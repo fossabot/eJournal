@@ -136,7 +136,7 @@
             class="right-content-timeline-page right-content"
         >
             <h3 class="theme-h3">
-                Entry Templates
+                Reusable templates
             </h3>
             <div
                 v-intro="'Every assignment contains customizable <i>templates</i> which specify what the contents of \

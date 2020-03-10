@@ -54,15 +54,6 @@
             v-if="currentPreset.type !== ''"
             class="mt-2"
         >
-            <b-alert
-                :show="showAlert"
-                class="error"
-                dismissible
-                @dismissed="showAlert = false"
-            >
-                Some required fields are empty or invalid.
-            </b-alert>
-
             <h3
                 class="theme-h3"
             >
@@ -103,7 +94,6 @@ export default {
                 template: '',
                 description: '',
             },
-            showAlert: false,
         }
     },
     methods: {
@@ -120,7 +110,7 @@ export default {
 
                 this.$emit('add-preset', this.currentPreset)
             } else {
-                this.showAlert = true
+                this.$toasted.error('Some required fields are empty or invalid.')
             }
         },
         validPreset () {
