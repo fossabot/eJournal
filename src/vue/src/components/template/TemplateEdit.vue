@@ -1,61 +1,22 @@
 <template>
     <b-card class="no-hover">
-        <div class="d-flex">
-            <b-button
-                :class="{'active': mode === 'edit'}"
-                class="multi-form change-button flex-basis-100"
-                @click="mode = 'edit'"
-            >
-                <icon name="edit"/>
-                Edit
-            </b-button>
-            <b-button
-                :class="{'active': mode === 'preview'}"
-                class="multi-form add-button flex-basis-100"
-                @click="mode='preview'"
-            >
-                <icon name="eye"/>
-                Preview
-            </b-button>
-        </div>
-        <hr/>
         <div v-if="mode === 'edit'">
-            <b-input
-                id="template-name"
-                v-model="template.name"
-                class="mr-sm-2 multi-form theme-input"
-                placeholder="Template name"
-                required
-            />
-            <div
-                v-if="template.preset_only"
-                class="template-availability"
-            >
+            <div class="d-flex">
+                <b-input
+                    id="template-name"
+                    v-model="template.name"
+                    class="mr-sm-2 multi-form theme-input"
+                    placeholder="Template name"
+                    required
+                />
                 <b-button
-                    class="delete-button"
-                    @click.stop
-                    @click="togglePresetOnly"
+                    :class="{'active': mode === 'preview'}"
+                    class="multi-form add-button flex-shrink-0"
+                    @click="mode='preview'"
                 >
-                    <icon name="times"/>
-                    Preset-only
+                    <icon name="eye"/>
+                    Preview
                 </b-button>
-                <icon name="info-circle"/>
-                This template can only be used for preset entries you add to the timeline
-            </div>
-            <div
-                v-if="!template.preset_only"
-                class="template-availability"
-            >
-                <b-button
-                    class="add-button"
-                    @click.stop
-                    @click="togglePresetOnly"
-                >
-                    <icon name="check"/>
-                    Unlimited
-                </b-button>
-                <icon name="info-circle"/>
-                This template can be freely used by students as often as they want<br/>
             </div>
             <draggable
                 v-model="template.field_set"
@@ -64,11 +25,12 @@
                 @end="endDrag"
                 @update="onUpdate"
             >
-                <b-card
+                <div
                     v-for="field in template.field_set"
                     :key="field.location"
                     class="field-card"
                 >
+                    <hr/>
                     <b-row
                         alignH="between"
                         noGutters
@@ -85,8 +47,9 @@
                                 required
                             />
                             <text-editor
-                                v-if="showEditors"
+                                v-show="showEditors"
                                 :id="`rich-text-editor-field-${template.id}-${field.location}`"
+                                :key="`rich-text-editor-field-${template.id}-${field.location}`"
                                 v-model="field.description"
                                 :basic="true"
                                 :displayInline="true"
@@ -173,7 +136,7 @@
                             />
                         </b-col>
                     </b-row>
-                </b-card>
+                </div>
                 <div class="invisible"/>
             </draggable>
             <b-button
@@ -187,7 +150,16 @@
         <template-preview
             v-else
             :template="template"
-        />
+        >
+            <b-button
+                :class="{'active': mode === 'edit'}"
+                class="change-button float-right"
+                @click="mode = 'edit'"
+            >
+                <icon name="edit"/>
+                Edit
+            </b-button>
+        </template-preview>
     </b-card>
 </template>
 

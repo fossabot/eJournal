@@ -91,7 +91,7 @@
                 />
 
                 <preset-node-card
-                    v-else-if="presets.length > 0 && currentNode !== -1 && currentNode < presets.length"
+                    v-else-if="presets.length > 0 && currentNode >= 0 && currentNode < presets.length"
                     ref="entry-template-card"
                     :class="{ 'input-disabled' : saveRequestInFlight }"
                     :currentPreset="presets[currentNode]"
@@ -99,6 +99,7 @@
                     :assignmentDetails="assignmentDetails"
                     @delete-preset="deletePreset"
                     @change-due-date="sortPresets"
+                    @newTemplateRequest="newTemplate"
                 />
 
                 <add-preset-node
@@ -107,6 +108,12 @@
                     :templates="templates"
                     :assignmentDetails="assignmentDetails"
                     @add-preset="addPreset"
+                    @newTemplateRequest="newTemplate"
+                />
+
+                <template-editor
+                    v-else-if="currentNode === -2"
+                    :template="templates[currentTemplate]"
                 />
 
                 <b-card
@@ -119,19 +126,6 @@
                     </h2>
                     <p>This is the end of the assignment.</p>
                 </b-card>
-
-                <b-modal
-                    ref="templateModal"
-                    size="lg"
-                    title="Edit template"
-                    hideFooter
-                    noEnforceFocus
-                >
-                    <template-editor
-                        v-if="currentTemplate !== -1"
-                        :template="templates[currentTemplate]"
-                    />
-                </b-modal>
             </b-col>
         </b-col>
 
@@ -520,8 +514,9 @@ export default {
                 this.presets.sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
             }
         },
-        newTemplate () {
-            this.templates.push({
+        newTemplate (requested = null) {
+            console.log('hiu')
+            const template = {
                 field_set: [{
                     type: 'rt',
                     title: 'Content',
@@ -532,9 +527,17 @@ export default {
                 }],
                 name: 'Entry',
                 id: this.newTemplateId--,
-                preset_only: false,
-            })
-            this.showTemplateModal(this.templates.length - 1)
+                preset_only: requested === null,
+            }
+            console.log('hiu')
+            this.templates.push(template)
+            console.log(template)
+            if (requested === null) {
+                this.showTemplateModal(this.templates.length - 1)
+            } else {
+                console.log(this.currentNode)
+                this.currentNode.template = template
+            }
         },
         deleteTemplate (index) {
             if (this.templates[index].id > 0) {
@@ -545,7 +548,7 @@ export default {
         },
         showTemplateModal (index) {
             this.currentTemplate = index
-            this.$refs.templateModal.show()
+            this.currentNode = -2
         },
         startTour () {
             this.$intro().start()

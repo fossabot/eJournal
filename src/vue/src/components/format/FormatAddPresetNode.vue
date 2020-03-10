@@ -4,11 +4,8 @@
             :class="$root.getBorderClass($route.params.cID)"
             class="no-hover overflow-x-hidden"
         >
-            <h2 class="theme-h2 d-inline multi-form">
-                New preset
-            </h2>
             <h2 class="theme-h2 field-heading required">
-                Preset Type
+                Select type
             </h2>
             <b-row>
                 <b-col md="6">
@@ -52,36 +49,42 @@
                     </b-card>
                 </b-col>
             </b-row>
-
-            <div
-                v-if="currentPreset.type !== ''"
-                class="mt-2"
-            >
-                <preset-node-card
-                    :newPreset="true"
-                    :currentPreset="currentPreset"
-                    :templates="templates"
-                    :assignmentDetails="assignmentDetails"
-                />
-
-                <b-alert
-                    :show="showAlert"
-                    class="error"
-                    dismissible
-                    @dismissed="showAlert = false"
-                >
-                    Some required fields are empty or invalid.
-                </b-alert>
-
-                <b-button
-                    class="add-button float-right"
-                    @click="addPreset"
-                >
-                    <icon name="plus"/>
-                    Add preset
-                </b-button>
-            </div>
         </b-card>
+        <div
+            v-if="currentPreset.type !== ''"
+            class="mt-2"
+        >
+            <b-alert
+                :show="showAlert"
+                class="error"
+                dismissible
+                @dismissed="showAlert = false"
+            >
+                Some required fields are empty or invalid.
+            </b-alert>
+
+            <h3
+                class="theme-h3"
+            >
+                {{ currentPreset.type == 'd' ? 'Entry details' : 'Progress goal details' }}
+            </h3>
+
+            <preset-node-card
+                :newPreset="true"
+                :currentPreset="currentPreset"
+                :templates="templates"
+                :assignmentDetails="assignmentDetails"
+                @newTemplateRequest="$emit('newTemplateRequest', true)"
+            />
+
+            <b-button
+                class="add-button full-width multi-form active"
+                @click="addPreset"
+            >
+                <icon name="plus"/>
+                Create
+            </b-button>
+        </div>
     </div>
 </template>
 

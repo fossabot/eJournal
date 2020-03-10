@@ -1,11 +1,12 @@
 <!-- Loads a preview of a template. nID are required but unused as autoupload is disabled. -->
 <template>
     <div>
+        <slot class="float-right"/>
         <h2 class="theme-h2">
             {{ template.name }}
         </h2>
         <div
-            v-for="(field, i) in sortedFields"
+            v-for="field in sortedFields"
             :key="field.eID"
             class="multi-form"
         >
@@ -59,7 +60,7 @@
             />
             <text-editor
                 v-else-if="field.type == 'rt'"
-                :id="'rich-text-editor-preview-field-' + i"
+                :id="`rich-text-editor-field-preview-${template.id}-${field.location}`"
                 class="input-disabled"
             />
             <url-input

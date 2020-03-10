@@ -9,22 +9,6 @@
         @click="$emit('edit-template')"
     >
         <icon
-            v-if="template.preset_only"
-            v-b-tooltip.hover
-            name="times"
-            class="fill-red float-right ml-2"
-            title="This template can only be used for preset entries you add to the timeline"
-            @click.native.stop="togglePresetOnly"
-        />
-        <icon
-            v-else
-            v-b-tooltip.hover
-            name="check"
-            class="fill-green float-right ml-2"
-            title="This template can be freely used by students as often as they want"
-            @click.native.stop="togglePresetOnly"
-        />
-        <icon
             name="trash"
             class="trash-icon ml-2 float-right"
             @click.native.stop="emitDeleteTemplate"

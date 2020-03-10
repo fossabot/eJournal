@@ -104,7 +104,7 @@
                 class="no-hover new-comment"
             >
                 <text-editor
-                    :id="'comment-text-editor'"
+                    id="comment-text-editor"
                     ref="comment-text-editor-ref"
                     v-model="tempComment"
                     :basic="true"
