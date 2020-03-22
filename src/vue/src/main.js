@@ -3,6 +3,7 @@ import BootstrapVue from 'bootstrap-vue'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue/dist/bootstrap-vue.css'
 import 'flatpickr/dist/flatpickr.css' // eslint-disable-line import/no-extraneous-dependencies
+import 'flatpickr/dist/themes/material_blue.css' // eslint-disable-line import/no-extraneous-dependencies
 import 'intro.js/introjs.css'
 
 import '@/helpers/vue_awesome_icons.js'
@@ -14,15 +15,19 @@ import VueIntro from 'vue-introjs'
 import Icon from 'vue-awesome/components/Icon.vue'
 import VueMoment from 'vue-moment'
 
-import App from './App.vue'
-import router from './router'
-import store from './store'
-import ThemeSelect from './components/assets/ThemeSelect.vue'
-
 import connection from '@/api/connection.js'
 
+import ResetWrapper from '@/components/assets/ResetWrapper.vue'
+import App from './App.vue'
+import router from './router/index.js'
+import store from './store/index.js'
+import ThemeSelect from './components/assets/ThemeSelect.vue'
+
 Vue.config.productionTip = false
-Vue.use(Toasted, { position: 'top-center', duration: 4000 })
+Vue.use(Toasted, {
+    position: 'top-center',
+    duration: 4000,
+})
 Vue.use(BootstrapVue)
 Vue.use(flatPickr)
 Vue.use(VueIntro)
@@ -30,13 +35,33 @@ Vue.use(VueMoment)
 
 Vue.component('icon', Icon)
 Vue.component('theme-select', ThemeSelect)
+Vue.component('reset-wrapper', ResetWrapper)
 
 initSentry(Vue)
 
 /* Checks the store for for permissions according to the current route cID or aID. */
 Vue.prototype.$hasPermission = store.getters['permissions/hasPermission']
+const toApi = new RegExp(`^${CustomEnv.API_URL}`)
 
-Vue.config.productionTip = false
+/* eslint-disable */
+Vue.config.productionTip = false;
+
+(function (open, send) {
+    let xhrOpenRequestUrl;
+
+    XMLHttpRequest.prototype.open = function (_, url) {
+        xhrOpenRequestUrl = url
+        open.apply(this, arguments)
+    }
+
+    XMLHttpRequest.prototype.send = function () {
+        if (store.getters['user/jwtAccess'] && toApi.test(xhrOpenRequestUrl)) {
+            this.setRequestHeader('Authorization', `Bearer ${store.getters['user/jwtAccess']}`)
+        }
+        send.apply(this, arguments)
+    }
+})(XMLHttpRequest.prototype.open, XMLHttpRequest.prototype.send)
+/* eslint-enable */
 
 /* eslint-disable no-new */
 new Vue({
@@ -45,7 +70,7 @@ new Vue({
     store,
     components: { App },
     data: {
-        colors: ['pink-border', 'purple-border', 'yellow-border', 'blue-border'],
+        colors: ['border-pink', 'border-purple', 'border-yellow', 'border-blue'],
         previousPage: null,
         windowWidth: 0,
         maxFileSizeBytes: 10485760,
@@ -58,12 +83,14 @@ new Vue({
             altInput: true,
             altFormat: 'D d M Y H:i',
             dateFormat: 'Y-m-dTH:i:S',
+            disableMobile: true,
         },
         flatPickrConfig: {
             enableTime: false,
             altInput: true,
             altFormat: 'D d M Y',
             dateFormat: 'Y-m-d',
+            disableMobile: true,
         },
     },
     computed: {
@@ -82,8 +109,8 @@ new Vue({
         store.dispatch('connection/setupConnectionInterceptors', { connection: connection.conn })
         store.dispatch('connection/setupConnectionInterceptors',
             { connection: connection.connRefresh, isRefresh: true })
-        store.dispatch('connection/setupConnectionInterceptors', { connection: connection.connFile })
-        store.dispatch('connection/setupConnectionInterceptors', { connection: connection.connFileEmail })
+        store.dispatch('connection/setupConnectionInterceptors', { connection: connection.connUpFile })
+        store.dispatch('connection/setupConnectionInterceptors', { connection: connection.connDownFile })
 
         window.addEventListener('resize', () => {
             this.windowWidth = window.innerWidth
@@ -91,8 +118,8 @@ new Vue({
         this.windowWidth = window.innerWidth
     },
     methods: {
-        getBorderClass (cID) {
-            return this.colors[cID % this.colors.length]
+        getBorderClass (id) {
+            return this.colors[id % this.colors.length]
         },
         beautifyDate (date, displayDate = true, displayTime = true) {
             if (!date) {
@@ -113,6 +140,30 @@ new Vue({
                 s += time
             }
             return s
+        },
+        assignmentRoute (assignment, course = null) {
+            const route = {
+                params: {
+                    cID: course === null ? assignment.course.id : course.id,
+                    aID: assignment.id,
+                },
+            }
+
+            if (this.$hasPermission('can_view_all_journals', 'assignment', assignment.id)) {
+                if (!assignment.is_published && !assignment.is_group_assignment) { // Teacher not published route
+                    route.name = 'FormatEdit'
+                } else { // Teacher published route
+                    route.name = 'Assignment'
+                }
+            } else if (assignment.is_group_assignment && assignment.journal === null) {
+                // Student new group assignment route
+                route.name = 'JoinJournal'
+            } else { // Student with journal route
+                route.name = 'Journal'
+                route.params.jID = assignment.journal
+            }
+
+            return route
         },
     },
     render: h => h(App),

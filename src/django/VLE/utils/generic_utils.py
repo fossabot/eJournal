@@ -3,6 +3,11 @@ Utilities.
 
 A library with useful functions.
 """
+import base64
+import re
+from mimetypes import guess_extension
+
+from django.core.files.base import ContentFile
 from django.db.models import Case, When
 
 import VLE.factory as factory
@@ -19,6 +24,8 @@ def required_params(post, *keys):
     result = []
     for key in keys:
         try:
+            if post[key] == '':
+                VLEMissingRequiredKey(key)
             result.append(post[key])
         except KeyError:
             raise VLEMissingRequiredKey(key)
@@ -47,7 +54,11 @@ def required_typed_params(post, *keys):
     result = []
     for func, key in keys:
         try:
-            if post[key] is not None:
+            if post[key] == '':
+                VLEMissingRequiredKey(key)
+            if isinstance(post[key], list):
+                result.append([func(elem) for elem in post[key]])
+            elif post[key] is not None:
                 result.append(func(post[key]))
             else:
                 result.append(None)
@@ -65,7 +76,7 @@ def optional_typed_params(post, *keys):
 
     result = []
     for func, key in keys:
-        if key in post and post[key] != '':
+        if key and key in post and post[key] != '':
             try:
                 if post[key] is not None:
                     result.append(func(post[key]))
@@ -235,9 +246,10 @@ def update_presets(assignment, presets, new_ids):
     format = assignment.format
     for preset in presets:
         id, template = required_typed_params(preset, (int, 'id'), (dict, 'template'))
-        target, = optional_typed_params(preset, (float, 'target'))
-        type, description, unlock_date, due_date, lock_date = \
-            required_params(preset, 'type', 'description', 'unlock_date', 'due_date', 'lock_date')
+        target, unlock_date, lock_date = optional_typed_params(
+            preset, (float, 'target'), (str, 'unlock_date'), (str, 'lock_date'))
+        type, description, due_date = required_params(
+            preset, 'type', 'description', 'due_date')
 
         if id > 0:
             preset_node = PresetNode.objects.get(pk=id)
@@ -264,7 +276,7 @@ def update_presets(assignment, presets, new_ids):
                 preset_node.forced_template = Template.objects.get(pk=template['id'])
         preset_node.save()
         if id < 0:
-            update_journals(Journal.objects.filter(assignment=assignment), preset_node)
+            update_journals(Journal.all_objects.filter(assignment=assignment), preset_node)
 
 
 def delete_presets(presets):
@@ -286,3 +298,10 @@ def archive_templates(templates):
         ids.append(template['id'])
 
     Template.objects.filter(pk__in=ids).update(archived=True)
+
+
+def base64ToContentFile(string, filename):
+    matches = re.findall(r'data:(.*);base64,(.*)', string)[0]
+    mimetype = matches[0]
+    extension = guess_extension(mimetype)
+    return ContentFile(base64.b64decode(matches[1]), name='{}{}'.format(filename, extension))

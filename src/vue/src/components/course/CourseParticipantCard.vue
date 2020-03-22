@@ -14,7 +14,7 @@
                 >
                     <img
                         :src="user.profile_picture"
-                        class="profile-picture-sm"
+                        class="theme-img profile-picture-sm"
                     />
                 </b-col>
                 <b-col cols="9">
@@ -32,6 +32,7 @@
                         v-if="$hasPermission('can_edit_course_roles')"
                         v-model="selectedRole"
                         :selectSize="1"
+                        class="theme-select"
                     >
                         <option
                             v-for="r in roles"

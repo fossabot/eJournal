@@ -11,7 +11,7 @@
             <b-form-select
                 v-model="selectedSortOption"
                 :selectSize="1"
-                class="multi-form mr-2"
+                class="theme-select multi-form mr-2"
             >
                 <option value="date">
                     Sort by date
@@ -32,7 +32,7 @@
                 @click.stop
                 @click="setOrder(!order)"
             >
-                <icon name="long-arrow-down"/>
+                <icon name="long-arrow-alt-down"/>
                 Ascending
             </b-button>
             <b-button
@@ -41,7 +41,7 @@
                 @click.stop
                 @click="setOrder(!order)"
             >
-                <icon name="long-arrow-up"/>
+                <icon name="long-arrow-alt-up"/>
                 Descending
             </b-button>
         </div>
@@ -52,7 +52,7 @@
             >
                 <b-link
                     v-if="d.course"
-                    :to="assignmentRoute(d.course.id, d.id, d.journal, d.is_published)"
+                    :to="$root.assignmentRoute(d)"
                     tag="b-button"
                 >
                     <todo-card
@@ -64,7 +64,7 @@
                     v-for="(course, j) in d.courses"
                     v-else
                     :key="`${i}-${j}`"
-                    :to="assignmentRoute(course.id, d.id, d.journal, d.is_published)"
+                    :to="$root.assignmentRoute(d, course)"
                     tag="b-button"
                 >
                     <todo-card
@@ -176,24 +176,6 @@ export default {
             setAssignmentSearchValue: 'preferences/SET_ASSIGNMENT_OVERVIEW_SEARCH_VALUE',
             setAssignmentOverviewSortBy: 'preferences/SET_ASSIGNMENT_OVERVIEW_SORT_BY',
         }),
-        assignmentRoute (cID, aID, jID, isPublished) {
-            const route = {
-                params: {
-                    cID,
-                    aID,
-                },
-            }
-
-            if (!isPublished) {
-                route.name = 'FormatEdit'
-            } else if (this.$hasPermission('can_view_all_journals', 'assignment', aID)) {
-                route.name = 'Assignment'
-            } else {
-                route.name = 'Journal'
-                route.params.jID = jID
-            }
-            return route
-        },
         compare (a, b) {
             if (a < b) { return this.order ? 1 : -1 }
             if (a > b) { return this.order ? -1 : 1 }

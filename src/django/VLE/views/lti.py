@@ -119,7 +119,7 @@ def handle_test_student(user, params):
        and 'custom_user_full_name' in params and params['custom_user_full_name'] == settings.LTI_TEST_STUDENT_FULL_NAME:
         lti_id, username, full_name, email, course_id = utils.required_params(
             params, 'user_id', 'custom_username', 'custom_user_full_name', 'custom_user_email', 'custom_course_id')
-        profile_picture = '/unknown-profile.png' if 'custom_user_image' not in params else params['custom_user_image']
+        profile_picture = params.get('custom_user_image', settings.DEFAULT_PROFILE_PICTURE)
         is_teacher = settings.ROLES['Teacher'] in lti.roles_to_list(params)
 
         return factory.make_user(username, email=email, lti_id=lti_id, profile_picture=profile_picture,
@@ -162,7 +162,7 @@ def get_lti_params_from_jwt(request):
         'state': get_finish_state(user, assignment, lti_params),
         'cID': course.pk,
         'aID': assignment.pk,
-        'jID': journal.pk if user.has_permission('can_have_journal', assignment) else None,
+        'jID': journal.pk if user.has_permission('can_have_journal', assignment) and journal else None,
     }})
 
 

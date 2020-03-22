@@ -1,5 +1,6 @@
 <template>
     <iframe
+        :key="`sandboxed-iframe-content-${renderKey}`"
         :srcdoc="content"
         sandbox="allow-same-origin allow-popups"
         height="0"
@@ -24,12 +25,12 @@ export default {
     data () {
         return {
             iframe: null,
+            renderKey: 0,
         }
     },
     watch: {
         content () {
-            this.setContent()
-            this.fitContent()
+            this.renderKey += 1
         },
     },
     methods: {
@@ -38,13 +39,7 @@ export default {
             window.addEventListener('resize', this.fitContent)
             this.setCustomStyle()
             this.setLinkTarget()
-            this.setContent()
             this.fitContent()
-        },
-        setContent () {
-            if (this.iframe && this.iframe.contentWindow) {
-                this.iframe.contentWindow.document.body.innerHTML = this.content
-            }
         },
         fitContent () {
             if (this.iframe && this.iframe.contentWindow) {
@@ -69,7 +64,6 @@ body *:last-child{
 }
 
 p a {
-    text-decoration: none;
     color: #22648A;
 }
 

@@ -5,6 +5,7 @@ from datetime import datetime
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
+from sentry_sdk import capture_message
 
 from VLE.models import Field
 from VLE.utils.error_handling import VLEMissingRequiredField
@@ -22,13 +23,17 @@ def validate_user_file(in_memory_uploaded_file, user):
     if in_memory_uploaded_file.size > settings.USER_MAX_FILE_SIZE_BYTES:
         raise ValidationError("Max size of file is {} Bytes".format(settings.USER_MAX_FILE_SIZE_BYTES))
 
-    user_files = user.userfile_set.all()
+    user_files = user.filecontext_set.all()
     # Fast check for allowed user storage space
     if settings.USER_MAX_TOTAL_STORAGE_BYTES - len(user_files) * settings.USER_MAX_FILE_SIZE_BYTES <= \
        in_memory_uploaded_file.size:
-        # Slow check for allowed user storage space
-        if sum(user_file.file.size for user_file in user_files) > settings.USER_MAX_TOTAL_STORAGE_BYTES:
-            raise ValidationError('Unsufficient storage space.')
+        total_user_file_size = sum(user_file.file.size for user_file in user_files)
+        if total_user_file_size > settings.USER_MAX_TOTAL_STORAGE_BYTES:
+            if user.is_teacher:
+                capture_message('Staff user {} file storage of {} exceeds desired limit'.format(
+                    user.pk, total_user_file_size), level='error')
+            else:
+                raise ValidationError('Unsufficient storage space.')
 
 
 def validate_email_files(files):

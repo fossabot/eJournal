@@ -1,7 +1,7 @@
 import factory
 from django.conf import settings
 
-DEFAULT_PASSWORD = 'Pass1234!'
+DEFAULT_PASSWORD = 'Pass123!'
 
 
 class UserFactory(factory.django.DjangoModelFactory):
@@ -9,11 +9,12 @@ class UserFactory(factory.django.DjangoModelFactory):
         model = 'VLE.User'
 
     username = factory.Sequence(lambda x: "user{}".format(x))
+    full_name = factory.Sequence(lambda x: "Normal user {}".format(x))
     email = factory.Sequence(lambda x: 'email{}@example.com'.format(x))
     password = factory.PostGenerationMethodCall('set_password', DEFAULT_PASSWORD)
     verified_email = True
 
-    profile_picture = '/unknown-profile.png'
+    profile_picture = settings.DEFAULT_PROFILE_PICTURE
 
     first_name = factory.Faker('first_name')
     last_name = factory.Faker('last_name')
@@ -34,6 +35,7 @@ class TestUserFactory(LtiStudentFactory):
 
 class TeacherFactory(UserFactory):
     username = factory.Sequence(lambda x: "teacher{}".format(x))
+    full_name = factory.Sequence(lambda x: "Teacher user {}".format(x))
     is_teacher = True
 
 
@@ -43,4 +45,5 @@ class LtiTeacherFactory(TeacherFactory):
 
 class AdminFactory(UserFactory):
     username = factory.Sequence(lambda x: "admin{}".format(x))
+    full_name = factory.Sequence(lambda x: "Admin user {}".format(x))
     is_superuser = True

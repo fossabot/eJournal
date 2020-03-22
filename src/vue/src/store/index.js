@@ -2,26 +2,28 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 import createPersistedState from 'vuex-persistedstate'
 
-import user from './modules/user'
-import permissions from './modules/permissions'
-import connection from './modules/connection'
-import preferences from './modules/preferences'
-import sentry from './modules/sentry'
+import connection from './modules/connection.js'
+import content from './modules/content.js'
+import permissions from './modules/permissions.js'
+import preferences from './modules/preferences.js'
+import sentry from './modules/sentry.js'
+import user from './modules/user.js'
 
 Vue.use(Vuex)
 
 const debug = process.env.NODE_ENV !== 'production'
 const plugins = []
 
-plugins.push(createPersistedState({ paths: ['user', 'permissions', 'preferences'] }))
+plugins.push(createPersistedState({ paths: ['content', 'permissions', 'preferences', 'user'] }))
 
 export default new Vuex.Store({
     modules: {
-        user,
-        permissions,
         connection,
-        sentry,
+        content,
+        permissions,
         preferences,
+        sentry,
+        user,
     },
     strict: debug,
     plugins,

@@ -1,10 +1,11 @@
-.theme-input, .flatpickr-input, .mce-edit-area
+.theme-input, .mce-edit-area
     @extend .small-inner-shadow
     font-family: 'Roboto Condensed', sans-serif
     background-color: white !important
     padding: 0.375rem 0.75rem !important
     border: 1px solid $theme-dark-grey !important
     border-radius: 5px !important
+    font-size: 1.1em
     height: auto
     &.no-width
         width: 0
@@ -16,8 +17,8 @@
     [aria-invalid='true']
         border-color: $theme-green
         box-shadow: 0 0 2px 2px $theme-green
-    &:read-only:not(.mce-edit-area):not(.flatpickr-input):not(.input-append-icon):not(select)
-        background-color: #e9ecef !important
+    &:read-only:not(.mce-edit-area):not(.input-append-icon):not(select)
+        background-color: #fff1ca !important
         pointer-events: none
         -moz-user-select: -moz-none
         -khtml-user-select: none
@@ -29,17 +30,44 @@
 
 .fileinput
     @extend .shadow
+    font-size: 1.1em
     font-family: 'Roboto Condensed', sans-serif
-    font-size: 1.2em
     background-color: white !important
     margin-bottom: 10px
     border-radius: 5px !important
 
-.flatpickr-day
-    &.selected, &.startRange, &.endRange
-        &, &.inRange, &:focus, &:hover, &.prevMonthDay, &.nextMonthDay
-            background: $theme-blue
-            border-color: $theme-blue
+// When using an alt date display, a read-only input field directly following the flatpickr-input should be clicked.
+.flatpickr-input, .flatpickr-input + input
+    @extend .small-inner-shadow
+    font-family: 'Roboto Condensed', sans-serif
+    border: 1px solid $theme-medium-grey
+    background-color: white !important
+    margin-bottom: 10px
+    border-radius: 5px
+    cursor: pointer
+
+.flatpickr-calendar
+    @extend .shadow
+    box-sizing: content-box
+    font-family: 'Roboto Condensed', sans-serif
+    border: 1px solid $theme-medium-grey
+    border-radius: 5px
+    .flatpickr-weekdays, .flatpickr-weekday, .flatpickr-month,
+    .flatpickr-monthDropdown-months, .flatpickr-monthDropdown-months .flatpickr-monthDropdown-month, .cur-year
+        background: $theme-green
+        color: white
+        &, .cur-month
+            font-weight: 400
+    .flatpickr-prev-month:hover, .flatpickr-next-month:hover
+        svg
+            fill: darken($theme-green, 7%)
+    .flatpickr-day
+        &.selected, &.startRange, &.endRange
+            &, &.inRange, &:focus, &:hover, &.prevMonthDay, &.nextMonthDay
+                background: $theme-dark-blue
+                border-color: $theme-dark-blue
+.flatpickr-calendar:before, .flatpickr-calendar:after
+    border: none !important
 
 .custom-checkbox
     .custom-control-label:before

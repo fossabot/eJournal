@@ -1,179 +1,111 @@
 <template>
     <b-card class="no-hover">
-        <b-form
-            @submit.prevent="onSubmit"
-            @reset.prevent="onReset"
+        <assignment-details
+            ref="assignmentDetails"
+            :assignmentDetails="form"
+        />
+        <b-button
+            class="float-left change-button mt-2"
+            type="reset"
+            @click.prevent.stop="onReset"
         >
-            <div class="d-flex float-right multi-form">
-                <b-button
-                    v-if="form.isPublished"
-                    v-b-tooltip.hover
-                    class="add-button flex-grow-1"
-                    title="This assignment is visible to students"
-                    @click="form.isPublished = false"
-                >
-                    <icon name="check"/>
-                    Published
-                </b-button>
-                <b-button
-                    v-if="!form.isPublished"
-                    v-b-tooltip.hover
-                    class="delete-button flex-grow-1"
-                    title="This assignment is not visible to students"
-                    @click="form.isPublished = true"
-                >
-                    <icon name="times"/>
-                    Unpublished
-                </b-button>
-            </div>
-
-            <h2 class="field-heading required">
-                Assignment Name
-            </h2>
-            <b-input
-                v-model="form.assignmentName"
-                class="multi-form theme-input"
-                placeholder="Assignment name"
-                required
-            />
-            <h2 class="field-heading">
-                Description
-            </h2>
-            <text-editor
-                :id="'text-editor-assignment-description'"
-                v-model="form.assignmentDescription"
-                :footer="false"
-                class="multi-form"
-                placeholder="Description of the assignment"
-            />
-            <h2 class="field-heading required">
-                Points possible
-                <tooltip
-                    tip="The amount of points that represents a perfect score for this assignment, excluding bonus
-                    points"
-                />
-            </h2>
-            <b-input
-                v-model="form.pointsPossible"
-                class="multi-form theme-input"
-                placeholder="Points"
-                type="number"
-            />
-            <b-row>
-                <b-col xl="4">
-                    <h2 class="field-heading">
-                        Unlock date
-                        <tooltip tip="Students will be able to work on the assignment from this date onwards"/>
-                    </h2>
-                    <flat-pickr
-                        v-model="form.unlockDate"
-                        :config="Object.assign({}, {
-                            maxDate: form.dueDate ? form.dueDate : form.lockDate
-                        }, $root.flatPickrTimeConfig)"
-                    />
-                </b-col>
-                <b-col xl="4">
-                    <h2 class="field-heading">
-                        Due date
-                        <tooltip
-                            tip="Students are expected to have finished their assignment by this date, but new entries
-                            can still be added until the lock date"
-                        />
-                    </h2>
-                    <flat-pickr
-                        v-model="form.dueDate"
-                        :config="Object.assign({}, {
-                            minDate: form.unlockDate,
-                            maxDate: form.lockDate,
-                        }, $root.flatPickrTimeConfig)"
-                    />
-                </b-col>
-                <b-col xl="4">
-                    <h2 class="field-heading">
-                        Lock date
-                        <tooltip tip="No more entries can be added after this date"/>
-                    </h2>
-                    <flat-pickr
-                        v-model="form.lockDate"
-                        :config="Object.assign({}, {
-                            minDate: form.dueDate ? form.dueDate : form.unlockDate
-                        }, $root.flatPickrTimeConfig)"
-                    />
-                </b-col>
-            </b-row>
-            <b-button
-                class="float-left change-button mt-2"
-                type="reset"
-            >
-                <icon name="undo"/>
-                Reset
-            </b-button>
-            <b-button
-                class="float-right add-button mt-2"
-                type="submit"
-            >
-                <icon name="plus-square"/>
-                Create
-            </b-button>
-        </b-form>
+            <icon name="undo"/>
+            Reset
+        </b-button>
+        <b-button
+            class="float-right add-button mt-2"
+            type="submit"
+            @click.prevent.stop="onSubmit"
+        >
+            <icon name="plus-square"/>
+            Create
+        </b-button>
     </b-card>
 </template>
 
 <script>
-import textEditor from '@/components/assets/TextEditor.vue'
-import tooltip from '@/components/assets/Tooltip.vue'
+import AssignmentDetails from '@/components/assignment/AssignmentDetails.vue'
 
 import assignmentAPI from '@/api/assignment.js'
 
 export default {
     name: 'CreateAssignment',
     components: {
-        textEditor,
-        tooltip,
+        AssignmentDetails,
     },
     props: ['lti', 'page'],
     data () {
         return {
             form: {
-                assignmentName: '',
-                assignmentDescription: '',
-                courseID: '',
-                ltiAssignID: null,
-                pointsPossible: null,
-                unlockDate: null,
-                dueDate: null,
-                lockDate: null,
-                isPublished: false,
+                name: '',
+                description: '',
+                course_id: '',
+                lti_id: null,
+                points_possible: null,
+                unlock_date: null,
+                due_date: null,
+                lock_date: null,
+                is_published: null,
+                is_group_assignment: false,
+                can_set_journal_name: false,
+                can_set_journal_image: false,
+                can_lock_journal: false,
+                remove_grade_upon_leaving_group: false,
             },
+            reset: null,
         }
+    },
+    computed: {
+        unlockDateConfig () {
+            const additionalConfig = {}
+            if (this.form.dueDate) {
+                additionalConfig.maxDate = new Date(this.form.dueDate)
+            } else if (this.form.lockDate) {
+                additionalConfig.maxDate = new Date(this.form.lockDate)
+            }
+            return Object.assign({}, additionalConfig, this.$root.flatPickrTimeConfig)
+        },
+        dueDateConfig () {
+            const additionalConfig = {}
+            if (this.form.unlockDate) {
+                additionalConfig.minDate = new Date(this.form.unlockDate)
+            }
+            if (this.form.lockDate) {
+                additionalConfig.maxDate = new Date(this.form.lockDate)
+            }
+            return Object.assign({}, additionalConfig, this.$root.flatPickrTimeConfig)
+        },
+        lockDateConfig () {
+            const additionalConfig = {}
+            if (this.form.dueDate) {
+                additionalConfig.minDate = new Date(this.form.dueDate)
+            } else if (this.form.unlockDate) {
+                additionalConfig.minDate = new Date(this.form.unlockDate)
+            }
+            return Object.assign({}, additionalConfig, this.$root.flatPickrTimeConfig)
+        },
     },
     mounted () {
         if (this.lti !== undefined) {
-            this.form.assignmentName = this.lti.ltiAssignName
-            this.form.ltiAssignID = this.lti.ltiAssignID
-            this.form.pointsPossible = this.lti.ltiPointsPossible
-            this.form.unlockDate = this.lti.ltiAssignUnlock.slice(0, -9)
-            this.form.dueDate = this.lti.ltiAssignDue.slice(0, -9)
-            this.form.lockDate = this.lti.ltiAssignLock.slice(0, -9)
-            this.form.courseID = this.page.cID
-            this.form.isPublished = this.lti.ltiAssignPublished
+            this.form.name = this.lti.ltiAssignName
+            this.form.lti_id = this.lti.ltiAssignID
+            this.form.points_possible = this.lti.ltiPointsPossible
+            this.form.unlock_date = this.lti.ltiAssignUnlock.slice(0, -9)
+            this.form.due_date = this.lti.ltiAssignDue.slice(0, -9)
+            this.form.lock_date = this.lti.ltiAssignLock.slice(0, -9)
+            this.form.course_id = this.page.cID
+            this.form.is_published = this.lti.ltiAssignPublished
         } else {
-            this.form.courseID = this.$route.params.cID
+            this.form.course_id = this.$route.params.cID
         }
+        this.reset = Object.assign({}, this.form)
     },
     methods: {
         onSubmit () {
-            assignmentAPI.create({
-                name: this.form.assignmentName,
-                description: this.form.assignmentDescription,
-                course_id: this.form.courseID,
-                lti_id: this.form.ltiAssignID,
-                points_possible: this.form.pointsPossible,
-                unlock_date: this.form.unlockDate,
-                due_date: this.form.dueDate,
-                lock_date: this.form.lockDate,
-                is_published: this.form.isPublished,
-            })
+            if (this.$refs.assignmentDetails && !this.$refs.assignmentDetails.validateDetails()) {
+                return
+            }
+            assignmentAPI.create(this.form)
                 .then((assignment) => {
                     this.$emit('handleAction', assignment.id)
                     this.onReset(undefined)
@@ -186,13 +118,21 @@ export default {
             if (evt !== undefined) {
                 evt.preventDefault()
             }
-            /* Reset our form values */
-            this.form.assignmentName = ''
-            this.form.assignmentDescription = ''
-            this.form.unlockDate = undefined
-            this.form.dueDate = undefined
-            this.form.lockDate = undefined
-            this.form.isPublished = false
+            /* Reset form values */
+            this.form.name = ''
+            this.form.description = ''
+            /* Due to defensive programming, resetting the rich text content does not work directly */
+            this.$refs.assignmentDetails.$refs['text-editor-assignment-edit-description'].clearContent()
+            this.form.course_id = ''
+            this.form.points_possible = null
+            this.form.unlock_date = null
+            this.form.due_date = null
+            this.form.lock_date = null
+            this.form.is_group_assignment = false
+            this.form.can_set_journal_name = false
+            this.form.can_set_journal_image = false
+            this.form.can_lock_journal = false
+            this.form.remove_grade_upon_leaving_group = false
 
             /* Trick to reset/clear native browser form validation state */
             this.show = false

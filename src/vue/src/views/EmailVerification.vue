@@ -1,13 +1,15 @@
 <template>
     <content-single-column>
-        <h1><span>Email Verification</span></h1>
+        <h1 class="theme-h1">
+            <span>Email Verification</span>
+        </h1>
         <b-card class="no-hover">
             <div class="center-content">
-                <h2 class="center-content">
+                <h2 class="theme-h2 center-content">
                     Verifying
                 </h2><br/>
                 <icon
-                    name="circle-o-notch"
+                    name="circle-notch"
                     pulse
                     scale="1.5"
                 />

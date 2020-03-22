@@ -4,7 +4,7 @@
         noGutters
     >
         <b-col
-            :class="'main-content ' + extraClasses"
+            :class="'content ' + extraClasses"
             lg="8"
             xl="6"
             offsetLg="2"
@@ -17,7 +17,7 @@
 
 <script>
 export default {
-    name: 'ContentColumn',
+    name: 'ContentSingleColumn',
     props: {
         extraClasses: {
             default: '',

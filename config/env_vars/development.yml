@@ -1,0 +1,88 @@
+---
+
+# Git settings.
+setup_git_repo: true
+git_branch: develop
+
+
+# Database settings.
+db_user: "{{ application_name }}"
+db_name: "{{ application_name }}"
+db_password: password
+db_host: localhost
+db_port: 5432
+
+
+# Sentry settings
+sentry_dsn: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          37353039363230633230633435366566653738303633653461613264636462663261363230346130
+          3363383838653364393739323234363066373863613864330a333633396332393932313531366638
+          35353232366530656633306630323239666666643732363434353065316131333461323139303335
+          3334393261626462370a373231333566356333643732376237623332653139363830346234333363
+          31643062623961666336323065373439613331323362323164313238333432313339393430313662
+          30643365616630623836326131636437313933623466393535366338316161633136346230376462
+          326337373932356436336531356436306665
+sentry_organization_slug: ejournal-test
+sentry_project_slug: ejournal-test
+
+
+# LTI settings.
+lti_secret: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          65666632343462356562333164656135623537646335316239613935613664616638613661616361
+          3061396136383835613630646362313334353536656534310a346339376538366637653036356132
+          39356533386666333632363837653134653930386638333263343635303637626262303365663631
+          6566636330636461320a323862613065626236366135323335323631323835323065363536396536
+          62633730306662393233343661306632613132363138333861643032636234643564613761663363
+          65386333666235653761306438646565303036343833363538343566663963393765323634373966
+          37373733313938373161616166383230346564393234316639343139663333653564633762373732
+          39303835303034643636
+lti_key: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          62323662373137323536313734333332623966623731353166633835383063333966623266633138
+          6462333963646230343661623164386664363039343635340a643231663630356330353239353434
+          31343935333961643566343236356561383035353137623837353937643030373034323635386664
+          6434323865383934360a356339373862366632633132633962613566373037323536373537663963
+          33316439366432373330313735613463366261613633623932376132343762303761633234396564
+          3064346331333639626135633133333965306339323836623466
+
+
+# Gunicorn settings.
+# For the number of workers, a good rule to follow is 2 x number of CPUs + 1
+gunicorn_num_workers: "{{ (2 * ansible_processor_cores + 1) }}"
+
+# Setting this to 1 will restart the Gunicorn process each time you make a request, basically reloading the code.
+# Very handy when developing. Set to 0 for unlimited requests (default).
+gunicorn_max_requests: 1
+
+
+# RabbitMQ settings.
+rabbitmq_server_name: "{{ inventory_hostname }}"
+
+rabbitmq_admin_user: admin
+rabbitmq_admin_password: password
+
+rabbitmq_application_vhost: "{{ application_name }}"
+rabbitmq_application_user: "{{ application_name }}"
+rabbitmq_application_password: password
+
+
+# Celery settings.
+celery_num_workers: 2
+
+
+# Application settings.
+django_settings_file: "{{ project_name }}.settings.development"
+django_secret_key: "akr2icmg1n8%z^3fe3c+)5d0(t^cy-2_25rrl35a7@!scna^1#"
+
+broker_url: "amqp://{{ rabbitmq_application_user }}:{{ rabbitmq_application_password }}@localhost/{{ rabbitmq_application_vhost }}"
+
+run_django_db_migrations: true
+run_django_collectstatic: true
+
+
+# Nginx settings.
+ssl_crt: placeholder
+ssl_key: placeholder
+csp_frame_ancestors_whitelist: "'self' uvadlo-tes.instructure.com"

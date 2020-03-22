@@ -1,7 +1,7 @@
 <template>
     <div
         ref="dropdown-button-wrapper"
-        class="position-relative"
+        class="position-relative dropdown-button-wrapper"
     >
         <b-button
             :class="buttonClass"
@@ -105,48 +105,46 @@ export default {
 @import '~sass/modules/colors.sass'
 @import '~sass/partials/shadows.sass'
 
-.dropdown-button
-    z-index: 1
-    span
-        display: inline-block
-        margin: 0px -0.375rem 0px 0.375rem
-        padding: 0px 0.375rem
-        border-radius: 5px !important
-        border: 1px solid $theme-dark-grey
-        background-color: rgba(0, 0, 0, 0.05)
-        transition: all 0.3s cubic-bezier(.25,.8,.25,1) !important
-        svg
-            fill: grey !important
-        &:hover
-            background-color: rgba(0, 0, 0, 0.2)
-    &:hover:not(.no-hover), &.active
-        background-color: $theme-blue !important
-        border-color: $theme-blue !important
-        color: white !important
-        svg
-            fill: white !important
-        span.dropdown
-            border-color: rgba(50, 50, 50, 0.2)
+.dropdown-button-wrapper
+    .dropdown-button
+        z-index: 1
+        span
+            display: inline-block
+            margin: 0px -0.375rem 0px 0.375rem
+            padding: 0px 0.375rem
+            border-radius: 5px !important
+            border: 1px solid $theme-dark-grey
+            background-color: rgba(0, 0, 0, 0.05)
+            transition: all 0.3s cubic-bezier(.25,.8,.25,1) !important
+            svg
+                fill: grey !important
+            &:hover
+                background-color: rgba(0, 0, 0, 0.2)
+        &:hover:not(.no-hover), &.active
+            svg
+                fill: white !important
+            span.dropdown
+                border-color: rgba(50, 50, 50, 0.2)
 
-.dropdown-button-options
-    position: absolute
-    top: 100%
-    right: 0px
-    @extend .shadow
-    background: $theme-medium-grey !important
-    border: none !important
-    border-radius: 0px 0px 5px 5px !important
-    padding: 5px 5px 0px 5px
-    &.up
-        bottom: 100%
-        top: auto
-    .option
-        justify-content: left
-        text-align: left
-        margin-bottom: 5px
-        width: 100%
-        line-height: 1.1em
-        svg
-            min-width: 0.95em
-            margin-left: 0px
+    .dropdown-button-options
+        position: absolute
+        top: 100%
+        right: 0px
+        @extend .shadow
+        background: $theme-medium-grey !important
+        border: none !important
+        border-radius: 0px 0px 5px 5px !important
+        padding: 5px 5px 0px 5px
+        &.up
+            bottom: 100%
+            top: auto
+        .option
+            justify-content: left
+            text-align: left
+            margin-bottom: 5px
+            width: 100%
+            line-height: 1.1em
+            svg
+                min-width: 0.95em
+                margin-left: 0px
 </style>

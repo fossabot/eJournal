@@ -48,7 +48,7 @@ export default {
                 return 'check'
             case 'failed':
             case 'overdue':
-                return 'clock-o'
+                return 'clock'
             case 'awaiting_grade':
                 return 'hourglass-half'
             case 'needs_grading':
@@ -58,7 +58,7 @@ export default {
             case 'add':
                 return 'plus'
             case 'start':
-                return 'flag'
+                return 'info-circle'
             case 'end':
                 return 'flag-checkered'
             default:

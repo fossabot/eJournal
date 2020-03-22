@@ -19,25 +19,25 @@ class EmailAPITest(TestCase):
     @override_settings(EMAIL_BACKEND='anymail.backends.test.EmailBackend', CELERY_TASK_ALWAYS_EAGER=True)
     def test_forgot_password(self):
         # Test if no/invalid params crashes
-        api.post(self, 'forgot_password', status=404)
-        api.post(self, 'forgot_password', params={'username': 'invalid_username'}, status=404)
-        api.post(self, 'forgot_password', params={'email': 'invalid_email'}, status=404)
+        api.post(self, 'forgot_password', status=400)
+        api.post(self, 'forgot_password', params={'identifier': 'invalid_username'}, status=404)
+        api.post(self, 'forgot_password', params={'identifier': 'invalid_email'}, status=404)
 
         # Test valid parameters
-        resp = api.post(self, 'forgot_password', params={'username': self.student.username})
+        resp = api.post(self, 'forgot_password', params={'identifier': self.student.username})
         assert 'An email was sent' in resp['description'], \
             'You should be able to get forgot password mail with only a username'
         assert len(mail.outbox) == 1, 'An actual mail should be sent'
         assert mail.outbox[0].to == [self.student.email], 'Email should be sent to the mail adress of the student'
         assert self.student.full_name in mail.outbox[0].body, 'Full name is expected to be used to increase delivery'
 
-        resp = api.post(self, 'forgot_password', params={'email': self.student.email})
+        resp = api.post(self, 'forgot_password', params={'identifier': self.student.email})
         assert 'An email was sent' in resp['description'], \
             'You should be able to get forgot password mail with only an email'
-        resp = api.post(self, 'forgot_password', params={'email': self.student.email}, user=self.student)
+        resp = api.post(self, 'forgot_password', params={'identifier': self.student.email}, user=self.student)
         assert 'An email was sent' in resp['description'], \
             'You should be able to get forgot password mail while logged in'
-        resp = api.post(self, 'forgot_password', params={'username': self.is_test_student.username}, status=400)
+        resp = api.post(self, 'forgot_password', params={'identifier': self.is_test_student.username}, status=400)
         assert 'no known email address' in resp['description'], \
             'Test student without email address cannot retrieve their password via email.'
 

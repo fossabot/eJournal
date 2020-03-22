@@ -5,8 +5,8 @@ from django.conf import settings
 
 import VLE.factory as factory
 import VLE.utils.generic_utils as utils
-from VLE.models import Assignment, Course, Group, Journal, Participation, Role, User
-from VLE.tasks.grading import send_journal_grade_to_LMS
+import VLE.utils.grading as grading
+from VLE.models import Assignment, AssignmentParticipation, Course, Group, Journal, Participation, Role, User
 
 
 class OAuthRequestValidater(object):
@@ -184,24 +184,20 @@ def select_create_journal(request, user, assignment):
     if assignment is None or user is None:
         return None
 
-    journals = Journal.objects.filter(user=user, assignment=assignment)
-    if journals.exists():
-        journal = journals.first()
-    else:
-        journal = factory.make_journal(assignment, user)
-
+    author = AssignmentParticipation.objects.get_or_create(user=user, assignment=assignment)[0]
+    journal = Journal.objects.filter(authors__in=[author], assignment=assignment).first()
     # Update the grade_url and sourcedid if the active LMS link is followed.
     if assignment.active_lti_id == request['custom_assignment_id']:
         passback_changed = False
-        if 'lis_outcome_service_url' in request and journal.grade_url != request['lis_outcome_service_url']:
+        if 'lis_outcome_service_url' in request and author.grade_url != request['lis_outcome_service_url']:
             passback_changed = True
-            journal.grade_url = request['lis_outcome_service_url']
-            journal.save()
-        if 'lis_result_sourcedid' in request and journal.sourcedid != request['lis_result_sourcedid']:
+            author.grade_url = request['lis_outcome_service_url']
+            author.save()
+        if 'lis_result_sourcedid' in request and author.sourcedid != request['lis_result_sourcedid']:
             passback_changed = True
-            journal.sourcedid = request['lis_result_sourcedid']
-            journal.save()
-        if passback_changed:
-            send_journal_grade_to_LMS.delay(journal.pk)
+            author.sourcedid = request['lis_result_sourcedid']
+            author.save()
+        if passback_changed and journal:
+            grading.task_author_status_to_LMS.delay(journal.pk, author.pk)
 
     return journal

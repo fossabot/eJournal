@@ -10,22 +10,20 @@
     >
         <span
             v-if="nodeTitle"
-            class="node-title"
+            class="node-title max-one-line"
         >
             <icon
                 v-if="new Date(nodeDate) > new Date()"
-                v-b-tooltip.hover
-                name="calendar"
+                v-b-tooltip:hover="'Upcoming deadline'"
+                :name="nodeIcon"
                 class="mb-1 mr-1"
-                title="Upcoming deadline"
             />
-            {{ nodeTitle }}<br/>
+            {{ nodeTitle }}
         </span>
 
         <span
             v-if="nodeDate"
-            v-b-tooltip.hover
-            :title="deadlineRange"
+            v-b-tooltip:hover="deadlineRange"
             class="node-date"
         >
             {{ $root.beautifyDate(nodeDate) }}
@@ -38,13 +36,18 @@ export default {
     props: ['node', 'selected'],
     computed: {
         nodeTitle () {
-            if (this.node.type === 'e') { // Entry
+            switch (this.node.type) {
+            case 'e':
                 return this.node.entry.template.name
-            } else if (this.node.type === 'd') { // Entry deadline
+            case 'd':
                 return this.node.template.name
-            } else if (this.node.type === 'p') { // Progress node
+            case 'p':
                 return 'Progress goal'
-            } else {
+            case 'n':
+                return 'End of assignment'
+            case 's':
+                return 'Assignment details'
+            default:
                 return null
             }
         },
@@ -54,6 +57,17 @@ export default {
             } else if (this.node.due_date) {
                 return this.node.due_date
             } else {
+                return null
+            }
+        },
+        nodeIcon () {
+            switch (this.node.type) {
+            case 'd':
+                return 'calendar'
+            case 'p':
+            case 'n':
+                return 'flag-checkered'
+            default:
                 return null
             }
         },

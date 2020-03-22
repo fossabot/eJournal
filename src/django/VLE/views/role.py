@@ -115,10 +115,13 @@ class RoleView(viewsets.ViewSet):
         # TODO: P Is this the right permission
         request.user.check_permission('can_edit_course_roles', course)
 
-        try:
-            role = factory.make_role_default_no_perms(name, course, **permissions)
-        except TypeError:
-            return response.bad_request("An invalid permission was given.")
+        for permission in permissions:
+            if permission not in Role.PERMISSIONS:
+                return response.bad_request('Invalid permission was supplied.')
+        if Role.objects.filter(name=name, course=course).exists():
+            return response.bad_request('A role with this name already exists.')
+
+        role = factory.make_role_default_no_perms(name, course, **permissions)
 
         serializer = RoleSerializer(role, many=False)
         return response.created({'role': serializer.data})

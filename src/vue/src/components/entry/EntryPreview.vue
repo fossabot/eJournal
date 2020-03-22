@@ -8,18 +8,21 @@
             :class="$root.getBorderClass($route.params.cID)"
             class="no-hover"
         >
-            <h2 class="mb-2">
+            <h2 class="theme-h2 mb-2">
                 {{ template.name }}
             </h2>
-            <p v-if="description">
-                {{ description }}
-            </p>
+            <sandboxed-iframe
+                v-if="description"
+                :content="description"
+            />
 
             <entry-fields
                 :template="template"
                 :completeContent="completeContent"
                 :displayMode="false"
                 :nodeID="nID"
+                @uploadingFile="uploadingFile = true"
+                @finishedUploadingFile="uploadingFile = false"
             />
 
             <b-alert
@@ -32,7 +35,7 @@
             </b-alert>
             <b-button
                 class="add-button float-right"
-                :class="{ 'input-disabled': saveRequestInFlight }"
+                :class="{ 'input-disabled': saveRequestInFlight || uploadingFile }"
                 @click="save"
             >
                 <icon name="paper-plane"/>
@@ -43,6 +46,7 @@
 </template>
 
 <script>
+import sandboxedIframe from '@/components/assets/SandboxedIframe.vue'
 import entryFields from '@/components/entry/EntryFields.vue'
 
 import entryAPI from '@/api/entry.js'
@@ -50,6 +54,7 @@ import entryAPI from '@/api/entry.js'
 export default {
     components: {
         entryFields,
+        sandboxedIframe,
     },
     props: {
         template: {
@@ -73,6 +78,7 @@ export default {
             dismissCountDown: 0,
             showDismissibleAlert: false,
             saveRequestInFlight: false,
+            uploadingFile: false,
         }
     },
     watch: {

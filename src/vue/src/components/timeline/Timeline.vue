@@ -50,7 +50,8 @@
                         :index="nodes.length + 1"
                         :last="true"
                         :node="{
-                            'type': 'n'
+                            'type': 'n',
+                            'due_date': assignment.due_date
                         }"
                         :selected="isSelected(nodes.length + 1)"
                         :edit="edit"
@@ -90,7 +91,8 @@
                         :index="nodes.length + 1"
                         :last="true"
                         :node="{
-                            'type': 'n'
+                            'type': 'n',
+                            'due_date': assignment.due_date
                         }"
                         :selected="isSelected(nodes.length + 1)"
                         :edit="edit"
@@ -132,7 +134,7 @@ export default {
     components: {
         timelineNode,
     },
-    props: ['selected', 'nodes', 'edit'],
+    props: ['selected', 'nodes', 'edit', 'assignment'],
     methods: {
         isSelected (id) {
             return id === this.selected
@@ -168,6 +170,7 @@ export default {
     overflow-x: hidden
     padding-right: 40px
     margin-right: -20px
+    padding-left: 5px
     @include lg-max
         height: 50vh
 

@@ -7,7 +7,6 @@ import VLE.timeline as timeline
 import VLE.validators as validators
 from VLE import factory
 from VLE.models import Field, Node
-from VLE.utils import file_handling
 from VLE.utils import generic_utils as utils
 from VLE.utils.error_handling import VLEBadRequest, VLEMissingRequiredField
 
@@ -16,17 +15,6 @@ def patch_entry_content(user, entry, old_content, field, data, assignment):
     """Creates new content for an entry, deleting the current content.
 
     If no temporary file is stored to replace the current content, the old content is kept as is."""
-    if field.type in field.FILE_TYPES:
-        new_file = file_handling.get_temp_user_file(user, assignment, data, content=old_content)
-
-        if new_file:
-            # As this get does not rely on user given data, no error should be needed.
-            old_file = user.userfile_set.filter(author=user, assignment=assignment, node=entry.node, entry=entry,
-                                                content=old_content, file_name=old_content.data)
-            if old_file.exists():
-                old_file.delete()
-            file_handling.make_permanent_file_content(new_file, old_content, entry.node)
-
     old_content.data = data
     old_content.save()
 
@@ -59,7 +47,7 @@ def check_fields(template, content_list):
             raise VLEMissingRequiredField(field)
 
 
-def add_entry_to_node(node, template):
+def add_entry_to_node(node, template, author):
     if not (node.preset and node.preset.forced_template == template):
         raise VLEBadRequest('Invalid template for preset node.')
 
@@ -72,7 +60,7 @@ def add_entry_to_node(node, template):
     if node.preset.is_locked():
         raise VLEBadRequest('The lock date for this node has passed.')
 
-    entry = factory.make_entry(template)
+    entry = factory.make_entry(template, author)
     node.entry = entry
     node.save()
     return entry

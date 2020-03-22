@@ -1,9 +1,11 @@
 import Vue from 'vue'
 import Router from 'vue-router'
+import { detect as detectBrowser } from 'detect-browser'
 import store from '@/store'
 import routerConstraints from '@/utils/constants/router_constraints.js'
 import Home from '@/views/Home.vue'
 import Journal from '@/views/Journal.vue'
+import JoinJournal from '@/views/JoinJournal.vue'
 import Assignment from '@/views/Assignment.vue'
 import Course from '@/views/Course.vue'
 import Profile from '@/views/Profile.vue'
@@ -108,6 +110,11 @@ const router = new Router({
         component: FormatEdit,
         props: true,
     }, {
+        path: '/Home/Course/:cID/Assignment/:aID/Journal/New',
+        name: 'JoinJournal',
+        component: JoinJournal,
+        props: true,
+    }, {
         path: '/Home/Course/:cID/Assignment/:aID/Journal/:jID',
         name: 'Journal',
         component: Journal,
@@ -124,11 +131,45 @@ const router = new Router({
     }],
 })
 
+/* Obtain browser user agent data. */
+const browser = detectBrowser()
+let browserUpdateNeeded = (browser && browser.name && browser.version && SupportedBrowsers[browser.name]
+    && parseInt(browser.version.split('.')[0], 10) < SupportedBrowsers[browser.name])
+
 router.beforeEach((to, from, next) => {
     const loggedIn = store.getters['user/loggedIn']
 
     if (from.name) {
         router.app.previousPage = from
+    }
+
+    /* Show warning when user visits the website with an outdated browser (to ensure correct functionality).
+     * In case the browser is not in our whitelist, no message will be shown. */
+    if (browserUpdateNeeded && !(to.name === 'Logout' || from.name === 'Guest' || from.name === 'Login')) {
+        router.app.$toasted.clear() // Clear existing toasts.
+        setTimeout(() => { // Allow a cooldown for smoother transitions.
+            router.app.$toasted.clear() // Clear existing toasts.
+            router.app.$toasted.error('Your current browser version is not up to date. For an optimal experience, '
+                + 'please update your browser before using eJournal.', {
+                action: [
+                    {
+                        text: 'Info',
+                        onClick: (e, toastObject) => {
+                            window.open('https://browsehappy.com', '_blank')
+                            toastObject.goAway(0)
+                        },
+                    },
+                    {
+                        text: 'Dismiss',
+                        onClick: (e, toastObject) => {
+                            browserUpdateNeeded = false
+                            toastObject.goAway(0)
+                        },
+                    },
+                ],
+                duration: null,
+            })
+        }, 1000)
     }
 
     if (loggedIn && routerConstraints.UNAVAILABLE_WHEN_LOGGED_IN.has(to.name)) {

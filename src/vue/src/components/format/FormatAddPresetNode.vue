@@ -4,10 +4,10 @@
             :class="$root.getBorderClass($route.params.cID)"
             class="no-hover overflow-x-hidden"
         >
-            <h2 class="d-inline multi-form">
+            <h2 class="theme-h2 d-inline multi-form">
                 New preset
             </h2>
-            <h2 class="field-heading required">
+            <h2 class="theme-h2 field-heading required">
                 Preset Type
             </h2>
             <b-row>

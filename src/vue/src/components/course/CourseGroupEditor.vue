@@ -1,6 +1,6 @@
 <template>
     <div>
-        <h4 class="mb-2">
+        <h4 class="theme-h4 mb-2">
             <span>Groups</span>
         </h4>
         <group-card
@@ -15,7 +15,7 @@
         />
 
         <div v-if="$hasPermission('can_add_course_user_group')">
-            <h4 class="mb-2">
+            <h4 class="theme-h4 mb-2">
                 <span>Create new group</span>
             </h4>
             <b-card class="no-hover">
@@ -103,7 +103,7 @@ export default {
                 })
         },
         resetFormInput () {
-            /* Reset our form values */
+            /* Reset form values */
             this.form.groupName = ''
         },
         deleteGroup (group) {

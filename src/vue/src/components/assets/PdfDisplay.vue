@@ -4,60 +4,64 @@
             class="pdf-controls mb-2 unselectable"
             @click="handleDownload"
         >
-            <icon name="align-left"/>
-            <i><span>{{ fileName }}</span></i>
+            <icon
+                name="file"
+                class="shift-up-2"
+            />
+            <b class="ml-1">
+                {{ file.file_name }}
+            </b>
         </div>
-
-        <div
-            v-if="show && loaded && numPages !== 0"
-            class="pdf-menu-container"
-        >
-            <icon
-                name="arrow-left"
-                class="action-icon"
-                @click.native="page = (page - 1 > 0) ? page - 1 : numPages"
-            />
-            <icon
-                name="arrow-right"
-                class="action-icon"
-                @click.native="page = (page + 1 > numPages) ? 1 : page + 1"
-            />
-            <icon
-                name="undo"
-                class="action-icon"
-                @click.native="rotate -= 90"
-            />
-            <icon
-                name="undo"
-                class="action-icon redo"
-                @click.native="rotate += 90"
-            />
-            <icon
-                name="print"
-                class="action-icon"
-                @click.native="print"
-            />
-            <icon
-                name="save"
-                class="action-icon"
-                @click.native="downloadLink.click()"
-            />
-            {{ page }} / {{ numPages }}
-            <input
-                v-model="displayPageNumber"
-                :max="numPages"
-                type="number"
-                min="1"
-                @input="validatePageInput"
-            />
-        </div>
-        <div>
+        <div class="position-relative">
             <div
                 v-if="loadedRatio > 0 && loadedRatio < 1"
                 :style="{ width: loadedRatio * 100 + '%' }"
                 style="background-color: green; color: white; text-align: center"
+                class="round-border"
             >
                 {{ Math.floor(loadedRatio * 100) }}%
+            </div>
+            <div
+                v-if="show && loaded && numPages !== 0"
+                class="pdf-menu-container"
+            >
+                <icon
+                    name="undo"
+                    @click.native="rotate -= 90"
+                />
+                <icon
+                    name="undo"
+                    class="redo mr-4"
+                    @click.native="rotate += 90"
+                />
+                <icon
+                    name="arrow-left"
+                    class="mr-2"
+                    @click.native="page = (page - 1 > 0) ? page - 1 : numPages"
+                />
+                <input
+                    v-model="displayPageNumber"
+                    :max="numPages"
+                    type="number"
+                    min="1"
+                    class="theme-input"
+                    @input="validatePageInput"
+                />
+                / {{ numPages }}
+                <icon
+                    name="arrow-right"
+                    class="mr-4 ml-1"
+                    @click.native="page = (page + 1 > numPages) ? 1 : page + 1"
+                />
+                <icon
+                    name="print"
+                    @click.native="print"
+                />
+                <icon
+                    name="save"
+                    class="mr-4"
+                    @click.native="downloadLink.click()"
+                />
             </div>
             <pdf
                 v-if="show && fileURL"
@@ -65,6 +69,7 @@
                 :src="fileURL"
                 :page="page"
                 :rotate="rotate"
+                class="pdf-viewer"
                 @password="password"
                 @progress="loadedRatio = $event"
                 @error="error"
@@ -78,7 +83,7 @@
 
 <script>
 import pdf from 'vue-pdf'
-import userAPI from '@/api/user.js'
+import auth from '@/api/auth.js'
 import sanitization from '@/utils/sanitization.js'
 
 export default {
@@ -86,28 +91,11 @@ export default {
         pdf,
     },
     props: {
-        fileName: {
+        file: {
             required: true,
-            String,
-        },
-        authorUID: {
-            required: true,
-            String,
         },
         display: {
             default: false,
-        },
-        entryID: {
-            required: true,
-            String,
-        },
-        nodeID: {
-            required: true,
-            String,
-        },
-        contentID: {
-            required: true,
-            String,
         },
     },
     data () {
@@ -161,7 +149,7 @@ export default {
             this.$refs.pdf.print()
         },
         fileDownload () {
-            userAPI.download(this.authorUID, this.fileName, this.entryID, this.nodeID, this.contentID)
+            auth.downloadFile(this.file.download_url)
                 .then((response) => {
                     try {
                         const blob = new Blob([response.data], { type: response.headers['content-type'] })
@@ -169,7 +157,7 @@ export default {
 
                         this.downloadLink = document.createElement('a')
                         this.downloadLink.href = this.fileURL
-                        this.downloadLink.download = this.fileName
+                        this.downloadLink.download = this.file.file_name
                         document.body.appendChild(this.downloadLink)
                     } catch (_) {
                         this.$toasted.error('Error creating file.')
@@ -182,13 +170,40 @@ export default {
 </script>
 
 <style lang="sass">
+@import '~sass/modules/colors.sass'
+@import '~sass/partials/shadows.sass'
+
 .pdf-menu-container
+    z-index: 1
+    padding: 10px
+    width: 100%
+    position: absolute
     text-align: center
+    margin-bottom: 10px
+    justify-content: center
+    transition: opacity 0.3s cubic-bezier(.25,.8,.25,1) !important
+
+    opacity: 0.2
+    &:hover
+        opacity: 1
+    svg
+        @extend .shadow
+        width: 1.6em
+        height: 1.6em
+        border-radius: 5px
+        padding: 5px
+        &:hover
+            cursor: pointer
+    .theme-input
+        width: 4em
+        font-size: 0.9em
+        padding: 0.1em !important
 
 .pdf-controls
+    margin: 5px
     &:hover
         cursor: pointer
-    span
+    b
         text-decoration: underline !important
     svg
         margin-bottom: -2px
@@ -199,4 +214,7 @@ export default {
     -o-transform: scale(-1, 1)
     -ms-transform: scale(-1, 1)
     transform: scale(-1, 1)
+
+.pdf-viewer
+    border: 2px solid $theme-dark-blue
 </style>

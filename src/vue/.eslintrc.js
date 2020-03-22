@@ -48,12 +48,13 @@ module.exports = {
         'vue/require-prop-types': 'off', // Do not demand component property types
         'vue/script-indent': 'off', // clash with base eslint for some edge cases
         'vue/attribute-hyphenation': ['error', 'never'], // allow component properties as camelCase
-        'import/extensions': 'always',
+        'import/extensions': ['error', 'always'],
         'space-before-function-paren': ['error', 'always'],
         'max-len': ['error', { 'code': 120 }],
         'prefer-destructuring': 'off',
         'no-param-reassign': ['error', { 'props': false }], // vuex
         'no-else-return': 'off',
+        'no-underscore-dangle': 'off',
         'no-plusplus': 'off',
         'no-alert': 'off', // allow alerts (we should create a custom component for this)
         'function-paren-newline': 'off',
@@ -66,6 +67,7 @@ module.exports = {
         },
     },
     globals: {
+        SupportedBrowsers: true,
         CurrentRelease: true,
         CustomEnv: true,
     },

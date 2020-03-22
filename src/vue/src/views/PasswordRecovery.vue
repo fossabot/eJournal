@@ -1,10 +1,15 @@
 <template>
     <content-single-column>
-        <h1><span>Password Recovery</span></h1>
+        <h1 class="theme-h1">
+            <span>Password Recovery</span>
+        </h1>
         <b-card class="no-hover">
             <b-form @submit.prevent="recoverPassword()">
-                <h2 class="field-heading">
+                <h2 class="theme-h2 field-heading">
                     New password
+                    <tooltip
+                        tip="Should contain at least 8 characters, a capital letter and a special character"
+                    />
                 </h2>
                 <b-input
                     v-model="password"
@@ -13,7 +18,7 @@
                     required
                     placeholder="New password"
                 />
-                <h2 class="field-heading">
+                <h2 class="theme-h2 field-heading">
                     Repeat new password
                 </h2>
                 <b-input
@@ -38,6 +43,7 @@
 
 <script>
 import contentSingleColumn from '@/components/columns/ContentSingleColumn.vue'
+import tooltip from '@/components/assets/Tooltip.vue'
 
 import authAPI from '@/api/auth.js'
 import validation from '@/utils/validation.js'
@@ -46,6 +52,7 @@ export default {
     name: 'PasswordRecovery',
     components: {
         contentSingleColumn,
+        tooltip,
     },
     props: ['username', 'recoveryToken'],
     data () {

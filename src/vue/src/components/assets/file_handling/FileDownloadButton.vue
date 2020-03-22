@@ -3,46 +3,34 @@
         class="file-controls"
         @click="fileDownload"
     >
-        <icon name="download"/>
-        <i><span>{{ fileName }}</span></i>
+        <icon
+            name="download"
+            class="shift-up-2"
+        />
+        <b class="ml-1">
+            {{ file.file_name }}
+        </b>
     </div>
 </template>
 
 <script>
-import userAPI from '@/api/user.js'
+import auth from '@/api/auth.js'
 
 export default {
     props: {
-        fileName: {
+        file: {
             required: true,
-            String,
-        },
-        authorUID: {
-            required: true,
-            String,
-        },
-        entryID: {
-            required: true,
-            String,
-        },
-        nodeID: {
-            required: true,
-            String,
-        },
-        contentID: {
-            required: true,
-            String,
         },
     },
     methods: {
         fileDownload () {
-            userAPI.download(this.authorUID, this.fileName, this.entryID, this.nodeID, this.contentID)
+            auth.downloadFile(this.file.download_url)
                 .then((response) => {
                     try {
                         const blob = new Blob([response.data], { type: response.headers['content-type'] })
                         const link = document.createElement('a')
                         link.href = window.URL.createObjectURL(blob)
-                        link.download = this.fileName
+                        link.download = this.file.file_name
                         document.body.appendChild(link)
                         link.click()
                         link.remove()
@@ -59,8 +47,6 @@ export default {
 .file-controls
     &:hover
         cursor: pointer
-    span
+    b
         text-decoration: underline !important
-    svg
-        margin-bottom: -4px
 </style>

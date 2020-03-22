@@ -8,7 +8,7 @@
 <template>
     <b-row class="node-container">
         <b-col
-            cols="7"
+            cols="8"
             class="d-flex h-100 align-items-center"
         >
             <timeline-node-info
@@ -17,7 +17,7 @@
             />
         </b-col>
         <b-col
-            cols="5"
+            cols="4"
             class="d-flex h-100 align-items-center justify-content-center"
         >
             <div

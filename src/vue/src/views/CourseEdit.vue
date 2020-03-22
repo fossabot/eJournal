@@ -28,7 +28,9 @@
         </div>
 
         <div slot="right-content-column">
-            <h3>Actions</h3>
+            <h3 class="theme-h3">
+                Actions
+            </h3>
             <b-button
                 v-if="$hasPermission('can_edit_course_details')"
                 class="multi-form change-button full-width"
@@ -107,6 +109,12 @@ export default {
         courseAPI.get(this.cID)
             .then((course) => {
                 this.course = course
+                if (!this.course.startdate) {
+                    this.course.startdate = ''
+                }
+                if (!this.course.enddate) {
+                    this.course.enddate = ''
+                }
                 this.originalCourse = this.deepCopyCourse(course)
             })
     },

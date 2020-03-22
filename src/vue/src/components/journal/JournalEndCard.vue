@@ -3,7 +3,9 @@
         :class="$root.getBorderClass($route.params.cID)"
         class="no-hover"
     >
-        <h2>End of assignment</h2>
+        <h2 class="theme-h2">
+            End of assignment
+        </h2>
         <hr class="full-width"/>
         <b v-if="assignment.due_date">
             <span v-if="new Date() > new Date(assignment.due_date) && !assignment.lock_date">

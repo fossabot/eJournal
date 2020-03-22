@@ -5,7 +5,7 @@
             @submit.prevent="onSubmit"
             @reset.prevent="onReset"
         >
-            <h2 class="field-heading required">
+            <h2 class="theme-h2 field-heading required">
                 Course name
             </h2>
             <b-input
@@ -13,7 +13,7 @@
                 class="multi-form theme-input"
                 placeholder="Course name"
             />
-            <h2 class="field-heading required">
+            <h2 class="theme-h2 field-heading required">
                 Course abbreviation
             </h2>
             <b-input
@@ -24,26 +24,30 @@
             />
             <b-row>
                 <b-col cols="6">
-                    <h2 class="field-heading required">
+                    <h2 class="theme-h2 field-heading">
                         Start date
                         <tooltip tip="Start date of the course"/>
                     </h2>
-                    <flat-pickr
-                        v-model="form.startdate"
-                        class="multi-form multi-date-input theme-input full-width"
-                        :config="{ maxDate: form.enddate }"
-                    />
+                    <reset-wrapper v-model="form.startdate">
+                        <flat-pickr
+                            v-model="form.startdate"
+                            class="multi-form full-width"
+                            :config="startDateConfig"
+                        />
+                    </reset-wrapper>
                 </b-col>
                 <b-col cols="6">
-                    <h2 class="field-heading required">
+                    <h2 class="theme-h2 field-heading">
                         End date
                         <tooltip tip="End date of the course"/>
                     </h2>
-                    <flat-pickr
-                        v-model="form.enddate"
-                        class="multi-form multi-date-input theme-input full-width"
-                        :config="{ minDate: form.startdate }"
-                    />
+                    <reset-wrapper v-model="form.enddate">
+                        <flat-pickr
+                            v-model="form.enddate"
+                            class="multi-form full-width"
+                            :config="endDateConfig"
+                        />
+                    </reset-wrapper>
                 </b-col>
             </b-row>
             <b-button
@@ -66,7 +70,6 @@
 
 <script>
 import courseAPI from '@/api/course.js'
-import genericUtils from '@/utils/generic_utils.js'
 import tooltip from '@/components/assets/Tooltip.vue'
 import commonAPI from '@/api/common.js'
 
@@ -87,18 +90,34 @@ export default {
             },
         }
     },
+    computed: {
+        startDateConfig () {
+            const additionalConfig = {}
+            if (this.form.enddate) {
+                additionalConfig.maxDate = new Date(this.form.enddate)
+            }
+            return Object.assign({}, additionalConfig, this.$root.flatPickrConfig)
+        },
+        endDateConfig () {
+            const additionalConfig = {}
+            if (this.form.startdate) {
+                additionalConfig.minDate = new Date(this.form.startdate)
+            }
+            return Object.assign({}, additionalConfig, this.$root.flatPickrConfig)
+        },
+    },
     mounted () {
         if (this.lti !== undefined) {
             this.form.name = this.lti.ltiCourseName
             this.form.abbreviation = this.lti.ltiCourseAbbr
             this.form.lti_id = this.lti.ltiCourseID
-            this.form.startdate = this.lti.ltiCourseStart.split(' ')[0]
-            this.form.enddate = genericUtils.yearOffset(this.form.startdate)
+            this.form.startdate = this.lti.ltiCourseStart.split(' ')[0] || ''
+            this.form.enddate = ''
         }
     },
     methods: {
         formFilled () {
-            return this.form.name && this.form.abbreviation && this.form.startdate && this.form.enddate
+            return this.form.name && this.form.abbreviation
         },
         onSubmit () {
             if (this.formFilled()) {

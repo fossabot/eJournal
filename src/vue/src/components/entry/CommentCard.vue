@@ -12,7 +12,7 @@
             >
                 <img
                     :src="comment.author.profile_picture"
-                    class="profile-picture-sm no-hover"
+                    class="theme-img profile-picture-sm no-hover"
                 />
                 <b-card
                     :class="$root.getBorderClass($route.params.cID)"
@@ -23,13 +23,13 @@
                         <hr class="full-width"/>
                         <b>{{ comment.author.full_name }}</b>
                         <icon
-                            v-if="canEditComment(comment)"
+                            v-if="comment.can_edit"
                             name="trash"
                             class="float-right trash-icon"
                             @click.native="deleteComment(comment.id)"
                         />
                         <icon
-                            v-if="canEditComment(comment)"
+                            v-if="comment.can_edit"
                             name="edit"
                             scale="1.07"
                             class="float-right ml-2 edit-icon"
@@ -45,8 +45,7 @@
                         </span>
                         <span
                             v-else-if="comment.published"
-                            v-b-tooltip
-                            :title="`Last edit by: ${comment.last_edited_by}`"
+                            v-b-tooltip:hover="`Last edit by: ${comment.last_edited_by}`"
                             class="timestamp"
                         >
                             Last edited: {{ $root.beautifyDate(comment.last_edited) }}
@@ -65,13 +64,14 @@
                     <div v-else>
                         <text-editor
                             :id="'comment-text-editor-' + index"
+                            :key="'comment-text-editor-' + index"
                             v-model="editCommentTemp[index]"
                             :basic="true"
                             :footer="false"
                             class="multi-form"
                         />
                         <b-button
-                            v-if="canEditComment(comment)"
+                            v-if="comment.can_edit"
                             class="multi-form delete-button"
                             @click="editCommentView(index, false, '')"
                         >
@@ -79,7 +79,7 @@
                             Cancel
                         </b-button>
                         <b-button
-                            v-if="canEditComment(comment)"
+                            v-if="comment.can_edit"
                             :class="{ 'input-disabled': saveRequestInFlight }"
                             class="ml-2 add-button float-right"
                             @click="editComment(comment.id, index)"
@@ -97,14 +97,15 @@
         >
             <img
                 :src="$store.getters['user/profilePicture']"
-                class="profile-picture-sm no-hover"
+                class="theme-img profile-picture-sm no-hover"
             />
             <b-card
                 :class="$root.getBorderClass($route.params.cID)"
                 class="no-hover new-comment"
             >
                 <text-editor
-                    :id="'comment-text-editor'"
+                    :id="`comment-text-editor-new-comment-${eID}`"
+                    :key="`comment-text-editor-new-comment-${eID}`"
                     ref="comment-text-editor-ref"
                     v-model="tempComment"
                     :basic="true"
@@ -201,7 +202,8 @@ export default {
     methods: {
         canEditComment (comment) {
             return this.$store.getters['user/uID'] === comment.author.id
-                || (this.$hasPermission('can_edit_staff_comment') && comment.author.id !== this.journal.student.id)
+                || (this.$hasPermission('can_edit_staff_comment')
+                    && !this.journal.authors.filter(author => author.id === comment.author.id))
         },
         setComments () {
             commentAPI.getFromEntry(this.eID)
@@ -271,7 +273,7 @@ export default {
         },
         deleteComment (cID) {
             if (window.confirm('Are you sure you want to delete this comment?')) {
-                commentAPI.delete(cID)
+                commentAPI.delete(cID, { responseSuccessToast: true })
                     .then(() => {
                         this.commentObject.forEach((comment, i) => {
                             if (comment.id === cID) {

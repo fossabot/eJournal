@@ -2,8 +2,11 @@
 <!-- If more events are desired, here is an overview: https://www.tiny.cloud/docs/advanced/events/ -->
 
 <template>
-    <div class="editor-container">
-        <textarea
+    <div
+        :ref="`ref-${id}`"
+        class="editor-container"
+    >
+        <div
             :id="id"
             :placeholder="placeholder"
         />
@@ -11,8 +14,9 @@
 </template>
 
 <script>
+/* eslint-disable import/extensions */
 import tinymce from 'tinymce/tinymce'
-import 'tinymce/themes/modern/theme'
+import 'tinymce/themes/silver'
 
 /* Only works with basic lists enabled. */
 import 'tinymce/plugins/advlist'
@@ -20,14 +24,12 @@ import 'tinymce/plugins/autolink'
 import 'tinymce/plugins/autoresize'
 /* Allows direct manipulation of the html aswell as easy export. */
 import 'tinymce/plugins/code'
-import 'tinymce/plugins/colorpicker'
 import 'tinymce/plugins/fullscreen'
 import 'tinymce/plugins/image'
 import 'tinymce/plugins/imagetools'
 import 'tinymce/plugins/link'
 import 'tinymce/plugins/lists'
 import 'tinymce/plugins/nonbreaking'
-import 'tinymce/plugins/media'
 import 'tinymce/plugins/preview'
 import 'tinymce/plugins/paste'
 import 'tinymce/plugins/print'
@@ -35,13 +37,15 @@ import 'tinymce/plugins/hr'
 import 'tinymce/plugins/searchreplace'
 import 'tinymce/plugins/spellchecker'
 import 'tinymce/plugins/table'
-import 'tinymce/plugins/textcolor'
 import 'tinymce/plugins/textpattern'
 /* Table of contents. */
 import 'tinymce/plugins/toc'
 import 'tinymce/plugins/wordcount'
+/* eslint-enable import/extensions */
 
-import 'public/external/tinymce/plugins/placeholder.js'
+import 'public/tinymce/plugins/placeholder.js'
+
+import auth from '@/api/auth.js'
 
 export default {
     name: 'TextEditor',
@@ -67,6 +71,9 @@ export default {
             type: String,
             default: '',
         },
+        inline: {
+            default: false, // NOTE: Does not play nice with bootstrap modals
+        },
         displayInline: {
             default: false,
         },
@@ -86,76 +93,70 @@ export default {
             config: {
                 selector: `#${this.id}`,
                 init_instance_callback: this.editorInit,
+
+                /* Style */
                 // QUESTION: How the bloody hell do we make this available with webpack so we can use node modules,
                 // whilst also predetermining the correct url before bundling?.
-                skin_url: '/external/tinymce/skins/lightgray',
-
-                paste_data_images: true,
-                /* https://www.tiny.cloud/docs/configure/file-image-upload/#images_dataimg_filter
-                 * Disables conversion of base64 images into blobs, only used when pasting an image. */
-                images_dataimg_filter (img) {
-                    return img.hasAttribute('internal-blob')
-                },
+                skin_url: '/tinymce/skins/ui/oxide',
+                /* Custom style applied to the content of the editor */
+                content_css: '/tinymce/content.css',
 
                 menubar: true,
                 branding: false,
                 statusbar: true,
-                inline: false,
-                image_title: true,
+                inline: this.inline,
+                resize: true,
 
-                autoresize_min_height: 150,
-                autoresize_max_height: 400,
+                /* File handling */
+                image_title: true,
+                paste_data_images: true,
+                images_upload_handler: this.imageUploadHandler,
+
+                /* Editor size */
+                min_height: 260,
+                max_height: 500,
                 autoresize_bottom_margin: 10,
 
-                /* Custom styling applied to the editor */
-                content_style: `
-                    @import url('https://fonts.googleapis.com/css?family=Roboto+Condensed|Roboto:400,700');
-                    body {
-                        font-family: 'Roboto Condensed', sans-serif;
-                        font-size: 16px !important;
-                    }
-                `,
-
-                file_picker_types: 'image',
-                file_picker_callback: this.insertDataURL,
+                /* Link handling */
+                link_assume_external_targets: true,
+                default_link_target: '_blank',
 
                 placeholder_attrs: {
                     style: {
                         position: 'absolute',
-                        top: '19px',
-                        left: 13,
+                        top: '0px',
+                        left: 0,
                         color: '#888',
-                        fontsize: '1.2em',
-                        padding: '0.375rem 0.75rem',
+                        padding: '13px 0 0 6px',
                         overflow: 'hidden',
-                        'font-family': 'Roboto Condensed',
+                        'font-family': 'Roboto',
                         'white-space': 'pre-wrap',
                     },
                 },
             },
             basicConfig: {
                 toolbar1: 'bold italic underline alignleft aligncenter alignright alignjustify '
-                    + '| forecolor backcolor | formatselect | bullist numlist | image media table '
+                    + '| forecolor backcolor | formatselect | bullist numlist | image table '
                     + '| removeformat fullscreentoggle fullscreen',
                 plugins: [
-                    'placeholder autoresize paste textcolor image lists wordcount autolink',
-                    'table media fullscreen',
+                    'placeholder autoresize paste image lists wordcount autolink',
+                    'table fullscreen',
                 ],
             },
             extensiveConfig: {
                 toolbar1: 'bold italic underline alignleft aligncenter alignright alignjustify | forecolor backcolor '
-                    + '| formatselect | bullist numlist | image media table | removeformat fullscreentoggle fullscreen',
+                    + '| formatselect | bullist numlist | image table | removeformat fullscreentoggle fullscreen',
                 plugins: [
-                    'placeholder link media preview paste print hr lists advlist wordcount autolink',
+                    'placeholder link preview paste print hr lists advlist wordcount autolink',
                     'autoresize code fullscreen image imagetools',
-                    'textcolor searchreplace table toc',
+                    'searchreplace table toc',
                 ],
             },
             extensiveConfigMenu: {
                 menu: {
                     file: { title: 'File', items: 'newdocument print' },
                     edit: { title: 'Edit', items: 'undo redo | cut copy paste | code | selectall searchreplace' },
-                    insert: { title: 'Insert', items: 'image media link | hr | toc' },
+                    insert: { title: 'Insert', items: 'image link | hr | toc' },
                     view: { title: 'View', items: 'preview fullscreen' },
                     format: {
                         title: 'Format',
@@ -187,8 +188,6 @@ export default {
 
         if (this.limitedColors) {
             this.setCustomColors()
-        } else {
-            this.config.plugins.push('colorpicker')
         }
 
         if (this.minifiedTextArea) { this.minifyTextArea() }
@@ -200,7 +199,12 @@ export default {
         tinymce.init(this.config)
     },
     beforeDestroy () {
-        if (this.editor) { this.editor.destroy() }
+        try {
+            if (this.editor) { tinymce.remove(this.editor) }
+        } catch (NS_ERROR_UNEXPECTED) {
+            // NOTE: User behaviour is not interrupted by this error
+            // TODO: When we have time, figure out the underlying issue
+        }
     },
     methods: {
         initValue (value) {
@@ -230,28 +234,49 @@ export default {
             vm.initValue(vm.value)
         },
         setupInlineDisplay (editor) {
-            editor.theme.panel.find('toolbar')[0].$el.hide()
-            if (!this.basic) { editor.theme.panel.find('menubar')[0].$el.hide() }
-            if (this.footer) { editor.theme.panel.find('#statusbar')[0].$el.hide() }
+            const container = this.$refs[`ref-${this.id}`]
+
+            container.querySelector('div.tox-editor-header').style.display = 'none'
+            if (this.footer) { container.querySelector('div.tox-statusbar').style.display = 'none' }
 
             editor.on('focus', () => {
                 this.justFocused = true
                 setTimeout(() => { this.justFocused = false }, 20)
-                if (!this.basic) { editor.theme.panel.find('menubar')[0].$el.show() }
-                editor.theme.panel.find('toolbar')[0].$el.show()
-                if (this.footer) { editor.theme.panel.find('#statusbar')[0].$el.show() }
+                container.querySelector('div.tox-editor-header').style.display = 'block'
+                if (this.footer) { container.querySelector('div.tox-statusbar').style.display = 'flex' }
             })
 
             editor.on('blur', () => {
                 if (this.justFocused) { return }
-                if (!this.basic) { editor.theme.panel.find('menubar')[0].$el.hide() }
-                editor.theme.panel.find('toolbar')[0].$el.hide()
-                if (this.footer) { editor.theme.panel.find('#statusbar')[0].$el.hide() }
+                container.querySelector('div.tox-editor-header').style.display = 'none'
+                if (this.footer) { container.querySelector('div.tox-statusbar').style.display = 'none' }
             })
         },
         handleShortCuts (e) {
             if (this.editor.plugins.fullscreen.isFullscreen() && e.key === 'Escape') {
                 this.editor.execCommand('mceFullScreen', { skip_focus: true })
+            }
+        },
+        /*
+            * Blob info consists of:
+            * blobInfo.id(): blobid -- 'blobidXXX'
+            * blobInfo.name(): filename -- 'some_img'
+            * blobInfo.blob(): javascript file object
+            * blobInfo.filename() filename with extension -- 'some_img.jpg'
+        */
+        imageUploadHandler (blobInfo, success, failure) {
+            const file = blobInfo.blob()
+            const formData = new FormData()
+
+            if (file.size > this.$root.maxFileSizeBytes) {
+                failure(`The selected file exceeds the maximum file size of: ${this.$root.maxSizeBytes} bytes.`)
+            } else {
+                formData.append('in_rich_text', true)
+                formData.append('file', file)
+
+                auth.uploadFile('files', formData)
+                    .then((response) => { success(response.data.download_url) })
+                    .catch(() => { failure('File upload failed') })
             }
         },
         insertDataURL () {
@@ -280,15 +305,14 @@ export default {
             input.click()
         },
         setCustomColors () {
-            /* Enables some basic colors too chose from, inline with the websites theme colors. */
-            this.config.textcolor_cols = 4
-            this.config.textcolor_rows = 1
-            this.config.textcolor_map = [
+            /* Enables some basic colors to chose from, inline with the websites theme colors. */
+            this.config.color_map = [
                 '252C39', 'Theme dark blue',
                 '007E33', 'Theme positive selected',
                 'FF8800', 'Theme change selected',
                 'CC0000', 'Theme negative selected',
             ]
+            this.config.custom_colors = false
         },
         setBasicConfig () {
             this.config.menubar = false
@@ -302,8 +326,8 @@ export default {
             this.config.menu = this.extensiveConfigMenu.menu
         },
         minifyTextArea () {
-            this.config.autoresize_min_height = 0
-            this.config.autoresize_max_height = 150
+            this.config.min_height = 10
+            this.config.max_height = 260
             this.config.autoresize_bottom_margin = 0.1
             this.config.placeholder_attrs.style.left = 6
         },
@@ -342,12 +366,29 @@ export default {
 </script>
 
 <style lang="sass">
+@import '~sass/partials/shadows.sass'
+
 .editor-container
     border-radius: 5px !important
     padding-right: 1px
     width: 100%
-    div
+    .tox-tinymce
         border-radius: 5px !important
+    .tox
+        font-family: 'Roboto Condensed', sans-serif
+    .tox-edit-area
+        border-radius: 0px !important
+        &::before
+            @extend .small-inner-shadow
+            content: ''
+            position: absolute
+            z-index: 2
+            top: 0
+            right: 0
+            bottom: 0
+            left: 0
+            pointer-events: none
+
 
 div.mce-fullscreen
     padding-top: 70px

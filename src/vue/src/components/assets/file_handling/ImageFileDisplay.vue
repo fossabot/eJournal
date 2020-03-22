@@ -4,12 +4,18 @@
             class="image-controls mb-2 unselectable"
             @click="handleDownload"
         >
-            <icon name="image"/>
-            <i><span>{{ fileName }}</span></i>
+            <icon
+                name="image"
+                class="shift-up-2"
+            />
+            <b class="ml-1">
+                {{ file.file_name }}
+            </b>
         </div>
         <transition name="fade">
             <img
                 v-if="fileURL && show"
+                class="theme-img"
                 :class="showImage"
                 :src="fileURL"
             />
@@ -18,32 +24,15 @@
 </template>
 
 <script>
-import userAPI from '@/api/user.js'
+import auth from '@/api/auth.js'
 
 export default {
     props: {
-        fileName: {
+        file: {
             required: true,
-            String,
-        },
-        authorUID: {
-            required: true,
-            String,
         },
         display: {
             default: false,
-        },
-        entryID: {
-            required: true,
-            String,
-        },
-        nodeID: {
-            required: true,
-            String,
-        },
-        contentID: {
-            required: true,
-            String,
         },
     },
     data () {
@@ -71,7 +60,7 @@ export default {
             }
         },
         fileDownload () {
-            userAPI.download(this.authorUID, this.fileName, this.entryID, this.nodeID, this.contentID)
+            auth.downloadFile(this.file.download_url)
                 .then((response) => {
                     try {
                         const blob = new Blob([response.data], { type: response.headers['content-type'] })
@@ -102,8 +91,6 @@ export default {
     .image-controls
         &:hover
             cursor: pointer
-        span
+        b
             text-decoration: underline !important
-        svg
-            margin-bottom: -2px
 </style>

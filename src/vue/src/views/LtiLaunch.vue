@@ -2,7 +2,7 @@
     <content-single-column>
         <h1
             v-if="currentPage"
-            class="mb-2"
+            class="theme-h1 mb-2"
         >
             <span>{{ currentPage }}</span>
         </h1>
@@ -40,7 +40,6 @@ import ltiAPI from '@/api/lti.js'
 import router from '@/router'
 import courseAPI from '@/api/course.js'
 import assignmentAPI from '@/api/assignment.js'
-import genericUtils from '@/utils/generic_utils.js'
 
 export default {
     name: 'LtiLaunch',
@@ -184,8 +183,8 @@ export default {
             courseAPI.create({
                 name: this.lti.ltiCourseName,
                 abbreviation: this.lti.ltiCourseAbbr,
-                startdate: this.lti.ltiCourseStart.split(' ')[0],
-                enddate: genericUtils.yearOffset(this.lti.ltiCourseStart.split(' ')[0]),
+                startdate: this.lti.ltiCourseStart.split(' ')[0] || '',
+                enddate: '',
                 lti_id: this.lti.ltiCourseID,
             }).then((course) => {
                 this.page.cID = course.id
@@ -195,7 +194,7 @@ export default {
         autoSetupAssignment () {
             assignmentAPI.create({
                 name: this.lti.ltiAssignName,
-                description: 'No content.',
+                description: '',
                 course_id: this.page.cID,
                 lti_id: this.lti.ltiAssignID,
                 points_possible: this.lti.ltiPointsPossible,
@@ -248,7 +247,7 @@ export default {
                 this.handleCourseChoice = true
                 break
             case this.states.new_assign:
-                assignmentAPI.getCopyable().then((assignments) => {
+                assignmentAPI.getImportable().then((assignments) => {
                     this.assignments = assignments
                     this.linkableAssignments = assignments.slice()
                     for (let i = 0; i < this.linkableAssignments.length; i++) {
@@ -293,14 +292,25 @@ export default {
             case this.states.finish_s:
                 /* Student has created a journal for an existing assignment, we need to update the store. */
                 this.$store.dispatch('user/populateStore').then(() => {
-                    this.$router.push({
-                        name: 'Journal',
-                        params: {
-                            cID: this.page.cID,
-                            aID: this.page.aID,
-                            jID: this.page.jID,
-                        },
-                    })
+                    /* If journal id is not set, it is a group assignment, and it should go to JoinJournal. */
+                    if (this.page.jID !== null) {
+                        this.$router.push({
+                            name: 'Journal',
+                            params: {
+                                cID: this.page.cID,
+                                aID: this.page.aID,
+                                jID: this.page.jID,
+                            },
+                        })
+                    } else {
+                        this.$router.push({
+                            name: 'JoinJournal',
+                            params: {
+                                cID: this.page.cID,
+                                aID: this.page.aID,
+                            },
+                        })
+                    }
                 }, (error) => {
                     this.$router.push({
                         name: 'ErrorPage',

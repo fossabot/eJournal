@@ -1,6 +1,6 @@
 -r base.txt
 
-coverage==4.5.4 # Tests
+coverage==5.0.3 # Tests
 Faker==2.0.2 # Tests
 flake8==3.7.8 # Tests
 mccabe==0.6.1 # Tests, plugin for flake8

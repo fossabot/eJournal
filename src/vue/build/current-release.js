@@ -1,12 +1,10 @@
-const execFileSync = require('child_process').execFileSync
-const version = ""
-const rawMessage = ""
-const date = ""
+const fs = require('fs')
+
+const packageJSON = fs.readFileSync('./package.json')
+const version = JSON.parse(packageJSON).version || 'version unknown'
 
 const currentRelease = {
     version,
-    message: rawMessage.length > 1 ? rawMessage[1] : '',
-    date,
 }
 
 module.exports = currentRelease

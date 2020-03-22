@@ -23,4 +23,9 @@
         padding: 30px 30px 10px 30px !important
 
 .content-single-column
-    min-height: calc(100vh - 70px)
+    @include lg
+        height: calc(100vh - 70px)
+        overflow-y: auto
+        overflow-x: hidden
+    .content
+        padding: 30px 10px 10px 10px !important

@@ -6,6 +6,7 @@ This includes:
     /forgot_password/ -- to get the names belonging to the ids
 """
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.db.models import Q
 from django.http import HttpResponse
 from django.utils.html import escape
 from rest_framework.decorators import api_view, permission_classes
@@ -28,22 +29,19 @@ def forgot_password(request):
     """Handles a forgot password request.
 
     Arguments:
-        username -- User claimed username.
-        email -- User claimed email.
+        identifier -- User claimed username / email.
         token -- Django stateless token, invalidated after password change or after a set time (by default three days).
 
     Generates a recovery token if a matching user can be found by either the prodived username or email.
     """
-    username, email = utils.optional_params(request.data, 'username', 'email')
+    identifier, = utils.required_params(request.data, 'identifier')
 
     # We are retrieving the username based on either the username or email
-    try:
-        user = User.objects.get(username=username)
+    user = User.objects.get(Q(email=identifier) | Q(username=identifier))
+    if user.email == identifier:
+        email = identifier
+    else:
         email = 'your recovery address'
-    except User.DoesNotExist:
-        if email is None or email == '':
-            return response.not_found('Invalid email address provided.')
-        user = User.objects.get(email=email)
 
     if not user.email:
         return response.bad_request(

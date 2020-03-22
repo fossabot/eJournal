@@ -13,17 +13,15 @@
             >
                 <icon
                     v-if="!$store.getters['user/verifiedEmail']"
-                    v-b-tooltip.hover
-                    :title="(showEmailValidationInput) ? 'Enter the email verification token below.' :
+                    v-b-tooltip:hover="(showEmailValidationInput) ? 'Enter the email verification token below.' :
                         'Click to verify your email!'"
                     :name="(showEmailValidationInput) ? 'check' : 'paper-plane'"
                     @click.native="requestEmailVerification"
                 />
                 <icon
                     v-if="$store.getters['user/verifiedEmail']"
-                    v-b-tooltip.hover
+                    v-b-tooltip:hover="'Your email is verified!'"
                     name="check"
-                    title="Your email is verified!"
                     class="checked-icon"
                 />
             </b-input-group-text>
@@ -35,8 +33,7 @@
         >
             <b-input
                 v-model="emailVerificationToken"
-                v-b-tooltip.hover
-                :title="(emailVerificationTokenMessage) ? emailVerificationTokenMessage : 'Enter your token'"
+                v-b-tooltip:hover="(emailVerificationTokenMessage) ? emailVerificationTokenMessage : 'Enter your token'"
                 class="theme-input"
                 required
                 placeholder="Enter the email verification token."
@@ -46,9 +43,8 @@
                 class="theme-input input-append-icon round-border"
             >
                 <icon
-                    v-b-tooltip.hover
+                    v-b-tooltip:hover="'Validate verification code.'"
                     name="paper-plane"
-                    title="Validate verification code."
                     @click.native="verifyEmail"
                 />
             </b-input-group-text>

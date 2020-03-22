@@ -1,22 +1,13 @@
 import auth from '@/api/auth.js'
 
 export default {
+    GDPR (id, connArgs = auth.DEFAULT_CONN_ARGS) {
+        return auth.downloadFile(`users/${id}/GDPR/`, null, connArgs)
+    },
+
     update (id, data, connArgs = auth.DEFAULT_CONN_ARGS) {
         return auth.update(`users/${id}`, data, connArgs)
             .then(response => response.data.user)
-    },
-
-    download (id, fileName, entryID, nodeID, contentID, connArgs = auth.DEFAULT_CONN_ARGS) {
-        return auth.downloadFile(`users/${id}/download`, {
-            file_name: fileName,
-            entry_id: entryID,
-            node_id: nodeID,
-            content_id: contentID,
-        }, connArgs)
-    },
-
-    GDPR (id, connArgs = auth.DEFAULT_CONN_ARGS) {
-        return auth.downloadFile(`users/${id}/GDPR/`, null, connArgs)
     },
 
     /* Upload an image that is base64 encoded. */

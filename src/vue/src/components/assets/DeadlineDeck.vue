@@ -1,6 +1,9 @@
 <template>
     <div v-if="computedDeadlines.length > 0">
-        <h3 slot="right-content-column">
+        <h3
+            slot="right-content-column"
+            class="theme-h3"
+        >
             To Do
         </h3>
         <!-- TODO: This seems like an inappropriate permission check. Will have to be reconsidered in the rework. -->
@@ -8,7 +11,7 @@
             v-if="showSortBy && computedDeadlines.length > 1"
             v-model="selectedSortOption"
             :selectSize="1"
-            class="multi-form"
+            class="theme-select multi-form"
         >
             <option value="date">
                 Sort by date
@@ -23,7 +26,7 @@
             :key="i"
         >
             <b-link
-                :to="assignmentRoute(d.course.id, d.id, d.journal, d.is_published)"
+                :to="$root.assignmentRoute(d)"
                 tag="b-button"
             >
                 <todo-card
@@ -103,24 +106,6 @@ export default {
         ...mapMutations({
             setSortBy: 'preferences/SET_TODO_SORT_BY',
         }),
-        assignmentRoute (cID, aID, jID, isPublished) {
-            const route = {
-                params: {
-                    cID,
-                    aID,
-                },
-            }
-
-            if (!isPublished) {
-                route.name = 'FormatEdit'
-            } else if (this.$hasPermission('can_view_all_journals', 'assignment', aID)) {
-                route.name = 'Assignment'
-            } else {
-                route.name = 'Journal'
-                route.params.jID = jID
-            }
-            return route
-        },
     },
 }
 </script>

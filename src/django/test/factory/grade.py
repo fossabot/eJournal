@@ -10,7 +10,7 @@ class GradeFactory(factory.django.DjangoModelFactory):
     entry = factory.SubFactory('test.factory.entry.EntryFactory')
     grade = 1
     published = True
-    date = date(2019, 1, 1)
+    creation_date = date(2019, 1, 1)
     author = None
 
     @factory.post_generation
@@ -20,3 +20,5 @@ class GradeFactory(factory.django.DjangoModelFactory):
 
         self.author = self.entry.node.journal.assignment.courses.first().author
         self.save()
+        self.entry.grade = self
+        self.entry.save()

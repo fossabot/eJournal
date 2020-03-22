@@ -2,8 +2,14 @@
     <b-card
         class="large-load-spinner no-hover"
     >
-        <img src="/ejournal-book.svg"/>
-        <img src="/ejournal-book.svg"/>
+        <img
+            src="/ejournal-book.svg"
+            class="theme-img"
+        />
+        <img
+            src="/ejournal-book.svg"
+            class="theme-img"
+        />
     </b-card>
 </template>
 

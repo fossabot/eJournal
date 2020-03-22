@@ -6,7 +6,7 @@
         >
             <h2
                 v-if="!lti"
-                class="field-heading required"
+                class="theme-h2 field-heading required"
             >
                 Username
             </h2>
@@ -20,7 +20,7 @@
             />
             <h2
                 v-if="!lti"
-                class="field-heading required"
+                class="theme-h2 field-heading required"
             >
                 Full name
             </h2>
@@ -32,8 +32,11 @@
                 maxlength="200"
                 required
             />
-            <h2 class="field-heading required">
+            <h2 class="theme-h2 field-heading required">
                 New password
+                <tooltip
+                    tip="Should contain at least 8 characters, a capital letter and a special character"
+                />
             </h2>
             <b-input
                 v-model="form.password"
@@ -42,7 +45,7 @@
                 placeholder="Password"
                 required
             />
-            <h2 class="field-heading required">
+            <h2 class="theme-h2 field-heading required">
                 Repeat new password
             </h2>
             <b-input
@@ -54,7 +57,7 @@
             />
             <h2
                 v-if="!lti"
-                class="field-heading required"
+                class="theme-h2 field-heading required"
             >
                 Email
             </h2>
@@ -74,6 +77,7 @@
             </b-button>
             <b-button
                 class="float-right multi-form"
+                :class="{ 'input-disabled': saveRequestInFlight }"
                 type="submit"
             >
                 <icon name="user-plus"/>
@@ -84,12 +88,17 @@
 </template>
 
 <script>
+import tooltip from '@/components/assets/Tooltip.vue'
+
 import authAPI from '@/api/auth.js'
 import validation from '@/utils/validation.js'
 import statuses from '@/utils/constants/status_codes.js'
 
 export default {
     name: 'RegisterUser',
+    components: {
+        tooltip,
+    },
     props: ['lti'],
     data () {
         return {
@@ -101,10 +110,12 @@ export default {
                 email: '',
                 ltiJWT: '',
             },
+            saveRequestInFlight: false,
         }
     },
     methods: {
         onSubmit () {
+            this.saveRequestInFlight = true
             if (this.lti) {
                 this.form.username = this.lti.username
                 this.form.ltiJWT = this.lti.ltiJWT
@@ -127,13 +138,18 @@ export default {
                             'user/login',
                             { username: this.form.username, password: this.form.password },
                         )
-                            .then(() => { this.$emit('handleAction') })
+                            .then(() => {
+                                this.$emit('handleAction')
+                                this.saveRequestInFlight = false
+                            })
                             .catch(() => {
+                                this.saveRequestInFlight = false
                                 this.$toasted.error('Error logging in with your newly created account, please contact '
                                 + 'a system administrator or try registering again.')
                             })
                     })
                     .catch((error) => {
+                        this.saveRequestInFlight = false
                         if (error.response.status === statuses.FORBIDDEN) {
                             this.$router.push({
                                 name: 'ErrorPage',
@@ -145,6 +161,8 @@ export default {
                             })
                         }
                     })
+            } else {
+                this.saveRequestInFlight = false
             }
         },
         onReset () {

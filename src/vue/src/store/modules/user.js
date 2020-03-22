@@ -1,8 +1,8 @@
 import Vue from 'vue'
-import * as types from '../constants/mutation-types.js'
 import connection from '@/api/connection.js'
 import genericUtils from '@/utils/generic_utils.js'
 import sanitization from '@/utils/sanitization.js'
+import * as types from '../constants/mutation-types.js'
 
 const getters = {
     jwtAccess: state => state.jwtAccess,
@@ -78,12 +78,12 @@ const mutations = {
 
         state.permissions[permissionKey] = permissions
     },
-    [types.COPY_ASSIGNMENT_PERMISSIONS] (state, data) {
-        const copyAssignmentID = data.copyAssignmentID
+    [types.IMPORT_ASSIGNMENT_PERMISSIONS] (state, data) {
+        const importAssignmentID = data.importAssignmentID
         const sourceAssignmentID = data.sourceAssignmentID
-        const permissionCopy = JSON.parse(JSON.stringify(state.permissions[`assignment${sourceAssignmentID}`]))
+        const permissionImport = JSON.parse(JSON.stringify(state.permissions[`assignment${sourceAssignmentID}`]))
 
-        state.permissions[`assignment${copyAssignmentID}`] = permissionCopy
+        state.permissions[`assignment${importAssignmentID}`] = permissionImport
     },
 }
 
@@ -108,6 +108,7 @@ const actions = {
     },
     logout ({ commit }) {
         return Promise.all([
+            commit(`content/${types.RESET_CONTENT}`, null, { root: true }),
             commit(`preferences/${types.RESET_PREFERENCES}`, null, { root: true }),
             commit(`permissions/${types.RESET_PERMISSIONS}`, null, { root: true }),
             commit(`connection/${types.RESET_CONNECTION}`, null, { root: true }),

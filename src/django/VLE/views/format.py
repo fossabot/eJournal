@@ -7,8 +7,9 @@ from rest_framework import viewsets
 
 import VLE.utils.generic_utils as utils
 import VLE.utils.responses as response
-from VLE.models import Assignment, Group
+from VLE.models import Assignment, Field, Group, PresetNode
 from VLE.serializers import AssignmentDetailsSerializer, FormatSerializer
+from VLE.utils import file_handling
 
 
 class FormatView(viewsets.ViewSet):
@@ -70,14 +71,13 @@ class FormatView(viewsets.ViewSet):
 
         request.user.check_permission('can_edit_assignment', assignment)
 
-        # Check if the assignment can be unpublished
-        is_published, = utils.optional_params(assignment_details, 'is_published')
-        if not assignment.can_unpublish() and is_published is False:
-            return response.bad_request("You cannot unpublish an assignment that already has submissions.")
+        is_published, can_set_journal_name, can_set_journal_image, can_lock_journal = \
+            utils.optional_typed_params(
+                assignment_details, (bool, 'is_published'),
+                (bool, 'can_set_journal_name'), (bool, 'can_set_journal_image'), (bool, 'can_lock_journal'))
 
         # Remove data that must not be changed by the serializer
         req_data = assignment_details or {}
-        req_data.pop('published', None)
         req_data.pop('author', None)
 
         for key in req_data:
@@ -85,8 +85,9 @@ class FormatView(viewsets.ViewSet):
                 req_data[key] = None
 
         # Update the assignment details
-        assigned_groups = req_data.get('assigned_groups', [])
+        assigned_groups = req_data.pop('assigned_groups', [])
         if len(assigned_groups) > 0:
+            assignment.assigned_groups.set([])
             for group in assigned_groups:
                 assignment.assigned_groups.add(Group.objects.get(pk=group['id']))
         else:
@@ -94,7 +95,7 @@ class FormatView(viewsets.ViewSet):
         serializer = AssignmentDetailsSerializer(assignment, data=req_data, context={'user': request.user},
                                                  partial=True)
         if not serializer.is_valid():
-            return response.bad_request('Invalid data.')
+            return response.bad_request('Invalid assignment data.')
         serializer.save()
 
         new_ids = utils.update_templates(format, templates)
@@ -103,6 +104,13 @@ class FormatView(viewsets.ViewSet):
         utils.delete_presets(removed_presets)
         utils.archive_templates(removed_templates)
 
+        file_handling.establish_rich_text(request.user, assignment.description, assignment=assignment)
+        for field in Field.objects.filter(template__format=format):
+            file_handling.establish_rich_text(request.user, field.description, assignment=assignment)
+        for node in PresetNode.objects.filter(format=format):
+            file_handling.establish_rich_text(request.user, node.description, assignment=assignment)
+
+        file_handling.remove_unused_user_files(request.user)
         serializer = FormatSerializer(format)
         assignment_details = AssignmentDetailsSerializer(assignment, context={'user': request.user})
 

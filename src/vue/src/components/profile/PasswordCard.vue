@@ -9,7 +9,7 @@
                 autocomplete="username"
                 hidden
             />
-            <h2 class="field-heading">
+            <h2 class="theme-h2 field-heading">
                 Current password
             </h2>
             <b-input
@@ -19,8 +19,11 @@
                 placeholder="Current password"
                 autocomplete="new-password"
             />
-            <h2 class="field-heading">
+            <h2 class="theme-h2 field-heading required">
                 New password
+                <tooltip
+                    tip="Should contain at least 8 characters, a capital letter and a special character"
+                />
             </h2>
             <b-input
                 v-model="newPass"
@@ -29,7 +32,7 @@
                 placeholder="New password"
                 autocomplete="new-password"
             />
-            <h2 class="field-heading">
+            <h2 class="theme-h2 field-heading">
                 Repeat new password
             </h2>
             <b-input
@@ -51,11 +54,15 @@
 </template>
 
 <script>
-import validation from '@/utils/validation.js'
+import tooltip from '@/components/assets/Tooltip.vue'
 
+import validation from '@/utils/validation.js'
 import authAPI from '@/api/auth.js'
 
 export default {
+    components: {
+        tooltip,
+    },
     data () {
         return {
             checkbox: false,
@@ -68,6 +75,11 @@ export default {
         changePassword () {
             if (validation.validatePassword(this.newPass, this.newPassRepeat)) {
                 authAPI.changePassword(this.newPass, this.oldPass, { responseSuccessToast: true })
+                    .then(() => {
+                        this.oldPass = ''
+                        this.newPass = ''
+                        this.newPassRepeat = ''
+                    })
             }
         },
         isChanged () {

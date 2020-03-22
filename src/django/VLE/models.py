@@ -4,6 +4,8 @@ models.py.
 Database file
 """
 import os
+import random
+import string
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
@@ -16,10 +18,10 @@ from django.utils import timezone
 from django.utils.timezone import now
 
 import VLE.permissions as permissions
+import VLE.utils.file_handling as file_handling
 from VLE.utils import sanitization
 from VLE.utils.error_handling import (VLEBadRequest, VLEParticipationError, VLEPermissionError, VLEProgrammingError,
                                       VLEUnverifiedEmailError)
-from VLE.utils.file_handling import get_feedback_file_path, get_path
 
 
 class Instance(models.Model):
@@ -35,50 +37,49 @@ class Instance(models.Model):
         return self.name
 
 
-class UserFile(models.Model):
-    """UserFile.
+# https://stackoverflow.com/a/2257449
+def access_gen(size=128, chars=string.ascii_lowercase + string.ascii_uppercase + string.digits):
+    return ''.join(random.SystemRandom().choice(chars) for _ in range(size))
 
-    UserFile is a file uploaded by the user stored in MEDIA_ROOT/uID/aID/<file>
-    - author: The user who uploaded the file.
-    - file_name: The name of the file (no parts of the path to the file included).
+
+class FileContext(models.Model):
+    """FileContext.
+
+    FileContext is a file uploaded by the user stored in MEDIA_ROOT/uID/<category>/?[id/]<filename>
+        Where category is selected from {course, assignment, journal}
+
+    - file: the actual filefield contain a reference to the physical file.
+    - file_name: The name of the file (not unique and no parts of the path to the file included).
+    - author: The user who uploaded the file. Can be null so the File persist on user deletion.
+    - assignment: The assignment that the File is linked to (e.g. assignment description).
+    - content: The content that the File is linked to. Can be rich text or a dedicated file field.
+    - course: The course that the File is linked to (e.g. course description).
+    - journal: The journal that the File is linked to (e.g. comment).
     - creation_date: The time and date the file was uploaded.
-    - content_type: The content type supplied by the user (unvalidated).
-    - assignment: The assignment that the UserFile is linked to.
-    - node: The node that the UserFile is linked to.
-    - entry: The entry that the UserFile is linked to.
-    - content: The content that UserFile is linked to.
-
-    Note that deleting the assignment, node or content will also delete the UserFile.
-    UserFiles uploaded initially have no node or content set, and are considered temporary until the journal post
-    is made and the corresponding node and content are set.
     """
     file = models.FileField(
         null=False,
-        upload_to=get_path
+        upload_to=file_handling.get_file_path
+    )
+    in_rich_text = models.BooleanField(
+        default=False
+    )
+    access_id = models.CharField(
+        null=False,
+        default=access_gen,
+        max_length=128,
+        unique=True,
     )
     file_name = models.TextField(
         null=False
     )
     author = models.ForeignKey(
         'User',
-        on_delete=models.CASCADE,
-        null=False
-    )
-    content_type = models.TextField(
-        null=False
+        null=True,
+        on_delete=models.SET_NULL
     )
     assignment = models.ForeignKey(
         'Assignment',
-        on_delete=models.CASCADE,
-        null=False
-    )
-    node = models.ForeignKey(
-        'Node',
-        on_delete=models.CASCADE,
-        null=True
-    )
-    entry = models.ForeignKey(
-        'Entry',
         on_delete=models.CASCADE,
         null=True
     )
@@ -87,27 +88,57 @@ class UserFile(models.Model):
         on_delete=models.CASCADE,
         null=True
     )
+    comment = models.ForeignKey(
+        'Comment',
+        on_delete=models.CASCADE,
+        null=True
+    )
+    course = models.ForeignKey(
+        'Course',
+        on_delete=models.CASCADE,
+        null=True
+    )
+    journal = models.ForeignKey(
+        'Journal',
+        on_delete=models.CASCADE,
+        null=True
+    )
+    is_temp = models.BooleanField(
+        default=True
+    )
+
     creation_date = models.DateTimeField(editable=False)
     last_edited = models.DateTimeField()
 
+    def download_url(self, access_id=False):
+        if access_id:
+            return '{}/files/{}?access_id={}'.format(settings.API_URL, self.pk, self.access_id)
+        return '/files/{}/'.format(self.pk)
+
+    def cascade_from_user(self, user):
+        return self.author is user and self.assignment is None and self.course is None and self.journal is None
+
     def save(self, *args, **kwargs):
-        if not self.pk:
-            self.creation_date = timezone.now()
+        if self._state.adding:
+            if not self.creation_date:
+                self.creation_date = timezone.now()
+            if not self.author:
+                raise VLEProgrammingError('FileContext author should be set on creation')
         self.last_edited = timezone.now()
 
-        return super(UserFile, self).save(*args, **kwargs)
+        return super(FileContext, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         self.file.delete()
-        super(UserFile, self).delete(*args, **kwargs)
+        super(FileContext, self).delete(*args, **kwargs)
 
     def to_string(self, user=None):
-        return "UserFile"
+        return "FileContext"
 
 
-@receiver(models.signals.post_delete, sender=UserFile)
+@receiver(models.signals.post_delete, sender=FileContext)
 def auto_delete_file_on_delete(sender, instance, **kwargs):
-    """Deletes file from filesystem when corresponding `UserFile` object is deleted."""
+    """Deletes file from filesystem when corresponding `FileContext` object is deleted."""
     if instance.file:
         if os.path.isfile(instance.file.path):
             os.remove(instance.file.path)
@@ -154,7 +185,7 @@ class User(AbstractUser):
     feedback_file = models.FileField(
         null=True,
         blank=True,
-        upload_to=get_feedback_file_path
+        upload_to=file_handling.get_feedback_file_path
     )
     is_test_student = models.BooleanField(
         default=False
@@ -192,6 +223,12 @@ class User(AbstractUser):
         if not self.is_participant(obj):
             raise VLEParticipationError(obj, self)
 
+    def is_supervisor_of(self, user):
+        if self.is_superuser:
+            return True
+
+        return permissions.is_user_supervisor_of(self, user)
+
     def is_participant(self, obj):
         if self.is_superuser:
             return True
@@ -219,9 +256,8 @@ class User(AbstractUser):
                     return False
                 return obj.is_published or self.has_permission('can_view_unpublished_assignment', obj)
             return False
-
         elif isinstance(obj, Journal):
-            if obj.user != self:
+            if not obj.authors.filter(user=self).exists():
                 return self.has_permission('can_view_all_journals', obj.assignment)
             else:
                 return self.has_permission('can_have_journal', obj.assignment)
@@ -233,6 +269,16 @@ class User(AbstractUser):
                 return True
             return self.has_permission('can_grade', obj.entry.node.journal.assignment)
 
+        elif isinstance(obj, User):
+            if self == obj:
+                return True
+            if permissions.is_user_supervisor_of(self, obj):
+                return True
+            if permissions.is_user_supervisor_of(obj, self):
+                return True
+            if Journal.objects.filter(authors__user__in=[self]).filter(authors__user__in=[obj]).exists():
+                return True
+
         return False
 
     def check_can_edit(self, obj):
@@ -242,8 +288,9 @@ class User(AbstractUser):
     def to_string(self, user=None):
         if user is None:
             return "User"
-        if not (self.is_superuser or self == user or permissions.is_user_supervisor_of(user, self)):
+        if not user.can_view(self):
             return "User"
+
         return self.username + " (" + str(self.pk) + ")"
 
     def save(self, *args, **kwargs):
@@ -285,6 +332,14 @@ def auto_delete_feedback_file_on_user_delete(sender, instance, **kwargs):
             os.remove(instance.feedback_file.path)
 
 
+@receiver(models.signals.post_delete, sender=User)
+def delete_dangling_files(sender, instance, **kwargs):
+    """Deletes FileContext instances which are only of interest to the deleted user."""
+    for f in FileContext.objects.filter(author=instance):
+        if f.cascade_from_user(instance):
+            f.delete()
+
+
 class Preferences(models.Model):
     """Preferences.
 
@@ -319,7 +374,7 @@ class Preferences(models.Model):
         default=False
     )
     hide_version_alert = models.TextField(
-        max_length=10,
+        max_length=20,
         null=True,
     )
     SAVE = 's'
@@ -455,6 +510,43 @@ class Role(models.Model):
     - name: name of the role
     - list of permissions (can_...)
     """
+    GENERAL_PERMISSIONS = [
+        'can_edit_institute_details',
+        'can_add_course'
+    ]
+    COURSE_PERMISSIONS = [
+        'can_edit_course_details',
+        'can_delete_course',
+
+        'can_edit_course_roles',
+        'can_view_course_users',
+        'can_add_course_users',
+        'can_delete_course_users',
+
+        'can_add_course_user_group',
+        'can_delete_course_user_group',
+        'can_edit_course_user_group',
+
+        'can_add_assignment',
+        'can_delete_assignment',
+    ]
+    ASSIGNMENT_PERMISSIONS = [
+        'can_edit_assignment',
+        'can_grade',
+        'can_publish_grades',
+
+        'can_view_all_journals',
+        'can_view_unpublished_assignment',
+        'can_view_grade_history',
+
+        'can_manage_journals',
+        'can_have_journal',
+
+        'can_comment',
+        'can_edit_staff_comment',
+    ]
+    PERMISSIONS = COURSE_PERMISSIONS + ASSIGNMENT_PERMISSIONS
+
     name = models.TextField()
 
     course = models.ForeignKey(
@@ -475,6 +567,7 @@ class Role(models.Model):
     can_delete_assignment = models.BooleanField(default=False)
 
     can_edit_assignment = models.BooleanField(default=False)
+    can_manage_journals = models.BooleanField(default=False)
     can_view_all_journals = models.BooleanField(default=False)
     can_grade = models.BooleanField(default=False)
     can_publish_grades = models.BooleanField(default=False)
@@ -552,6 +645,16 @@ class Participation(models.Model):
         default=None,
     )
 
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        super(Participation, self).save(*args, **kwargs)
+
+        # Instance is being created (not modified)
+        if is_new:
+            existing = AssignmentParticipation.objects.filter(user=self.user).values('assignment')
+            for assignment in Assignment.objects.filter(courses__in=[self.course]).exclude(pk__in=existing):
+                AssignmentParticipation.objects.create(assignment=assignment, user=self.user)
+
     class Meta:
         """Meta data for the model: unique_together."""
 
@@ -564,7 +667,7 @@ class Participation(models.Model):
             return "Participation"
 
         return "user: {}, course: {}, role: {}".format(
-            self.user.to_string(user), self.course.to_string(user), self.role.to_string(user))
+            self.user.to_string(user=user), self.course.to_string(user=user), self.role.to_string(user=user))
 
 
 class Assignment(models.Model):
@@ -628,16 +731,30 @@ class Assignment(models.Model):
         default=list,
     )
 
+    is_group_assignment = models.BooleanField(default=False)
+    remove_grade_upon_leaving_group = models.BooleanField(default=False)
+    can_set_journal_name = models.BooleanField(default=False)
+    can_set_journal_image = models.BooleanField(default=False)
+    can_lock_journal = models.BooleanField(default=False)
+
     def has_lti_link(self):
         return self.active_lti_id is not None
 
     def is_locked(self):
         return self.unlock_date and self.unlock_date > now() or self.lock_date and self.lock_date < now()
 
+    def add_course(self, course):
+        if not self.courses.filter(pk=course.pk).exists():
+            self.courses.add(course)
+            existing = AssignmentParticipation.objects.filter(assignment=self).values('user')
+            for user in course.users.exclude(pk__in=existing):
+                AssignmentParticipation.objects.create(assignment=self, user=user)
+
     def save(self, *args, **kwargs):
         self.description = sanitization.strip_script_tags(self.description)
 
         active_lti_id_modified = False
+        type_changed = False
 
         # Instance is being created (not modified)
         if self._state.adding:
@@ -646,6 +763,14 @@ class Assignment(models.Model):
             if self.pk:
                 pre_save = Assignment.objects.get(pk=self.pk)
                 active_lti_id_modified = pre_save.active_lti_id != self.active_lti_id
+
+                if pre_save.is_published and not self.is_published and pre_save.has_entries():
+                    raise ValidationError('Cannot unpublish an assignment that has entries.')
+                if pre_save.is_group_assignment != self.is_group_assignment:
+                    if pre_save.has_entries():
+                        raise ValidationError('Cannot change the type of an assignment that has entries.')
+                    else:
+                        type_changed = True
             # A copy is being made of the original instance
             else:
                 self.active_lti_id = None
@@ -653,7 +778,7 @@ class Assignment(models.Model):
 
         if active_lti_id_modified:
             # Reset all sourcedid if the active lti id is updated.
-            Journal.all_objects.filter(assignment=self.pk).update(sourcedid=None, grade_url=None)
+            AssignmentParticipation.objects.filter(assignment=self).update(sourcedid=None, grade_url=None)
 
             if self.active_lti_id is not None and self.active_lti_id not in self.lti_id_set:
                 self.lti_id_set.append(self.active_lti_id)
@@ -662,9 +787,35 @@ class Assignment(models.Model):
                 lti_id_set__contains=[self.active_lti_id]).exclude(pk=self.pk)
             if other_assignments_with_lti_id_set.exists():
                 raise ValidationError(
-                    "A lti_id should be unique, and only part of a single assignment's lti_id_set.")
+                    "An lti_id should be unique, and only part of a single assignment's lti_id_set.")
 
-        return super(Assignment, self).save(*args, **kwargs)
+        is_new = self._state.adding
+        if not self._state.adding and self.pk:
+            old_publish = Assignment.objects.get(pk=self.pk).is_published
+        else:
+            old_publish = self.is_published
+
+        super(Assignment, self).save(*args, **kwargs)
+
+        if type_changed:
+            # Delete all journals if assignment type changes
+            Journal.objects.filter(assignment=self).delete()
+
+        if type_changed or not old_publish and self.is_published:
+            # Create journals if it is changed to (or published as) a non group assignment
+            if not self.is_group_assignment:
+                users = self.courses.values('users').distinct()
+                if is_new:
+                    existing = []
+                    for user in users:
+                        AssignmentParticipation.objects.create(assignment=self, user=user['users'])
+                else:
+                    existing = Journal.objects.filter(assignment=self).values('authors__user')
+                for user in users.exclude(pk__in=existing):
+                    ap = AssignmentParticipation.objects.get(assignment=self, user=user['users'])
+                    if not Journal.objects.filter(assignment=self, authors__in=[ap]).exists():
+                        journal = Journal.objects.create(assignment=self)
+                        journal.authors.add(ap)
 
     def get_active_lti_course(self):
         """"Query for retrieving the course which matches the active lti id of the assignment."""
@@ -673,6 +824,10 @@ class Assignment(models.Model):
 
     def get_active_course(self, user):
         """"Query for retrieving the course which is most relevant to the assignment."""
+        # If there are no courses connected, return none
+        if not self.courses:
+            return None
+
         # Get matching LTI course if possible
         active_courses = self.courses.filter(assignment_lti_id_set__contains=[self.active_lti_id])
         for course in active_courses:
@@ -680,7 +835,7 @@ class Assignment(models.Model):
                 return course
 
         # Else get course that started the most recent
-        most_recent_courses = self.courses.filter(startdate__lt=timezone.now()).order_by('-startdate')
+        most_recent_courses = self.courses.filter(startdate__lte=timezone.now()).order_by('-startdate')
         for course in most_recent_courses:
             if user.can_view(course):
                 return course
@@ -688,6 +843,11 @@ class Assignment(models.Model):
         # Else get the course that starts the soonest
         starts_first_courses = self.courses.filter(startdate__gt=timezone.now()).order_by('startdate')
         for course in starts_first_courses:
+            if user.can_view(course):
+                return course
+
+        # Else get the first course without start date
+        for course in self.courses.filter(startdate__isnull=True).order_by('pk'):
             if user.can_view(course):
                 return course
 
@@ -721,8 +881,8 @@ class Assignment(models.Model):
         course.add_assignment_lti_id(lti_id)
         course.save()
 
-    def can_unpublish(self):
-        return not (self.is_published and Entry.objects.filter(node__journal__assignment=self).exists())
+    def has_entries(self):
+        return Entry.objects.filter(node__journal__assignment=self).exists()
 
     def to_string(self, user=None):
         if user is None:
@@ -733,25 +893,79 @@ class Assignment(models.Model):
         return "{} ({})".format(self.name, self.pk)
 
 
+class AssignmentParticipation(models.Model):
+    """AssignmentParticipation
+
+    A user that is connected to an assignment
+    this can then be used as a participation for a journal
+    """
+
+    journal = models.ForeignKey(
+        'Journal',
+        on_delete=models.SET_NULL,
+        related_name='authors',
+        null=True,
+    )
+
+    user = models.ForeignKey(
+        'User',
+        on_delete=models.CASCADE,
+    )
+
+    assignment = models.ForeignKey(
+        'Assignment',
+        on_delete=models.CASCADE
+    )
+
+    sourcedid = models.TextField(null=True)
+    grade_url = models.TextField(null=True)
+
+    def needs_lti_link(self):
+        return self.assignment.active_lti_id is not None and self.sourcedid is None
+
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        super(AssignmentParticipation, self).save(*args, **kwargs)
+
+        # Instance is being created (not modified)
+        if is_new:
+            if self.assignment.is_published and not self.assignment.is_group_assignment and not self.journal:
+                journal = Journal.objects.create(assignment=self.assignment)
+                journal.authors.add(self)
+
+    def to_string(self, user=None):
+        if user is None or not user.can_view(self.assignment):
+            return "Participant"
+
+        return "{0} in {1}".format(self.user.username, self.assignment.name)
+
+    class Meta:
+        """A class for meta data.
+
+        - unique_together: assignment and author must be unique together.
+        """
+        unique_together = ('assignment', 'user',)
+
+
 class JournalManager(models.Manager):
     def get_queryset(self):
         """Filter on only journals with can_have_journal and that are in the assigned to groups"""
         query = super(JournalManager, self).get_queryset()
-        q1 = query.annotate(
+        return query.annotate(
             p_user=F('assignment__courses__participation__user'),
             p_group=F('assignment__courses__participation__groups'),
             can_have_journal=F('assignment__courses__participation__role__can_have_journal')
         ).filter(
             # Filter on only can_have_journal
-            p_user=F('user'), can_have_journal=True,
+            Q(assignment__is_group_assignment=True) | Q(p_user__in=F('authors__user'), can_have_journal=True),
         ).filter(
             # Filter on only assigned groups
-            Q(p_group__in=F('assignment__assigned_groups')) | Q(assignment__assigned_groups=None),
+            Q(assignment__is_group_assignment=True) | Q(p_group__in=F('assignment__assigned_groups')) |
+            Q(assignment__assigned_groups=None),
         ).annotate(
             # Reset group, as that could lead to distinct not working
-            p_group=F('pk')
+            p_group=F('pk'), p_user=F('pk'), can_have_journal=F('pk'),
         ).distinct().order_by('pk')
-        return q1
 
 
 class Journal(models.Model):
@@ -762,6 +976,7 @@ class Journal(models.Model):
     - assignment: a foreign key linked to an assignment.
     - user: a foreign key linked to a user.
     """
+    UNLIMITED = 0
     all_objects = models.Manager()
     objects = JournalManager()
 
@@ -770,38 +985,93 @@ class Journal(models.Model):
         on_delete=models.CASCADE,
     )
 
-    user = models.ForeignKey(
-        'User',
-        on_delete=models.CASCADE,
-    )
-
-    sourcedid = models.TextField(
-        'sourcedid',
-        null=True
-    )
-    grade_url = models.TextField(
-        'grade_url',
-        null=True
-    )
-
     bonus_points = models.FloatField(
         default=0,
     )
 
-    def get_queryset(self):
-        return super(Journal, self).get_queryset().filter(pk=1)
+    author_limit = models.IntegerField(
+        default=1
+    )
 
-    def get_grade(self):
-        return self.bonus_points + (self.node_set.filter(entry__grade__published=True)
-                                    .values('entry__grade__grade')
-                                    .aggregate(Sum('entry__grade__grade'))['entry__grade__grade__sum'] or 0)
+    name = models.TextField(
+        null=True,
+    )
+
+    image = models.TextField(
+        null=True,
+    )
+
+    locked = models.BooleanField(
+        default=False,
+    )
+
+    LMS_grade = models.IntegerField(
+        default=0,
+    )
 
     # NOTE: Any suggestions for a clear warning msg for all cases?
     outdated_link_warning_msg = 'This journal has an outdated LMS uplink and can no longer be edited. Visit  ' \
         + 'eJournal from an updated LMS connection.'
 
+    def get_grade(self):
+        return round(self.bonus_points + (
+            self.node_set.filter(entry__grade__published=True)
+            .values('entry__grade__grade')
+            .aggregate(Sum('entry__grade__grade'))['entry__grade__grade__sum'] or 0), 2)
+
     def needs_lti_link(self):
-        return self.sourcedid is None and self.assignment.active_lti_id is not None
+        return any(author.needs_lti_link() for author in self.authors.all())
+
+    def get_name(self):
+        if self.name is not None:
+            return self.name
+
+        return self.get_full_names()
+
+    def get_image(self):
+        if self.image is None:
+            user_with_pic = self.authors.all().exclude(user__profile_picture=settings.DEFAULT_PROFILE_PICTURE).first()
+            if user_with_pic is not None:
+                return user_with_pic.user.profile_picture
+
+            return settings.DEFAULT_PROFILE_PICTURE
+        return self.image
+
+    def get_full_names(self):
+        if self.authors.count() == 0:
+            return None
+        full_names = [author.user.full_name for author in self.authors.all()]
+        return ', '.join(full_names[:-1]) + \
+            (' and ' + full_names[-1]) if len(full_names) > 1 else full_names[0]
+
+    def reset(self):
+        Node.objects.filter(journal=self).delete()
+
+        preset_nodes = self.assignment.format.presetnode_set.all()
+        for preset_node in preset_nodes:
+            Node.objects.create(type=preset_node.type, journal=self, preset=preset_node)
+
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        if self.name is None:
+            if self.assignment.is_group_assignment:
+                self.name = 'Journal {}'.format(Journal.objects.filter(assignment=self.assignment).count() + 1)
+        super(Journal, self).save(*args, **kwargs)
+        # On create add preset nodes
+        if is_new:
+            preset_nodes = self.assignment.format.presetnode_set.all()
+            for preset_node in preset_nodes:
+                Node.objects.create(type=preset_node.type, journal=self, preset=preset_node)
+
+    @property
+    def published_nodes(self):
+        return self.node_set.filter(entry__grade__published=True).order_by('entry__grade__creation_date')
+
+    @property
+    def unpublished_nodes(self):
+        return self.node_set.filter(
+            Q(entry__grade__isnull=True) | Q(entry__grade__published=False),
+            entry__isnull=False).order_by('entry__last_edited')
 
     def to_string(self, user=None):
         if user is None:
@@ -809,15 +1079,7 @@ class Journal(models.Model):
         if not user.can_view(self):
             return "Journal"
 
-        return "the {0} journal of {1}".format(self.assignment.name, self.user.username)
-
-    class Meta:
-        """A class for meta data.
-
-        - unique_together: assignment and user must be unique together.
-        """
-
-        unique_together = ('assignment', 'user',)
+        return "the {0} journal of {1}".format(self.assignment.name, self.get_full_names())
 
 
 class Node(models.Model):
@@ -968,14 +1230,14 @@ class Entry(models.Model):
     - creation_date: the date and time when the entry was posted.
     - last_edited: the date and time when the etry was last edited
     """
-    NEED_SUBMISSION = 'Submission needs to be sent to VLE'
-    SEND_SUBMISSION = 'Submission is successfully received by VLE'
-    GRADING = 'Grade needs to be sent to VLE'
+    NEEDS_SUBMISSION = 'Submission needs to be sent to VLE'
+    SENT_SUBMISSION = 'Submission is successfully received by VLE'
+    NEEDS_GRADE_PASSBACK = 'Grade needs to be sent to VLE'
     LINK_COMPLETE = 'Everything is sent to VLE'
     TYPES = (
-        (NEED_SUBMISSION, 'entry_submission'),
-        (SEND_SUBMISSION, 'entry_submitted'),
-        (GRADING, 'grade_submission'),
+        (NEEDS_SUBMISSION, 'entry_submission'),
+        (SENT_SUBMISSION, 'entry_submitted'),
+        (NEEDS_GRADE_PASSBACK, 'grade_submission'),
         (LINK_COMPLETE, 'done'),
     )
 
@@ -991,11 +1253,25 @@ class Entry(models.Model):
         related_name='+',
         null=True,
     )
+
     creation_date = models.DateTimeField(editable=False)
+    author = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        related_name='entries',
+        null=True,
+    )
+
     last_edited = models.DateTimeField()
+    last_edited_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        related_name='last_edited_entries',
+        null=True,
+    )
 
     vle_coupling = models.TextField(
-        default=NEED_SUBMISSION,
+        default=NEEDS_SUBMISSION,
         choices=TYPES,
     )
 
@@ -1228,7 +1504,7 @@ class Comment(models.Model):
             return True
 
         return user.has_permission('can_edit_staff_comment', self.entry.node.journal.assignment) and \
-            self.author != self.entry.node.journal.user
+            not self.entry.node.journal.authors.filter(user=self.author).exists()
 
     def save(self, *args, **kwargs):
         if not self.pk:

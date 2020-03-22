@@ -37,3 +37,4 @@ env:
     - SENTRY_PROJECT_SLUG="ejournal"
     - MAILGUN_API_KEY="placeholder"
     - MAILGUN_SENDER_DOMAIN="placeholder"
+    - API_URL="http://localhost:8000"

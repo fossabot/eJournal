@@ -1,39 +1,20 @@
 import axios from 'axios'
-import store from '@/store'
 
 axios.defaults.baseURL = CustomEnv.API_URL
 
-const conn = axios.create({
-    transformRequest: [(data, headers) => {
-        if (store.getters['user/jwtAccess']) { headers.Authorization = `Bearer ${store.getters['user/jwtAccess']}` }
-        return data
-    }, ...axios.defaults.transformRequest],
-})
+const conn = axios.create()
 
 // An instance without refresh interceptor
-const connRefresh = axios.create({
-    transformRequest: [(data, headers) => {
-        if (store.getters['user/jwtAccess']) { headers.Authorization = `Bearer ${store.getters['user/jwtAccess']}` }
-        return data
-    }, ...axios.defaults.transformRequest],
-})
+const connRefresh = axios.create()
 
-const connFile = axios.create({
-    transformRequest: [(data, headers) => {
-        if (store.getters['user/jwtAccess']) { headers.Authorization = `Bearer ${store.getters['user/jwtAccess']}` }
-        return data
-    }, ...axios.defaults.transformRequest],
-    responseType: 'arraybuffer',
+const connUpFile = axios.create({
     headers: {
         'Content-Type': 'multipart/form-data',
     },
 })
 
-const connFileEmail = axios.create({
-    transformRequest: [(data, headers) => {
-        if (store.getters['user/jwtAccess']) { headers.Authorization = `Bearer ${store.getters['user/jwtAccess']}` }
-        return data
-    }, ...axios.defaults.transformRequest],
+const connDownFile = axios.create({
+    responseType: 'arraybuffer',
     headers: {
         'Content-Type': 'multipart/form-data',
     },
@@ -50,7 +31,7 @@ const connSentry = axios.create({
 export default {
     conn,
     connRefresh,
-    connFile,
-    connFileEmail,
+    connUpFile,
+    connDownFile,
     connSentry,
 }

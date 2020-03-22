@@ -11,7 +11,7 @@ from django.test import TestCase
 
 import VLE.factory as factory
 import VLE.permissions as permissions
-from VLE.models import Participation
+from VLE.models import Participation, Role
 from VLE.utils.error_handling import VLEParticipationError, VLEPermissionError, VLEProgrammingError
 
 
@@ -238,7 +238,7 @@ class PermissionTests(TestCase):
         result = permissions.serialize_general_permissions(self.user)
         assert not result['can_edit_institute_details']
         assert not result['can_add_course']
-        self.assertEqual(len(permissions.GENERAL_PERMISSIONS), len(result))
+        self.assertEqual(len(Role.GENERAL_PERMISSIONS), len(result))
 
         role = factory.make_role_default_no_perms("SD", self.course_independent,
                                                   can_view_course_users=True, can_edit_assignment=True)
@@ -247,12 +247,12 @@ class PermissionTests(TestCase):
         result = permissions.serialize_course_permissions(self.user, self.course_independent)
         assert result['can_view_course_users']
         assert not result['can_edit_course_details']
-        self.assertEqual(len(permissions.COURSE_PERMISSIONS), len(result))
+        self.assertEqual(len(Role.COURSE_PERMISSIONS), len(result))
 
         result = permissions.serialize_assignment_permissions(self.user, self.assignment_independent)
         assert result['can_edit_assignment']
         assert not result['can_have_journal']
-        self.assertEqual(len(permissions.ASSIGNMENT_PERMISSIONS), len(result))
+        self.assertEqual(len(Role.ASSIGNMENT_PERMISSIONS), len(result))
 
     def test_is_supervisor(self):
         middle = factory.make_user('Username2', DEFAULT_PASSWORD, email='some2@email.address', full_name='Test User')
@@ -267,7 +267,7 @@ class PermissionTests(TestCase):
 
         role = factory.make_role_default_no_perms("SD", self.course1)
         factory.make_participation(student, self.course1, role)
-        factory.make_journal(self.assignment, student)
+        factory.make_journal(self.assignment, author=student)
 
         assert permissions.is_user_supervisor_of(self.user, student)
         assert permissions.is_user_supervisor_of(self.user, middle)

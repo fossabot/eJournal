@@ -15,11 +15,5 @@
     -webkit-filter: drop-shadow(0 4px 7px rgba(0,0,0,0.23))
     filter: drop-shadow(0 4px 7px rgba(0,0,0,0.23))
 
-.inner-shadow
-    box-shadow: 1px 2px 5px rgba(0,0,0,0.16) inset, 1px 2px 5px rgba(0,0,0,0.23) inset
-
 .small-inner-shadow
-    @extend .inner-shadow
-    transition: box-shadow 0.3s cubic-bezier(.25,.8,.25,1)
-    &:hover:not(.no-hover), &:focus
-        box-shadow: 1px 2px 7px rgba(0,0,0,0.16) inset, 1px 2px 7px rgba(0,0,0,0.23) inset
+    box-shadow: 0.5px 0.2px 0.5px rgba(0,0,0,0.16) inset, 1px 2px 5px rgba(0,0,0,0.23) inset

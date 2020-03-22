@@ -14,7 +14,7 @@
                 :key="a.id"
             >
                 <b-link
-                    :to="assignmentRoute(cID, a.id, a.journal, a.is_published)"
+                    :to="$root.assignmentRoute(a)"
                     tag="b-button"
                 >
                     <assignment-card
@@ -46,18 +46,18 @@
                 @click="showModal('createAssignmentRef')"
             >
                 <icon name="plus"/>
-                Create New Assignment
+                Create new assignment
             </b-button>
             <b-button
                 v-if="$hasPermission('can_add_assignment', 'course', cID)"
-                v-b-modal="'course-assignment-copy-modal'"
+                v-b-modal="'course-assignment-import-modal'"
                 class="add-button mb-2"
             >
                 <icon name="file"/>
-                Copy Assignment
+                Import Assignment
             </b-button>
-            <assignment-copy-modal
-                modalID="course-assignment-copy-modal"
+            <assignment-import-modal
+                modalID="course-assignment-import-modal"
                 :cID="cID"
             />
         </load-wrapper>
@@ -68,6 +68,7 @@
             title="Create new assignment"
             size="lg"
             hideFooter
+            noEnforceFocus
         >
             <create-assignment @handleAction="handleCreated"/>
         </b-modal>
@@ -84,7 +85,7 @@ import assignmentCard from '@/components/assignment/AssignmentCard.vue'
 import mainCard from '@/components/assets/MainCard.vue'
 import createAssignment from '@/components/assignment/CreateAssignment.vue'
 import deadlineDeck from '@/components/assets/DeadlineDeck.vue'
-import assignmentCopyModal from '@/components/assignment/AssignmentCopyModal.vue'
+import assignmentImportModal from '@/components/assignment/AssignmentImportModal.vue'
 
 import assignmentAPI from '@/api/assignment.js'
 
@@ -98,7 +99,7 @@ export default {
         mainCard,
         createAssignment,
         deadlineDeck,
-        assignmentCopyModal,
+        assignmentImportModal,
     },
     props: {
         cID: {
@@ -157,24 +158,6 @@ export default {
         },
         showModal (ref) {
             this.$refs[ref].show()
-        },
-        assignmentRoute (cID, aID, jID, isPublished) {
-            const route = {
-                params: {
-                    cID,
-                    aID,
-                },
-            }
-
-            if (!isPublished) {
-                route.name = 'FormatEdit'
-            } else if (this.$hasPermission('can_view_all_journals', 'assignment', aID)) {
-                route.name = 'Assignment'
-            } else {
-                route.name = 'Journal'
-                route.params.jID = jID
-            }
-            return route
         },
     },
 }

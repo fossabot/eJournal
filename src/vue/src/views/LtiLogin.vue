@@ -1,11 +1,11 @@
 <template>
     <content-single-column>
         <div v-if="handleUserIntegration">
-            <h1 class="mb-2">
+            <h1 class="theme-h1 mb-2">
                 <span>Welcome to eJournal!</span>
             </h1>
             <b-card class="no-hover">
-                <h2 class="multi-form">
+                <h2 class="theme-h2 multi-form">
                     Hi {{ lti.fullName ? lti.fullName : lti.username }}
                 </h2>
                 <p>

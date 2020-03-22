@@ -35,9 +35,9 @@ class UserAPITest(TestCase):
                       user=factory.Admin())
 
     def test_get(self):
-        student = factory.Student()
+        journal = factory.Journal()
+        student = journal.authors.first().user
         admin = factory.Admin()
-        journal = factory.Journal(user=student)
         teacher = journal.assignment.courses.first().author
 
         # Test get all users
@@ -70,7 +70,7 @@ class UserAPITest(TestCase):
         assert 'verified_email' in resp, 'Admin can retrieve all user data'
         assert 'email' in resp, 'Admin can retrieve all user data'
 
-    def test_create(self):
+    def test_create_user(self):
         params = dict(self.create_params)
 
         # Test a valid creation
@@ -86,6 +86,16 @@ class UserAPITest(TestCase):
         # Test a non lti creation without email
         params_without_email = {'username': 'test2', 'password': 'Pa$$word!', 'full_name': 'test user2'}
         resp = api.create(self, 'users', params=params_without_email, status=400)
+        params_without_email = {'username': 'test2', 'password': 'Pa$$word!', 'full_name': 'test user2', 'email': ''}
+        resp = api.create(self, 'users', params=params_without_email, status=400)
+        assert resp['description'] == 'No email address is provided.'
+        params_without_email = {'username': 'test2', 'password': 'Pa$$word!', 'full_name': 'test user2', 'email': None}
+        resp = api.create(self, 'users', params=params_without_email, status=400)
+        assert resp['description'] == 'No email address is provided.'
+        params_without_email = {
+            'username': 'test2', 'password': 'Pa$$word!', 'full_name': '', 'email': 'valid@email.com'}
+        resp = api.create(self, 'users', params=params_without_email, status=400)
+        assert resp['description'] == 'No full name is provided.'
 
         # Test a creation with the different username and same email
         params['username'] = 'test2'
@@ -138,9 +148,10 @@ class UserAPITest(TestCase):
             **gen_jwt_params(factory.JWTTestUserParams()),
         })
 
-    def test_update(self):
+    def test_update_user(self):
         user = factory.Student()
         user2 = factory.Student()
+        lti_user = factory.LtiStudent()
         admin = factory.Admin()
 
         # Test update the own user
@@ -155,6 +166,21 @@ class UserAPITest(TestCase):
 
         # Test update other user as user
         api.update(self, 'users', params={'pk': user.pk, 'full_name': 'not_admin'}, user=user2, status=403)
+
+        # Cant update user full name or username if the user has an LTI id
+        resp = api.update(
+            self,
+            'users',
+            params={
+                'pk': 0,
+                'full_name': 'new name',
+                'username': 'new username',
+            },
+            user=lti_user
+        )['user']
+        updated_lti_user = User.objects.get(pk=lti_user.pk)
+        assert lti_user.username == updated_lti_user.username
+        assert lti_user.full_name == updated_lti_user.full_name
 
         is_test_student = factory.TestUser(lti_id=None)
         resp = api.update(self, 'users', user=is_test_student, params={
@@ -281,7 +307,8 @@ class UserAPITest(TestCase):
         User.objects.create(**params)
 
     def test_gdpr(self):
-        user = factory.Student()
+        entry = factory.Entry()
+        user = entry.node.journal.authors.first().user
         user2 = factory.Student()
         admin = factory.Admin()
 
@@ -334,5 +361,22 @@ class UserAPITest(TestCase):
             validators.validate_password('SomePassword')
         # Underscore qualifies as special character
         validators.validate_password('Some_Password')
+
+    def test_can_view(self):
+        journal = factory.GroupJournal()
+        user1 = journal.authors.first().user
+        ap2 = factory.AssignmentParticipation(assignment=journal.assignment)
+        user2 = ap2.user
+        journal.authors.add(ap2)
+        user3 = factory.AssignmentParticipation(assignment=journal.assignment).user
+
+        assert user1.can_view(user2) and user2.can_view(user1), 'Users in same journal should be able to see each other'
+        assert not user3.can_view(user1), 'Users in different journals should not be able to see each other'
+        assert user1.can_view(journal.assignment.courses.first().author), \
+            'Student should be able to see supervisor'
+        assert journal.assignment.courses.first().author.can_view(user1), \
+            'Supervisor should be able to see its students'
+        assert not factory.Teacher().can_view(user1), 'Non supervisor should not be able to see its students'
+        assert user1.can_view(user1), 'Non supervisor should not be able to see its students'
 
     # TODO: Test download, upload and set_profile_picture

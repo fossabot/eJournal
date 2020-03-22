@@ -1,54 +1,47 @@
 <template>
     <content-single-column>
-        <h1><span>Welcome to {{ name ? name : 'eJournal' }}</span></h1><br/>
-        <h4 class="multi-form">
+        <h1 class="theme-h1">
+            <span>Welcome to {{ name ? name : 'eJournal' }}</span>
+        </h1><br/>
+        <h4 class="theme-h4 multi-form">
             <span>Let's get started</span>
         </h4>
         <login-form @handleAction="handleLoginSucces"/>
-        <h4 class="multi-form mt-4">
-            <span>Want to use eJournal in your education?</span>
+        <h4 class="theme-h4 multi-form mt-4">
+            <span>About eJournal</span>
         </h4>
-        <b-card class="no-hover">
-            eJournal is a blended learning application that provides an easy to manage graded journal system for
-            teachers and students. It seamlessly connects to your <i>learning management system</i> (LMS) via LTI,
-            allowing for automatic grade passback and simple setup.
-            Do you want to use eJournal in your education? Do not hesitate to contact us!
-            <div class="text-right">
+        <b-row>
+            <b-col
+                lg="5"
+                class="mb-4"
+            >
+                <img
+                    src="/journal-view.png"
+                    class="screenshot round-border shadow no-hover"
+                />
+            </b-col>
+            <b-col lg="7">
+                eJournal is a blended learning web application that provides an easy to manage graded journal system
+                focused on education. Curious what eJournal has to offer for your education?
+                <br/>
                 <b-button
-                    class="big-button-text"
-                    href="https://www.ejournal.app"
+                    href="https://www.eJournal.app"
                     target="_blank"
+                    class="mr-2 mt-4"
                 >
-                    <icon
-                        name="globe"
-                        scale="1.3"
-                    />
-                    Website
+                    <icon name="play"/>
+                    Learn more
                 </b-button>
-            </div>
-        </b-card>
-
-        <h4 class="multi-form mt-4">
-            <span>eJournal is open source software</span>
-        </h4>
-        <b-card class="no-hover mb-4">
-            eJournal is an open source project. This means that you have the right to see the source code and many
-            more.
-            You can find this and more information including instructions for deployment on our GitHub repository.
-            <div class="text-right">
                 <b-button
-                    class="big-button-text"
-                    href="https://github.com/eJourn-al/eJournal/"
+                    href="mailto:contact@ejournal.app?subject=I%20would%20like%20to%20know%20more%20about%20eJournal!"
                     target="_blank"
+                    class="change-button mt-4"
                 >
-                    <icon
-                        name="github"
-                        scale="1.3"
-                    />
-                    GitHub
+                    <icon name="desktop"/>
+                    Request a demo
                 </b-button>
-            </div>
-        </b-card>
+            </b-col>
+        </b-row>
         <custom-footer style="clear:both"/>
     </content-single-column>
 </template>
@@ -86,10 +79,21 @@ export default {
                 || this.$root.previousPage.name === 'Logout'
                 || routerConstraints.PERMISSIONLESS_CONTENT.has(this.$root.previousPage.name)) {
                 this.$router.push({ name: 'Home' })
+            } else {
+                this.$router.push({ name: this.$root.previousPage.name, params: this.$root.previousPage.params })
             }
-
-            this.$router.push({ name: this.$root.previousPage.name, params: this.$root.previousPage.params })
         },
     },
 }
 </script>
+
+<style lang="sass">
+.screenshot
+    width: 100%
+    padding-top: 15px
+    background-color: #444444
+    background-image: url('../assets/images/window-controls.svg')
+    background-repeat: no-repeat
+    background-size: auto 10px
+    background-position: 2px 2px
+</style>

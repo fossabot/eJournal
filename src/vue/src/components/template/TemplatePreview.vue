@@ -1,7 +1,9 @@
 <!-- Loads a preview of a template. nID are required but unused as autoupload is disabled. -->
 <template>
     <div>
-        <h2>{{ template.name }}</h2>
+        <h2 class="theme-h2">
+            {{ template.name }}
+        </h2>
         <div
             v-for="(field, i) in sortedFields"
             :key="field.eID"
@@ -10,7 +12,7 @@
             <h2
                 v-if="field.title"
                 :class="{ 'required': field.required }"
-                class="field-heading"
+                class="theme-h2 field-heading"
             >
                 {{ field.title }}
             </h2>
@@ -58,6 +60,7 @@
             <text-editor
                 v-else-if="field.type == 'rt'"
                 :id="'rich-text-editor-preview-field-' + i"
+                :key="'rich-text-editor-preview-field-' + i"
                 class="input-disabled"
             />
             <url-input
@@ -66,17 +69,19 @@
             />
             <flat-pickr
                 v-else-if="field.type == 'd'"
-                class="input-disabled theme-input full-width"
+                :config="$root.flatpickrConfig"
+                class="input-disabled full-width"
             />
             <flat-pickr
                 v-else-if="field.type == 'dt'"
-                class="input-disabled theme-input full-width"
+                :config="$root.flatpickrTimeConfig"
+                class="input-disabled full-width"
             />
             <b-form-select
                 v-else-if="field.type == 's'"
                 :value="null"
                 :options="parseSelectionOptions(field.options)"
-                class="input-disabled"
+                class="theme-select input-disabled"
             />
         </div>
     </div>

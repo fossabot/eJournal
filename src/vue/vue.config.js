@@ -1,6 +1,7 @@
 const path = require('path')
 const webpack = require('webpack') // eslint-disable-line import/no-extraneous-dependencies
 const currentRelease = require('./build/current-release')
+const supportedBrowsers = require('./build/supported-browsers')
 
 module.exports = {
     configureWebpack: {
@@ -14,6 +15,7 @@ module.exports = {
         plugins: [
             new webpack.DefinePlugin({
                 CurrentRelease: JSON.stringify(currentRelease),
+                SupportedBrowsers: JSON.stringify(supportedBrowsers),
                 CustomEnv: {
                     API_URL: JSON.stringify(process.env.API_URL),
                     SENTRY_DSN: JSON.stringify(process.env.SENTRY_DSN),

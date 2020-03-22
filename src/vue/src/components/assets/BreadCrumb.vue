@@ -7,19 +7,9 @@
 
 <template>
     <div class="breadcrumb-container">
-        <version-alert/>
-
-        <b-button
-            v-if="canEdit()"
-            class="float-right change-button multi-form"
-            @click="editClick()"
-        >
-            <icon name="edit"/>
-            Edit
-        </b-button>
         <div>
             <div v-if="crumbs.length > 1">
-                <h4>
+                <h4 class="theme-h4">
                     <span>
                         <span
                             v-for="crumb in crumbs.slice(0, -1)"
@@ -38,7 +28,7 @@
                                 tag="b-button"
                             >
                                 <icon
-                                    name="level-up"
+                                    name="level-up-alt"
                                     class="shift-up-2 action-icon"
                                 />
                             </b-link>
@@ -47,13 +37,22 @@
                 </h4>
                 <br/>
             </div>
-            <h1>
-                <span>
+            <h1 class="theme-h1">
+                <span class="title">
                     {{ crumbs.slice(-1)[0].displayName }}
                     <slot/>
                 </span>
+                <b-button
+                    v-if="canEdit()"
+                    class="change-button edit-button"
+                    @click="editClick()"
+                >
+                    <icon name="edit"/>
+                    Edit
+                </b-button>
             </h1>
         </div>
+        <version-alert/>
     </div>
 </template>
 
@@ -80,6 +79,7 @@ export default {
                     CourseEdit: 'Course Editor',
                     AssignmentsOverview: 'Assignments',
                     UserRoleConfiguration: 'Permission Manager',
+                    JoinJournal: 'Join a Journal',
                 },
                 namedViews: {
                     Course: { apiReturnValue: 'course', primaryParam: 'cID' },
@@ -174,4 +174,10 @@ export default {
     padding-right: 10px
     .alert
         margin-right: -10px
+    .title
+        margin-right: 10px
+    .edit-button
+        font-size: 0.667em
+        vertical-align: middle
+        border-radius: 2em !important
 </style>

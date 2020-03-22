@@ -3,14 +3,16 @@
         :class="borderColor"
         class="no-hover"
     >
-        <h2 class="mb-2">
+        <h2 class="theme-h2 mb-2">
             Target: {{ currentNode.target }} point<span v-if="currentNode.target > 1">s</span>
         </h2>
         <p
             v-if="currentNode.description"
             class="mb-0"
         >
-            {{ currentNode.description }}
+            <sandboxed-iframe
+                :content="currentNode.description"
+            />
         </p>
         <hr class="full-width"/>
         <span v-if="!accomplished && new Date() < new Date(currentNode.due_date)">
@@ -25,7 +27,12 @@
 </template>
 
 <script>
+import sandboxedIframe from '@/components/assets/SandboxedIframe.vue'
+
 export default {
+    components: {
+        sandboxedIframe,
+    },
     props: ['nodes', 'currentNode', 'bonusPoints'],
     computed: {
         score () {

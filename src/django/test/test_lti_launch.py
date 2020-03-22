@@ -105,12 +105,18 @@ class LtiLaunchTest(TestCase):
     def setUp(self):
         """Setup."""
         self.factory = RequestFactory()
+
+        self.new_lti_id = 'new_lti_id'
+
+        self.teacher = factory.Teacher()
+        self.teacher.lti_id = 'teacher_lti_id'
+        self.teacher.save()
+
+        self.journal = factory.Journal()
+        self.student = self.journal.authors.first().user
+        self.student.lti_id = 'student_lti_id'
+        self.student.save()
         self.request = REQUEST.copy()
-
-        self.teacher = factory.LtiTeacher()
-        self.student = factory.LtiStudent()
-
-        self.journal = factory.Journal(user=self.student)
         self.assignment = self.journal.assignment
 
     def test_select_user(self):
@@ -484,7 +490,7 @@ class LtiLaunchTest(TestCase):
         assignment = factory.LtiAssignment(
             author=self.teacher, courses=[course], name=REQUEST['custom_assignment_title'])
         student = factory.LtiStudent()
-        journal_exists = Journal.objects.filter(user=student, assignment=assignment).exists()
+        journal_exists = Journal.objects.filter(authors__user=student, assignment=assignment).exists()
         assert not journal_exists, "The student is assumed to have no journal beforehand"
 
         get_jwt(
@@ -499,12 +505,12 @@ class LtiLaunchTest(TestCase):
             response_value=lti_view.LTI_STATES.FINISH_S.value,
             assert_msg='With a setup assignment, a legitimate student jwt connection should return FINISH_S state')
 
-        journal_qry = Journal.objects.filter(user=student, assignment=assignment)
+        journal_qry = Journal.objects.filter(authors__user=student, assignment=assignment)
         assert journal_qry.count() == 1, 'A legitimate student jwt connection should create a single journal.'
         journal = journal_qry.first()
-        assert journal.sourcedid == REQUEST['lis_result_sourcedid'], \
+        assert journal.authors.first().sourcedid == REQUEST['lis_result_sourcedid'], \
             'A legitimate student jwt route should set a journal sourcedid.'
-        assert journal.grade_url == REQUEST['lis_outcome_service_url'], \
+        assert journal.authors.first().grade_url == REQUEST['lis_outcome_service_url'], \
             'A legitimate student jwt route should set a journal grade_url.'
 
     def test_legit_student_from_old_uplink_update_passback(self):
@@ -512,15 +518,16 @@ class LtiLaunchTest(TestCase):
         assignment = factory.LtiAssignment(
             author=self.teacher, courses=[course], name=REQUEST['custom_assignment_title'])
         student = factory.LtiStudent()
-        journal = factory.Journal(user=student)
+        ap = factory.AssignmentParticipation(user=student, assignment=assignment)
+        journal = factory.Journal(assignment=assignment)
+        journal.authors.add(ap)
         assignment = journal.assignment
 
-        journal_exists = Journal.objects.filter(user=student, assignment=assignment)
-        journal_exists = journal_exists.count() == 1 and journal.pk == journal_exists.first().pk
+        journal_exists = Journal.objects.filter(authors__user=student, assignment=assignment, pk=journal.pk).exists()
         assert journal_exists, "The student is assumed to have a single nested journal beforehand"
 
-        journal.grade_url = 'before'
-        journal.sourcedid = 'before'
+        journal.authors.first().grade_url = 'before'
+        journal.authors.first().sourcedid = 'before'
         course.active_lti_id = 'new'
         assignment.active_lti_id = 'new'
         course.save()
@@ -540,10 +547,10 @@ class LtiLaunchTest(TestCase):
             assert_msg='With a setup assignment, a legitimate student jwt connection should return FINISH_S state',
         )
 
-        journal = Journal.objects.get(user=student, assignment=assignment)
-        assert journal.sourcedid == REQUEST['lis_result_sourcedid'], \
+        journal = Journal.objects.get(authors__user=student, assignment=assignment)
+        assert journal.authors.first().sourcedid == REQUEST['lis_result_sourcedid'], \
             'A legitimate student jwt route should set a journal sourcedid.'
-        assert journal.grade_url == REQUEST['lis_outcome_service_url'], \
+        assert journal.authors.first().grade_url == REQUEST['lis_outcome_service_url'], \
             'A legitimate student jwt route should set a journal grade_url.'
 
     def test_get_lti_params_from_jwt_multiple_roles(self):
@@ -606,8 +613,8 @@ class LtiLaunchTest(TestCase):
                 'lis_result_sourcedid': "267-686-2694-585-0afc8c37342732c97b011855389af1f2c2f6d552",
                 'lis_outcome_service_url': "https://uvadlo-tes.instructure.com/api/lti/v1/tools/267/grade_passback"
             },
-            user=self.student,
-            assignment=self.assignment
+            self.student,
+            self.assignment
         )
         assert selected_journal == self.journal
 
@@ -620,7 +627,7 @@ class LtiLaunchTest(TestCase):
                 'lis_result_sourcedid': "267-686-2694-585-0afc8c37342732c97b011855389af1f2c2f6d552",
                 'lis_outcome_service_url': "https://uvadlo-tes.instructure.com/api/lti/v1/tools/267/grade_passback"
             },
-            user=self.student,
-            assignment=None
+            self.student,
+            None
         )
         assert selected_journal is None

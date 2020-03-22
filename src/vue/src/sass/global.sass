@@ -21,23 +21,20 @@
 
 @import '~sass/vendor/fonts.sass'
 
-*
-    border-radius: 0px !important
-    text-decoration: none !important
-    color: $theme-dark-blue
-    text-align: left
-
 body
+    color: $theme-dark-blue
     /* Background pattern from Toptal Subtle Patterns */
     background-image: url(/background.png)
 
 a, select, input
     outline: 0
+    text-decoration: none
 
 a
-    color: $theme-blue
-    &:hover
+    color: $theme-dark-blue
+    &:hover, &:after
         color: $theme-dark-blue
+        text-decoration: none
 
 .min-height-100
     min-height: 100%
@@ -49,6 +46,7 @@ a
     margin-bottom: 10px !important
 
 .input-disabled
+    @extend .unselectable
     opacity: 0.5
     pointer-events: none
 
@@ -74,27 +72,51 @@ a
     -o-user-select: none
     user-select: none
 
-.error
+.error, .red
     background-color: $theme-red !important
 
-.success
+.success, .green
     background-color: $theme-green !important
 
-.warning
+.warning, .orange
     background-color: $theme-orange !important
 
-.info
+.info, .blue
     background-color: $theme-blue !important
-
-.error, .success, .warning
-    font-family: 'Roboto Condensed', sans-serif !important
-    font-size: 1.1em !important
-    color: white
 
 .badge, .toasted
     border-radius: 5px !important
+
+.toasted, .toasted.toasted-primary
+    padding: 10px 15px
+    font-family: 'Roboto Condensed', sans-serif
+    font-size: 1em
+    color: white
+    .action
+        color: rgba(0, 0, 0, 0.45)
 
 .fade-enter-active, .fade-leave-active
   transition: opacity .5s
 .fade-enter, .fade-leave-to
   opacity: 0
+
+.max-one-line
+    display: block
+    width: auto
+    max-width: 100%
+    text-overflow: ellipsis
+    white-space: nowrap
+    overflow: hidden
+
+ul
+    padding-top: 5px
+    padding-bottom: 5px
+    margin-bottom: 0px
+
+.no-left-radius
+    border-top-left-radius: 0 !important
+    border-bottom-left-radius: 0 !important
+
+.no-right-radius
+    border-top-right-radius: 0 !important
+    border-bottom-right-radius: 0 !important

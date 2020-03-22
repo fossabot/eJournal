@@ -31,7 +31,7 @@
                     @click="showModal('createCourseRef')"
                 >
                     <icon name="plus"/>
-                    Create New Course
+                    Create new course
                 </b-button>
             </div>
             <main-card
@@ -50,6 +50,7 @@
             title="Global Changes"
             size="lg"
             hideFooter
+            noEnforceFocus
         >
             <edit-home @handleAction="handleConfirm('editCourseRef')"/>
         </b-modal>
@@ -60,6 +61,7 @@
             title="New Course"
             size="lg"
             hideFooter
+            noEnforceFocus
         >
             <create-course @handleAction="handleConfirm('createCourseRef')"/>
         </b-modal>

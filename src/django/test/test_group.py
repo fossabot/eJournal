@@ -5,7 +5,7 @@ from test.utils.response import in_response
 from django.test import TestCase
 
 import VLE.factory as nfac
-from VLE.models import Group
+from VLE.models import Group, Participation
 
 
 class GroupAPITest(TestCase):
@@ -35,6 +35,77 @@ class GroupAPITest(TestCase):
                       create_params=self.create_params, get_status=405, get_is_create=False,
                       create_status=403,
                       user=factory.Student())
+
+    def test_list_limited(self):
+        def check_ids(groups):
+            ids = [g['id'] for g in groups]
+            assert empty_group.pk not in ids, 'empty groups should not be shown'
+            assert test_student_group.pk not in ids, 'groups with only test student should not be shown'
+            assert teacher_group.pk not in ids, 'groups with only teacher should not be shown'
+
+            assert student_group.pk in ids, 'groups with student should be shown'
+            assert other_group.pk in ids, 'groups with student should be shown'
+            assert test_and_student_group.pk in ids, 'groups with student and test student should be shown'
+
+            assert all_group.pk not in ids, 'groups with all students should not be shown'
+
+        empty_group = self.group
+
+        test_student = factory.TestUser()
+        journal = factory.Journal(assignment__courses=[self.course])
+        journal.authors.set([])
+        journal.authors.add(factory.AssignmentParticipation(user=test_student))
+        assignment = journal.assignment
+
+        test_student_group = factory.Group(course=self.course)
+        test_participation = Participation.objects.get(user=test_student)
+        test_participation.groups.add(test_student_group)
+
+        student = factory.Journal(assignment=assignment).authors.first().user
+        student_group = factory.Group(course=self.course)
+        student_in_group = Participation.objects.get(user=student)
+        student_in_group.groups.add(student_group)
+
+        test_and_student_group = factory.Group(course=self.course)
+        student_in_group.groups.add(test_and_student_group)
+        test_participation.groups.add(test_and_student_group)
+
+        teacher_group = factory.Group(course=self.course)
+        teacher_participation = Participation.objects.get(user=self.teacher)
+        teacher_participation.groups.add(teacher_group)
+
+        other_student = factory.Journal(assignment=assignment).authors.first().user
+        other_group = factory.Group(course=self.course)
+        other_student_participation = Participation.objects.get(user=other_student)
+        other_student_participation.groups.add(other_group)
+
+        all_group = factory.Group(course=self.course)
+        student_in_group.groups.add(all_group)
+        test_participation.groups.add(all_group)
+        teacher_participation.groups.add(all_group)
+        other_student_participation.groups.add(all_group)
+
+        groups = api.get(
+            self, 'groups', params={'course_id': self.course.pk, 'assignment_id': assignment.pk},
+            user=self.teacher)['groups']
+        check_ids(groups)
+
+        # Check if the same groups are returned when students are together in one group journal
+        group_journal = factory.GroupJournal()
+        for ap in group_journal.authors.all():
+            ap.user.delete()
+        group_journal.assignment.courses.set([self.course])
+        group_journal.authors.add(factory.AssignmentParticipation(user=student))
+        group_journal.authors.add(factory.AssignmentParticipation(user=other_student))
+        other_group_journal = factory.GroupJournal(assignment=group_journal.assignment)
+        for ap in other_group_journal.authors.all():
+            ap.user.delete()
+        other_group_journal.authors.add(factory.AssignmentParticipation(user=test_student))
+
+        groups = api.get(
+            self, 'groups', params={'course_id': self.course.pk, 'assignment_id': assignment.pk},
+            user=self.teacher)['groups']
+        check_ids(groups)
 
     def test_get(self):
         # Test all groups from course

@@ -2,7 +2,7 @@
     <span class="number-badge">
         <b-badge
             v-if="rightNum === null || leftNum > 0"
-            class="badge-part"
+            class="badge-part highlight"
             :class="{
                 'info': leftNum > 0,
                 'border-grey': leftNum <= 0,
@@ -13,7 +13,7 @@
         </b-badge>
         <b-badge
             v-if="rightNum > 0"
-            class="badge-part inverse"
+            class="badge-part"
             :class="{
                 'right-number': leftNum > 0,
             }"
@@ -43,6 +43,8 @@ export default {
 @import '~sass/modules/colors.sass'
 .number-badge
     .badge-part
+        background-color: white
+        color: $theme-dark-blue
         font-family: 'Roboto Condensed', sans-serif
         font-size: 1em
         border-radius: 5px !important
@@ -55,7 +57,7 @@ export default {
             border-top-right-radius: 0 !important
             border-bottom-right-radius: 0 !important
             border-right: 0px !important
-    .inverse
-        background-color: white
-        color: $theme-dark-blue
+    .highlight
+        background-color: $theme-dark-blue
+        color: white!important
 </style>

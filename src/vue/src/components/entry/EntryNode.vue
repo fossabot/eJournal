@@ -20,9 +20,13 @@
                 {{ entryNode.entry.grade.grade }}
             </div>
 
-            <h2 class="mb-2">
+            <h2 class="theme-h2 mb-2">
                 {{ entryNode.entry.template.name }}
             </h2>
+            <sandboxed-iframe
+                v-if="entryNode.description"
+                :content="entryNode.description"
+            />
             <entry-fields
                 :template="entryNode.entry.template"
                 :completeContent="completeContent"
@@ -91,7 +95,7 @@
                 </b-button>
             </div>
 
-            <h2 class="mb-2">
+            <h2 class="theme-h2 mb-2">
                 {{ entryNode.entry.template.name }}
             </h2>
             <entry-fields
@@ -99,20 +103,23 @@
                 :template="entryNode.entry.template"
                 :completeContent="completeContent"
                 :displayMode="true"
-                :authorUID="journal.student.id"
+                :journalID="journal.id"
                 :entryID="entryNode.entry.id"
             />
             <hr class="full-width"/>
             <div>
                 <span class="timestamp">
-                    <span
-                        v-if="$root.beautifyDate(entryNode.entry.last_edited)
-                            === $root.beautifyDate(entryNode.entry.creation_date)"
-                    >
+                    <span v-if="entryNode.entry.last_edited_by == null">
                         Submitted on: {{ $root.beautifyDate(entryNode.entry.creation_date) }}
+                        <template v-if="assignment && assignment.is_group_assignment">
+                            by {{ entryNode.entry.author }}
+                        </template>
                     </span>
                     <span v-else>
                         Last edited: {{ $root.beautifyDate(entryNode.entry.last_edited) }}
+                        <template v-if="assignment && assignment.is_group_assignment">
+                            by {{ entryNode.entry.last_edited_by }}
+                        </template>
                     </span>
                     <b-badge
                         v-if="entryNode.due_date
@@ -134,6 +141,7 @@
 </template>
 
 <script>
+import sandboxedIframe from '@/components/assets/SandboxedIframe.vue'
 import commentCard from '@/components/entry/CommentCard.vue'
 import entryFields from '@/components/entry/EntryFields.vue'
 
@@ -141,8 +149,9 @@ export default {
     components: {
         commentCard,
         entryFields,
+        sandboxedIframe,
     },
-    props: ['entryNode', 'cID', 'journal'],
+    props: ['entryNode', 'cID', 'journal', 'assignment'],
     data () {
         return {
             saveEditMode: 'Edit',

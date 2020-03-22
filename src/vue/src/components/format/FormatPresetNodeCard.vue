@@ -11,7 +11,7 @@
     >
         <h2
             v-if="!newPreset"
-            class="d-inline multi-form"
+            class="theme-h2 d-inline multi-form"
         >
             <span v-if="currentPreset.type == 'd'">Entry</span>
             <span v-if="currentPreset.type == 'p'">Progress goal</span>
@@ -19,77 +19,88 @@
 
         <b-row v-if="currentPreset.type == 'd'">
             <b-col xl="4">
-                <h2 class="field-heading">
+                <h2 class="theme-h2 field-heading">
                     Unlock date
                     <tooltip tip="Students will be able to work on the entry from this date onwards"/>
                 </h2>
-                <flat-pickr
-                    v-model="currentPreset.unlock_date"
-                    class="multi-form theme-input full-width"
-                    :config="unlockDateConfig"
-                />
+                <reset-wrapper v-model="currentPreset.unlock_date">
+                    <flat-pickr
+                        v-model="currentPreset.unlock_date"
+                        class="multi-form full-width"
+                        :config="unlockDateConfig"
+                    />
+                </reset-wrapper>
             </b-col>
             <b-col xl="4">
-                <h2 class="field-heading required">
+                <h2 class="theme-h2 field-heading required">
                     Due date
                     <tooltip
                         tip="Students are expected to have finished their entry by this date, but new entries can
                         still be added until the lock date"
                     />
                 </h2>
-                <flat-pickr
-                    v-model="currentPreset.due_date"
-                    class="multi-form theme-input full-width"
-                    :config="dueDateConfig"
-                    @on-change="$emit('change-due-date')"
-                />
+                <reset-wrapper v-model="currentPreset.due_date">
+                    <flat-pickr
+                        v-model="currentPreset.due_date"
+                        class="multi-form full-width"
+                        :config="dueDateConfig"
+                        @on-change="$emit('change-due-date')"
+                    />
+                </reset-wrapper>
             </b-col>
             <b-col xl="4">
-                <h2 class="field-heading">
+                <h2 class="theme-h2 field-heading">
                     Lock date
                     <tooltip tip="Students will not be able to fill in the entry anymore after this date"/>
                 </h2>
-                <flat-pickr
-                    v-model="currentPreset.lock_date"
-                    class="multi-form theme-input full-width"
-                    :config="lockDateConfig"
-                />
+                <reset-wrapper v-model="currentPreset.lock_date">
+                    <flat-pickr
+                        v-model="currentPreset.lock_date"
+                        class="multi-form full-width"
+                        :config="lockDateConfig"
+                    />
+                </reset-wrapper>
             </b-col>
         </b-row>
         <div v-else>
-            <h2 class="field-heading required">
+            <h2 class="theme-h2 field-heading required">
                 Due date
                 <tooltip
                     tip="Students are expected to have reached the amount of points below by this date,
                     but new entries can still be added until the assignment lock date"
                 />
             </h2>
-            <flat-pickr
-                v-model="currentPreset.due_date"
-                class="multi-form theme-input full-width"
-                :config="progressDateConfig"
-                @on-change="$emit('change-due-date')"
-            />
+            <reset-wrapper v-model="currentPreset.due_date">
+                <flat-pickr
+                    v-model="currentPreset.due_date"
+                    class="multi-form full-width"
+                    :config="progressDateConfig"
+                    @on-change="$emit('change-due-date')"
+                />
+            </reset-wrapper>
         </div>
 
-        <h2 class="field-heading">
+        <h2 class="theme-h2 field-heading">
             Description
         </h2>
-        <b-textarea
+        <text-editor
+            :id="`preset-description-${currentPreset.id}`"
+            :key="`preset-description-${currentPreset.id}`"
             v-model="currentPreset.description"
-            class="multi-form theme-input"
+            class="multi-form"
             placeholder="Description"
+            footer="false"
         />
 
         <div v-if="currentPreset.type === 'd'">
-            <h2 class="field-heading required">
+            <h2 class="theme-h2 field-heading required">
                 Preset Template
                 <tooltip tip="The template students can use for this entry"/>
             </h2>
             <div class="d-flex">
                 <b-form-select
                     v-model="currentPreset.template"
-                    class="multi-form mr-2"
+                    class="theme-select multi-form mr-2"
                     :class="{ 'input-disabled' : templates.length === 0 }"
                 >
                     <option
@@ -136,7 +147,7 @@
             </div>
         </div>
         <div v-else-if="currentPreset.type === 'p'">
-            <h2 class="field-heading required">
+            <h2 class="theme-h2 field-heading required">
                 Amount of points
                 <tooltip
                     tip="The amount of points students should have achieved by the deadline of this node to be on
@@ -164,6 +175,7 @@
 </template>
 
 <script>
+import textEditor from '@/components/assets/TextEditor.vue'
 import templatePreview from '@/components/template/TemplatePreview.vue'
 import tooltip from '@/components/assets/Tooltip.vue'
 
@@ -171,6 +183,7 @@ export default {
     components: {
         templatePreview,
         tooltip,
+        textEditor,
     },
     props: ['newPreset', 'currentPreset', 'templates', 'assignmentDetails'],
     data () {
@@ -179,83 +192,89 @@ export default {
         }
     },
     computed: {
+        // Ensure the unlock date is between the assignment unlock date and before preset due / lock date and
+        // assignment due / lock date .
         unlockDateConfig () {
-            let maxDate
+            const additionalConfig = {}
 
             if (this.currentPreset.due_date) {
-                maxDate = this.currentPreset.due_date
+                additionalConfig.maxDate = new Date(this.currentPreset.due_date)
             } else if (this.currentPreset.lock_date) {
-                maxDate = this.currentPreset.lock_date
-            } else if (this.assignmentDetails.due_date) {
-                maxDate = this.assignmentDetails.due_date
-            } else {
-                maxDate = this.assignmentDetails.lock_date
+                additionalConfig.maxDate = new Date(this.currentPreset.lock_date)
+            } else if (this.assignmentDetails.lock_date) {
+                additionalConfig.maxDate = new Date(this.assignmentDetails.lock_date)
             }
 
-            return Object.assign({}, {
-                minDate: this.assignmentDetails.unlock_date,
-                maxDate,
-            }, this.$root.flatPickrTimeConfig)
+            // Assignment due date can be before the current preset lock date.
+            if (this.assignmentDetails.due_date && (!additionalConfig.maxDate
+                || new Date(this.assignmentDetails.due_date) < additionalConfig.maxDate)) {
+                additionalConfig.maxDate = new Date(this.assignmentDetails.due_date)
+            }
+
+            if (this.assignmentDetails.unlock_date) {
+                additionalConfig.minDate = new Date(this.assignmentDetails.unlock_date)
+            }
+
+            return Object.assign({}, additionalConfig, this.$root.flatPickrTimeConfig)
         },
+        // Ensure the due date is preset unlock / lock date and between the assignment unlock and due / lock date.
         dueDateConfig () {
-            let minDate
-            let maxDate
+            const additionalConfig = {}
 
             if (this.currentPreset.unlock_date) {
-                minDate = this.currentPreset.unlock_date
-            } else {
-                minDate = this.assignmentDetails.unlock_date
+                additionalConfig.minDate = new Date(this.currentPreset.unlock_date)
+            } if (this.assignmentDetails.unlock_date) {
+                additionalConfig.minDate = new Date(this.assignmentDetails.unlock_date)
             }
 
-            if ((this.currentPreset.lock_date && new Date(this.currentPreset.lock_date) < new Date(maxDate))
-                || !maxDate) {
-                maxDate = this.currentPreset.lock_date
+            if (this.currentPreset.lock_date) {
+                additionalConfig.maxDate = new Date(this.currentPreset.lock_date)
+            } else if (this.assignmentDetails.lock_date) {
+                additionalConfig.maxDate = new Date(this.assignmentDetails.lock_date)
             }
 
-            if ((this.assignmentDetails.due_date && new Date(this.assignmentDetails.due_date) < new Date(maxDate))
-                || !maxDate) {
-                maxDate = this.assignmentDetails.due_date
+            // Assignment due date can be before the current preset lock date.
+            if (this.assignmentDetails.due_date && (!additionalConfig.maxDate
+                || new Date(this.assignmentDetails.due_date) < additionalConfig.maxDate)) {
+                additionalConfig.maxDate = new Date(this.assignmentDetails.due_date)
             }
 
-            if (!maxDate) {
-                maxDate = this.assignmentDetails.lock_date
-            }
-
-            return Object.assign({}, {
-                minDate,
-                maxDate,
-            }, this.$root.flatPickrTimeConfig)
+            return Object.assign({}, additionalConfig, this.$root.flatPickrTimeConfig)
         },
+        // Ensure the lock date is after the preset unlock / due date and betwween the assignment unlock / due and lock
+        // date.
         lockDateConfig () {
-            let minDate
+            const additionalConfig = {}
 
             if (this.currentPreset.due_date) {
-                minDate = this.currentPreset.due_date
+                additionalConfig.minDate = new Date(this.currentPreset.due_date)
             } else if (this.currentPreset.unlock_date) {
-                minDate = this.currentPreset.unlock_date
-            } else {
-                minDate = this.assignmentDetails.unlock_date
+                additionalConfig.minDate = new Date(this.currentPreset.unlock_date)
+            } else if (this.assignmentDetails.unlock_date) {
+                additionalConfig.minDate = new Date(this.assignmentDetails.unlock_date)
             }
 
-            return Object.assign({}, {
-                minDate,
-                maxDate: this.assignmentDetails.lock_date,
-            }, this.$root.flatPickrTimeConfig)
+            if (this.assignmentDetails.lock_date) {
+                additionalConfig.maxDate = new Date(this.assignmentDetails.lock_date)
+            }
+
+            return Object.assign({}, additionalConfig, this.$root.flatPickrTimeConfig)
         },
+        // Ensure the progress date is between the assignment unlock and due / lock date.
         progressDateConfig () {
-            const minDate = this.assignmentDetails.unlock_date
-            let maxDate
+            const additionalConfig = {}
+
+            if (this.assignmentDetails.unlock_date) {
+                additionalConfig.minDate = new Date(this.assignmentDetails.unlock_date)
+            }
 
             if (this.assignmentDetails.due_date) {
-                maxDate = this.assignmentDetails.due_date
-            } else {
-                maxDate = this.assignmentDetails.lock_date
+                additionalConfig.maxDate = new Date(this.assignmentDetails.due_date)
+            } else if (this.assignmentDetails.lock_date) {
+                additionalConfig.maxDate = new Date(this.assignmentDetails.lock_date)
             }
 
-            return Object.assign({}, {
-                minDate,
-                maxDate,
-            }, this.$root.flatPickrTimeConfig)
+            return Object.assign({}, additionalConfig, this.$root.flatPickrTimeConfig)
         },
     },
     methods: {

@@ -11,33 +11,39 @@ from VLE.utils.error_handling import VLEPermissionError
 
 class EntryAPITest(TestCase):
     def setUp(self):
-        self.student = factory.Student()
-        self.student2 = factory.Student()
         self.admin = factory.Admin()
-        self.journal = factory.Journal(user=self.student)
-        self.journal2 = factory.Journal(user=self.student2, assignment=self.journal.assignment)
+        self.g_assignment = factory.GroupAssignment()
+        self.journal = factory.Journal(assignment=self.g_assignment)
+        self.student = self.journal.authors.first().user
+        self.journal2 = factory.Journal(assignment=self.journal.assignment)
+        self.student2 = self.journal2.authors.first().user
         self.teacher = self.journal.assignment.courses.first().author
-        self.journal_teacher = factory.Journal(user=self.teacher, assignment=self.journal.assignment)
+        APteacher = factory.AssignmentParticipation(user=self.teacher)
+        self.journal_teacher = factory.Journal(assignment=self.journal.assignment)
+        self.journal_teacher.authors.add(APteacher)
+        self.journal_teacher.save()
+        # self.teacher = self.journal_teacher.authors.first().user
         self.format = self.journal.assignment.format
-        factory.Template(format=self.format)
+        self.template = factory.Template(format=self.format)
         factory.Template(format=self.format)
         factory.Template(format=self.format)
 
         self.valid_create_params = {
             'journal_id': self.journal.pk,
-            'template_id': self.format.template_set.first().pk,
+            'template_id': self.template.pk,
             'content': []
         }
-        fields = Field.objects.filter(template=self.format.template_set.first())
+        fields = Field.objects.filter(template=self.template)
         self.valid_create_params['content'] = [{'data': 'test data', 'id': field.id} for field in fields]
 
-    def test_create(self):
+    def test_create_entry(self):
         # Check valid entry creation
         resp = api.create(self, 'entries', params=self.valid_create_params, user=self.student)['entry']
         entry = Entry.objects.get(pk=resp['id'])
         self.student.check_can_edit(entry)
         resp2 = api.create(self, 'entries', params=self.valid_create_params, user=self.student)['entry']
         assert resp['id'] != resp2['id'], 'Multiple creations should lead to different ids'
+        assert resp['author'] == self.student.full_name
 
         # Check if students cannot update journals without required parts filled in
         create_params = self.valid_create_params.copy()
@@ -61,7 +67,7 @@ class EntryAPITest(TestCase):
 
         # Check if template for other assignment wont work
         create_params = self.valid_create_params.copy()
-        alt_journal = factory.Journal(user=self.student)
+        alt_journal = factory.Journal()
         template = factory.Template(format=alt_journal.assignment.format)
         create_params['template_id'] = template.pk
         api.create(self, 'entries', params=create_params, user=self.student, status=403)
@@ -74,7 +80,7 @@ class EntryAPITest(TestCase):
         )
         teacher_params = self.valid_create_params.copy()
         teacher_params['journal_id'] = self.journal_teacher.pk
-        api.create(self, 'entries', params=teacher_params, user=self.teacher, status=404)
+        api.create(self, 'entries', params=teacher_params, user=self.teacher, status=403)
 
         # Entries can no longer be created if the LTI link is outdated (new active uplink)
         assignment_old_lti_id = self.journal.assignment.active_lti_id
@@ -128,10 +134,10 @@ class EntryAPITest(TestCase):
         # Creation with only required params should work
         required_only_creation = {
             'journal_id': self.journal.pk,
-            'template_id': self.format.template_set.first().pk,
+            'template_id': self.template.pk,
             'content': []
         }
-        fields = Field.objects.filter(template=self.format.template_set.first())
+        fields = Field.objects.filter(template=self.template)
         required_only_creation['content'] = [{'data': 'test data', 'id': field.id}
                                              for field in fields if field.required]
         api.create(self, 'entries', params=required_only_creation, user=self.student)
@@ -148,16 +154,19 @@ class EntryAPITest(TestCase):
         api.update(self, 'entries', params=params.copy(), user=self.student, status=400)
 
         # Student should be able to update only the required fields, leaving the optinal fields empty
-        fields = Field.objects.filter(template=self.format.template_set.first())
-        params = {
-            'pk': entry['id'],
-            'content': [{
-                'id': field.pk,
-                'data': 'filled' if field.required else ''
-            } for field in fields]
-        }
-        resp = api.update(self, 'entries', params=params.copy(), user=self.student)['entry']
-        assert len(resp['content']) == 2, 'Response should have emptied the optional fields'
+        fields = Field.objects.filter(template=self.template)
+        for empty_value in [None, '']:
+            params = {
+                'pk': entry['id'],
+                'content': [{
+                    'id': field.pk,
+                    'data': 'filled' if field.required else empty_value
+                } for field in fields]
+            }
+            resp = api.update(self, 'entries', params=params.copy(), user=self.student)['entry']
+            assert len(resp['content']) == 3, 'Response should have emptied the optional fields, not deleted'
+            assert any([c['data'] is None for c in resp['content']]), \
+                'Response should have emptied the optional fields, not deleted'
         # Student should be able to edit an optinal field
         params = {
             'pk': entry['id'],
@@ -170,7 +179,7 @@ class EntryAPITest(TestCase):
         assert len(resp['content']) == 3 and resp['content'][2]['data'] == 'filled', \
             'Response should have filled the optional fields'
 
-    def test_update(self):
+    def test_update_entry(self):
         entry = api.create(self, 'entries', params=self.valid_create_params, user=self.student)['entry']
 
         params = {
@@ -182,6 +191,13 @@ class EntryAPITest(TestCase):
         }
 
         api.update(self, 'entries', params=params.copy(), user=self.student)
+
+        # Check if last_edited_by gets set to the correct other user
+        last_edited = factory.AssignmentParticipation(assignment=self.journal.assignment)
+        self.journal.authors.add(last_edited)
+        resp = api.update(self, 'entries', params=params.copy(), user=last_edited.user)['entry']
+        assert resp['last_edited_by'] == last_edited.user.full_name
+
         # Other users shouldn't be able to update an entry
         api.update(self, 'entries', params=params.copy(), user=self.teacher, status=403)
 

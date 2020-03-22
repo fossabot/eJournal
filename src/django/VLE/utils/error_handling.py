@@ -30,7 +30,7 @@ class VLEProgrammingError(Exception):
 
 
 class VLEUnverifiedEmailError(Exception):
-    def __init__(self, message='You need to verify your email before an email can be sent to this account.'):
+    def __init__(self, message='You need to verify your email address on your profile page first.'):
         super(VLEUnverifiedEmailError, self).__init__(message)
 
 

@@ -44,6 +44,7 @@ class TeacherRoleFactory(TaRoleFactory):
     can_add_assignment = True
     can_delete_assignment = True
     can_edit_assignment = True
+    can_manage_journals = True
     can_comment = True
     can_edit_staff_comment = True
     can_view_grade_history = True

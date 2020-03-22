@@ -14,7 +14,7 @@
                 class="spinner shadow"
             >
                 <icon
-                    name="circle-o-notch"
+                    name="circle-notch"
                     spin
                     scale="1.1"
                 />
@@ -24,7 +24,10 @@
             :to="{ name: 'Home' }"
             class="brand-name text-shadow"
         >
-            <img src="/ejournal-logo-white.svg"/>
+            <img
+                src="/ejournal-logo-white.svg"
+                class="theme-img"
+            />
         </b-navbar-brand>
 
         <b-navbar-toggle
@@ -77,7 +80,7 @@
                 >
                     <img
                         :src="profileImg"
-                        class="profile-picture-sm"
+                        class="theme-img profile-picture-sm"
                     />
                 </div>
                 <b-button
@@ -88,7 +91,7 @@
                     &nbsp;Profile
                 </b-button>
                 <b-button :to="{ name: 'Logout' }">
-                    <icon name="sign-out"/>
+                    <icon name="sign-out-alt"/>
                     Log out
                 </b-button>
             </b-nav-dropdown>
@@ -110,7 +113,7 @@
                 class="spinner shadow"
             >
                 <icon
-                    name="circle-o-notch"
+                    name="circle-notch"
                     spin
                     scale="1.3"
                 />
@@ -120,7 +123,10 @@
             :to="{ name: 'Guest' }"
             class="brand-name"
         >
-            <img src="/ejournal-logo-white.svg"/>
+            <img
+                src="/ejournal-logo-white.svg"
+                class="theme-img"
+            />
         </b-navbar-brand>
 
         <b-navbar-nav
@@ -139,7 +145,8 @@
                 >
                     <icon
                         name="user"
-                        scale="2.5"
+                        class="fill-dark-blue"
+                        scale="2"
                     />
                 </div>
                 <b-button
@@ -151,7 +158,7 @@
                     Register
                 </b-button>
                 <b-button :to="{ name: 'Login' }">
-                    <icon name="sign-in"/>
+                    <icon name="sign-in-alt"/>
                     Log in
                 </b-button>
             </b-nav-dropdown>
@@ -261,9 +268,6 @@ export default {
         a.nav-link
             text-align: right !important
 
-#nav-collapse
-    background-color: $theme-dark-blue
-
 .dropdown-menu
     @extend .shadow
     background: $theme-dark-blue !important
@@ -280,6 +284,7 @@ export default {
 
 .spinner
     background: white
+    color: $theme-dark-blue
     position: fixed
     bottom: 0px
     left: 0px

@@ -1,6 +1,6 @@
 <template>
     <div>
-        <h4 class="mb-2">
+        <h4 class="theme-h4 mb-2">
             <span>Manage course members</span>
         </h4>
         <div class="d-flex">
@@ -50,7 +50,7 @@
             <b-form-select
                 v-model="selectedSortOption"
                 :selectSize="1"
-                class="multi-form mr-2"
+                class="theme-select multi-form mr-2"
             >
                 <option value="name">
                     Sort by name
@@ -62,7 +62,7 @@
             <b-form-select
                 v-model="groupFilter"
                 :selectSize="1"
-                class="multi-form mr-2"
+                class="theme-select multi-form mr-2"
             >
                 <option :value="null">
                     Filter on group...
@@ -81,7 +81,7 @@
                 @click.stop
                 @click="setOrder(!order)"
             >
-                <icon name="long-arrow-down"/>
+                <icon name="long-arrow-alt-down"/>
                 Ascending
             </b-button>
             <b-button
@@ -90,7 +90,7 @@
                 @click.stop
                 @click="setOrder(!order)"
             >
-                <icon name="long-arrow-up"/>
+                <icon name="long-arrow-alt-up"/>
                 Descending
             </b-button>
         </div>

@@ -1,8 +1,8 @@
 <template>
     <content-single-column>
-        <h1 class="mb-2">
+        <h1 class="theme-h1 mb-2">
             <span>
-                Error {{ code }}: <span class="text-dark-grey">{{ reasonPhrase }}</span>
+                Error {{ code }}: {{ reasonPhrase }}
             </span>
         </h1>
         <b-card
@@ -10,7 +10,7 @@
         >
             <h2
                 v-if="description !== null"
-                class="mb-2"
+                class="theme-h2 mb-2"
             >
                 {{ description }}
             </h2>

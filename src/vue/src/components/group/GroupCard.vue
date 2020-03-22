@@ -13,7 +13,7 @@
                 Stop editing
             </b-button>
             <b-form @submit.prevent="updateGroupName">
-                <h2 class="field-heading">
+                <h2 class="theme-h2 field-heading">
                     Group name
                 </h2><br/>
                 <div class="d-flex">
@@ -33,7 +33,7 @@
                     </b-button>
                 </div>
             </b-form>
-            <h2 class="field-heading">
+            <h2 class="theme-h2 field-heading">
                 Members
             </h2>
             <ul
@@ -69,10 +69,10 @@
                         :multiSelectText="`user${participantsToAdd &&
                             participantsToAdd.length === 1 ? '' : 's'} selected`"
                         placeholder="Select users to add"
-                        class="multi-form mr-2"
+                        class="multi-form no-right-radius"
                     />
                     <b-button
-                        class="add-button multi-form"
+                        class="add-button multi-form no-left-radius"
                         @click.prevent.stop="addToGroup()"
                     >
                         <icon name="user-plus"/>
@@ -96,14 +96,13 @@
             @click="editing = true"
         >
             <span class="float-left">
-                <h2 class="field-heading">{{ group.name }}</h2>
+                <h2 class="theme-h2 field-heading">{{ group.name }}</h2>
                 {{ members.length }} {{ members.length === 1 ? "member" : "members" }}
             </span>
         </b-card>
     </div>
 </template>
 
-<style src="vue-multiselect/dist/vue-multiselect.min.css"></style>
 <style lang="sass">
 .member-list
     padding: 0

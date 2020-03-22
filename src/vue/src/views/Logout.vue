@@ -1,5 +1,7 @@
 <template>
-    <h2>Logging out</h2>
+    <h2 class="theme-h2">
+        Logging out
+    </h2>
 </template>
 
 <script>

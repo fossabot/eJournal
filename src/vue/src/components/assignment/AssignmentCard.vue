@@ -1,7 +1,7 @@
 <template>
     <b-card :class="$root.getBorderClass(assignment.id)">
         <slot class="float-right"/>
-        <h2 class="d-inline align-middle">
+        <h2 class="theme-h2 d-inline align-middle">
             {{ assignment.name }}
         </h2>
         <b-badge
@@ -13,7 +13,7 @@
                 class="text-grey"
             >
                 <icon
-                    name="clock-o"
+                    name="clock"
                     scale="0.8"
                     class="fill-grey shift-up-2"
                 />
@@ -33,18 +33,15 @@
         </b-badge>
         <b-badge
             v-if="assignment.lti_couples > 0"
-            v-b-tooltip.hover
+            v-b-tooltip:hover="'Linked via LTI'"
             class="info align-middle mr-1"
-            title="Linked via LTI"
         >
             LTI
         </b-badge>
         <b-badge
             v-if="!assignment.is_published"
-            v-b-tooltip.hover
+            v-b-tooltip:hover="'Not visible to students: click to edit'"
             class="align-middle"
-            title="Not visible to students:
-            click to edit"
         >
             Unpublished
         </b-badge>

@@ -12,8 +12,10 @@ htmlcov/*
 .vscode/*
 
 # Coverage
-.coverage
+.coverage*
 
+*.zip
+*.gz
 # Created by https://www.gitignore.io/intellij
 
 ### Intellij ###

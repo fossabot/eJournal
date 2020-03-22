@@ -110,6 +110,7 @@ class CourseView(viewsets.ViewSet):
                 return response.bad_request('Course already linked to LMS.')
             request.data['active_lti_id'] = request.data.pop('lti_id')
 
+        request.data['startdate'], request.data['enddate'] = utils.optional_params(request.data, 'startdate', 'enddate')
         serializer = self.serializer_class(course, data=request.data, partial=True)
         if not serializer.is_valid():
             return response.bad_request()

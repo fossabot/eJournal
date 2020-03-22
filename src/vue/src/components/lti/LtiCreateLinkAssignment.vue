@@ -1,6 +1,6 @@
 <template>
     <div>
-        <h2 class="multi-form">
+        <h2 class="theme-h2 multi-form">
             Configuring an assignment
         </h2>
         <span class="d-block mb-2">
@@ -25,7 +25,7 @@
         </b-card>
         <b-card class="no-hover">
             <b-button
-                v-b-modal="'lti-assignment-copy-modal'"
+                v-b-modal="'lti-assignment-import-modal'"
                 class="add-button big-button-text full-width"
             >
                 <icon
@@ -33,16 +33,16 @@
                     class="mr-3"
                     scale="1.8"
                 />
-                Copy assignment
+                Import assignment
             </b-button>
-            <assignment-copy-modal
-                modalID="lti-assignment-copy-modal"
+            <assignment-import-modal
+                modalID="lti-assignment-import-modal"
                 :cID="page.cID"
                 :lti="lti"
             />
             <hr/>
             If you want to create a new assignment that is identical to an assignment that you have
-            already configured, click the button above to copy it. Existing journals are not copied
+            already configured, click the button above to import it. Existing journals are not imported
             and will remain accessible only from the original assignment.
         </b-card>
         <b-card
@@ -70,6 +70,7 @@
             title="Link to existing assignment"
             size="lg"
             hideFooter
+            noEnforceFocus
         >
             <link-assignment
                 :lti="lti"
@@ -83,6 +84,7 @@
             title="Create new assignment"
             size="lg"
             hideFooter
+            noEnforceFocus
         >
             <create-assignment
                 :lti="lti"
@@ -96,14 +98,14 @@
 <script>
 import createAssignment from '@/components/assignment/CreateAssignment.vue'
 import linkAssignment from '@/components/lti/LinkAssignment.vue'
-import assignmentCopyModal from '@/components/assignment/AssignmentCopyModal.vue'
+import assignmentImportModal from '@/components/assignment/AssignmentImportModal.vue'
 
 export default {
     name: 'LtiCreateLinkAssignment',
     components: {
         createAssignment,
         linkAssignment,
-        assignmentCopyModal,
+        assignmentImportModal,
     },
     props: ['lti', 'page', 'linkableAssignments'],
     methods: {

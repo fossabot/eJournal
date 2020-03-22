@@ -14,30 +14,31 @@ from VLE.models import Entry, Journal, Node, PresetNode
 
 def _send_deadline_mail(deadline, journal):
     assignment = journal.assignment
-    course = assignment.get_active_course(journal.user)
-    email_data = {}
-    email_data['heading'] = 'Upcoming deadline'
-    email_data['main_content'] = '''\
-    You have an unfinished deadline coming up for {} in {}.'''.format(course.name, assignment.name)
-    email_data['extra_content'] = 'Date: {}'.format(deadline['due_date'])
-    email_data['button_url'] = '{}/Home/Course/{}/Assignment/{}/Journal/{}?nID={}'\
-                               .format(settings.BASELINK, course.id, assignment.id, journal.id, deadline['node'])
-    email_data['button_text'] = 'View Deadline'
-    email_data['profile_url'] = '{}/Profile'.format(settings.BASELINK)
+    for author in journal.authors.all():
+        course = assignment.get_active_course(author.user)
+        email_data = {}
+        email_data['heading'] = 'Upcoming deadline'
+        email_data['main_content'] = '''\
+        You have an unfinished deadline coming up for {} in {}.'''.format(course.name, assignment.name)
+        email_data['extra_content'] = 'Date: {}'.format(deadline['due_date'])
+        email_data['button_url'] = '{}/Home/Course/{}/Assignment/{}/Journal/{}?nID={}'\
+                                   .format(settings.BASELINK, course.id, assignment.id, journal.id, deadline['node'])
+        email_data['button_text'] = 'View Deadline'
+        email_data['profile_url'] = '{}/Profile'.format(settings.BASELINK)
 
-    html_content = render_to_string('call_to_action.html', {'email_data': email_data})
-    text_content = strip_tags(html_content)
+        html_content = render_to_string('call_to_action.html', {'email_data': email_data})
+        text_content = strip_tags(html_content)
 
-    email = EmailMultiAlternatives(
-        subject='Upcoming deadline in {}'.format(assignment.name),
-        body=text_content,
-        from_email='noreply@{}'.format(settings.EMAIL_SENDER_DOMAIN),
-        headers={'Content-Type': 'text/plain'},
-        to=[journal.user.email]
-    )
+        email = EmailMultiAlternatives(
+            subject='Upcoming deadline in {}'.format(assignment.name),
+            body=text_content,
+            from_email='eJournal | Noreply<noreply@{}>'.format(settings.EMAIL_SENDER_DOMAIN),
+            headers={'Content-Type': 'text/plain'},
+            to=[author.user.email]
+        )
 
-    email.attach_alternative(html_content, 'text/html')
-    email.send()
+        email.attach_alternative(html_content, 'text/html')
+        email.send()
 
 
 def _send_deadline_mails(deadline_query):
@@ -51,8 +52,8 @@ def _send_deadline_mails(deadline_query):
     emails_sent_to = []
     # Remove all filled entrydeadline, and remove where the user does not want to recieve an email.
     no_submissions = Q(type=Node.ENTRYDEADLINE, node__entry__isnull=True) | Q(type=Node.PROGRESS)
-    notifications_enabled = Q(node__journal__user__preferences__upcoming_deadline_notifications=True)
-    verified_email = Q(node__journal__user__verified_email=True)
+    notifications_enabled = Q(node__journal__authors__user__preferences__upcoming_deadline_notifications=True)
+    verified_email = Q(node__journal__authors__user__verified_email=True)
     deadlines = deadline_query.filter(notifications_enabled & verified_email & no_submissions)\
                               .values('node', 'node__journal', 'due_date', 'type', 'target')
     for deadline in deadlines:
@@ -70,7 +71,8 @@ def _send_deadline_mails(deadline_query):
             continue
 
         _send_deadline_mail(deadline, journal)
-        emails_sent_to.append(journal.user.email)
+        for author in journal.authors.all():
+            emails_sent_to.append(author.user.email)
 
     return emails_sent_to
 

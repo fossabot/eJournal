@@ -8,7 +8,7 @@
             <h2
                 v-if="field.title"
                 :class="{ 'required': field.required }"
-                class="field-heading"
+                class="theme-h2 field-heading"
             >
                 {{ field.title }}
             </h2>
@@ -23,37 +23,49 @@
                 class="theme-input"
                 rows="1"
             />
-            <flat-pickr
+            <reset-wrapper
                 v-if="field.type == 'd'"
                 v-model="completeContent[i].data"
-                class="theme-input full-width"
-                :config="$root.flatPickrConfig"
-            />
-            <flat-pickr
+            >
+                <flat-pickr
+                    v-model="completeContent[i].data"
+                    class="full-width"
+                    :config="$root.flatPickrConfig"
+                />
+            </reset-wrapper>
+            <reset-wrapper
                 v-if="field.type == 'dt'"
                 v-model="completeContent[i].data"
-                class="theme-input full-width"
-                :config="$root.flatPickrTimeConfig"
-            />
+            >
+                <flat-pickr
+                    v-model="completeContent[i].data"
+                    class="full-width"
+                    :config="$root.flatPickrTimeConfig"
+                />
+            </reset-wrapper>
             <file-upload-input
                 v-else-if="field.type == 'i'"
-                :placeholder="completeContent[i].data"
+                :placeholder="completeContent[i].data ? completeContent[i].data.file_name : null"
                 :acceptedFiletype="'image/*'"
                 :maxSizeBytes="$root.maxFileSizeBytes"
                 :autoUpload="true"
                 :aID="$route.params.aID"
                 :contentID="completeContent[i].contentID"
-                @fileUploadSuccess="completeContent[i].data = $event"
+                @uploadingFile="$emit('uploadingFile')"
+                @fileUploadFailed="$emit('finishedUploadingFile')"
+                @fileUploadSuccess="completeContent[i].data = $event; $emit('finishedUploadingFile')"
             />
             <file-upload-input
                 v-else-if="field.type == 'f'"
-                :placeholder="completeContent[i].data"
+                :placeholder="completeContent[i].data ? completeContent[i].data.file_name : null"
                 :acceptedFiletype="'*/*'"
                 :maxSizeBytes="$root.maxFileSizeBytes"
                 :autoUpload="true"
                 :aID="$route.params.aID"
                 :contentID="completeContent[i].contentID"
-                @fileUploadSuccess="completeContent[i].data = $event"
+                @uploadingFile="$emit('uploadingFile')"
+                @fileUploadFailed="$emit('finishedUploadingFile')"
+                @fileUploadSuccess="completeContent[i].data = $event; $emit('finishedUploadingFile')"
             />
             <b-input
                 v-else-if="field.type == 'v'"
@@ -63,17 +75,20 @@
             />
             <file-upload-input
                 v-else-if="field.type == 'p'"
-                :placeholder="completeContent[i].data"
+                :placeholder="completeContent[i].data ? completeContent[i].data.file_name : null"
                 :acceptedFiletype="'application/pdf'"
                 :maxSizeBytes="$root.maxFileSizeBytes"
                 :autoUpload="true"
                 :aID="$route.params.aID"
                 :contentID="completeContent[i].contentID"
-                @fileUploadSuccess="completeContent[i].data = $event"
+                @uploadingFile="$emit('uploadingFile')"
+                @fileUploadFailed="$emit('finishedUploadingFile')"
+                @fileUploadSuccess="completeContent[i].data = $event; $emit('finishedUploadingFile')"
             />
             <text-editor
                 v-else-if="field.type == 'rt'"
                 :id="'rich-text-editor-field-' + i"
+                :key="'rich-text-editor-field-' + i"
                 v-model="completeContent[i].data"
             />
             <url-input
@@ -85,6 +100,7 @@
                 v-else-if="field.type == 's'"
                 v-model="completeContent[i].data"
                 :options="parseSelectionOptions(field.options)"
+                class="theme-select"
             />
         </div>
     </div>
@@ -98,7 +114,7 @@
             <h2
                 v-if="field.title"
                 :class="{ 'required': field.required }"
-                class="field-heading"
+                class="theme-h2 field-heading"
             >
                 {{ field.title }}
             </h2>
@@ -117,19 +133,11 @@
             <image-file-display
                 v-else-if="field.type == 'i'"
                 :id="'image-display-field-' + field.location"
-                :fileName="completeContent[field.location].data"
-                :authorUID="authorUID"
-                :entryID="entryID"
-                :nodeID="nodeID"
-                :contentID="completeContent[field.location].contentID"
+                :file="completeContent[field.location].data"
             />
             <file-download-button
                 v-else-if="field.type == 'f'"
-                :fileName="completeContent[field.location].data"
-                :authorUID="authorUID"
-                :entryID="entryID"
-                :nodeID="nodeID"
-                :contentID="completeContent[field.location].contentID"
+                :file="completeContent[field.location].data"
             />
             <b-embed
                 v-else-if="field.type == 'v'"
@@ -140,11 +148,7 @@
             />
             <pdf-display
                 v-else-if="field.type == 'p'"
-                :fileName="completeContent[field.location].data"
-                :authorUID="authorUID"
-                :entryID="entryID"
-                :nodeID="nodeID"
-                :contentID="completeContent[field.location].contentID"
+                :file="completeContent[field.location].data"
             />
             <sandboxed-iframe
                 v-else-if="field.type == 'rt'"
@@ -192,7 +196,7 @@ export default {
         nodeID: {
             required: true,
         },
-        authorUID: {
+        journalID: {
             default: null,
             required: false,
         },

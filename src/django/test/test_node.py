@@ -4,10 +4,10 @@ from test.utils import api
 from django.test import TestCase
 
 
-class NodeAPITest(TestCase):
+class NodeTest(TestCase):
     def setUp(self):
-        self.student = factory.Student()
-        self.journal = factory.Journal(user=self.student)
+        self.journal = factory.Journal()
+        self.student = self.journal.authors.first().user
         self.teacher = self.journal.assignment.courses.first().author
 
     def test_get(self):

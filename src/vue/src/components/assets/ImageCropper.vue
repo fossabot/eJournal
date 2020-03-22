@@ -1,5 +1,5 @@
 <template>
-    <b-card class="no-hover">
+    <div>
         <div class="profile-picture-lg profile-picture-cropper">
             <croppa
                 v-model="croppa"
@@ -20,27 +20,32 @@
             />
         </div>
         <b-button
-            class="mr-2"
+            class="multi-form"
+            :class="{
+                'mr-2': !hideSaveButton,
+                'float-right': hideSaveButton,
+            }"
             @click="croppa.chooseFile()"
         >
             <icon name="upload"/>
             Upload
         </b-button>
         <b-button
-            class="change-button"
+            class="change-button multi-form"
             @click="refreshPicture()"
         >
             <icon name="undo"/>
             Reset
         </b-button>
         <b-button
+            v-if="!hideSaveButton"
             class="add-button float-right"
             @click="savePicture()"
         >
             <icon name="save"/>
             Save
         </b-button>
-    </b-card>
+    </div>
 </template>
 
 <script>
@@ -51,7 +56,16 @@ export default {
     components: {
         croppa: Croppa.component,
     },
-    props: ['pictureUrl'],
+    props: {
+        pictureUrl: {
+            required: false,
+            default: null,
+        },
+        hideSaveButton: {
+            required: false,
+            default: false,
+        },
+    },
     data () {
         return {
             croppa: {},
@@ -63,10 +77,13 @@ export default {
         },
         onFileSizeExceed () {
             this.$toasted.error(
-                `The profile picture exceeds the maximum file size of ${this.$root.maxFileSizeBytes} bytes.`)
+                `The picture exceeds the maximum file size of ${this.$root.maxFileSizeBytes} bytes.`)
         },
         savePicture () {
-            this.$emit('newPicture', this.croppa.generateDataUrl('image/jpeg'))
+            this.$emit('newPicture', this.croppa.generateDataUrl('image/png'))
+        },
+        getPicture () {
+            return this.croppa.generateDataUrl('image/png')
         },
         refreshPicture () {
             this.croppa.refresh()

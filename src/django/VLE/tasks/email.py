@@ -26,6 +26,7 @@ def send_email_verification_link(user_pk):
     We have received a request for email verification. If it was you who made this request, \
     please click the button below to verify your email address. If you have not made this \
     request please ignore this email.'''
+    email_data['full_name'] = user.full_name
     email_data['extra_content'] = 'Token: {}'.format(token)
     email_data['button_url'] = '{}/EmailVerification/{}/{}'.format(settings.BASELINK, user.username, token)
     email_data['button_text'] = 'Verify Email'
@@ -37,7 +38,7 @@ def send_email_verification_link(user_pk):
     email = EmailMultiAlternatives(
         subject='eJournal email verification',
         body=text_content,
-        from_email='noreply@{}'.format(settings.EMAIL_SENDER_DOMAIN),
+        from_email='eJournal | Noreply<noreply@{}>'.format(settings.EMAIL_SENDER_DOMAIN),
         headers={'Content-Type': 'text/plain'},
         to=[user.email]
     )
@@ -58,6 +59,7 @@ def send_password_recovery_link(user_pk):
     We have received a request for password recovery. If it was you who made this request, \
     please click the button below to set a new password. If you have not made this \
     request please ignore this email.'''
+    email_data['full_name'] = user.full_name
     email_data['extra_content'] = 'Token: {}'.format(token)
     email_data['button_url'] = '{}/PasswordRecovery/{}/{}'.format(settings.BASELINK, user.username, token)
     email_data['button_text'] = 'Set New Password'
@@ -69,7 +71,7 @@ def send_password_recovery_link(user_pk):
     email = EmailMultiAlternatives(
         subject='eJournal password recovery',
         body=text_content,
-        from_email='noreply@{}'.format(settings.EMAIL_SENDER_DOMAIN),
+        from_email='eJournal | Noreply<noreply@{}>'.format(settings.EMAIL_SENDER_DOMAIN),
         headers={'Content-Type': 'text/plain'},
         to=[user.email]
     )
@@ -99,7 +101,7 @@ def send_email_feedback(user_pk, topic, ftype, feedback, user_agent, url, file_c
     r_html_content = render_to_string('feedback.html', {'email_data': r_email_data})
     r_text_content = strip_tags(r_html_content)
 
-    from_email = 'eJournal | Support<' + 'support@{}'.format(settings.EMAIL_SENDER_DOMAIN) + '>'
+    from_email = 'eJournal | Support<support@{}>'.format(settings.EMAIL_SENDER_DOMAIN)
 
     attachments = []
     if user.feedback_file:

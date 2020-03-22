@@ -1,5 +1,8 @@
+import test.factory.participation
+
 import factory
 
+import VLE.factory
 import VLE.models
 
 
@@ -7,12 +10,19 @@ class JournalFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = 'VLE.Journal'
 
-    user = factory.SubFactory('test.factory.user.UserFactory')
-    assignment = factory.SubFactory('test.factory.assignment.AssignmentFactory')
+    assignment = factory.SubFactory('test.factory.assignment.TemplateAssignmentFactory')
 
     @factory.post_generation
     def add_user_to_assignment(self, create, extracted):
-        for course in self.assignment.courses.all():
-            if not VLE.models.Participation.objects.filter(course=course, user=self.user).exists():
-                role = VLE.models.Role.objects.get(course=course, name='Student')
-                VLE.models.Participation.objects.create(course=course, user=self.user, role=role)
+        if not create:
+            return
+
+        if not VLE.models.AssignmentParticipation.objects.filter(journal=self).exists():
+            author = test.factory.participation.AssignmentParticipationFactory(
+                journal=self, assignment=self.assignment)
+            self.authors.add(author)
+
+
+class GroupJournalFactory(JournalFactory):
+    assignment = factory.SubFactory('test.factory.assignment.GroupAssignmentFactory')
+    author_limit = 3

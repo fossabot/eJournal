@@ -19,6 +19,7 @@
                 <timeline
                     :selected="currentNode"
                     :nodes="nodes"
+                    :assignment="assignment"
                     @select-node="selectNode"
                 />
             </b-col>
@@ -34,9 +35,25 @@
                     v-if="journal && journal.needs_lti_link && assignment && assignment.active_lti_course"
                     show
                 >
-                    <b>Warning:</b> This student has not visited the assignment in the active LMS (Canvas) course
-                    '{{ assignment.active_lti_course.name }}' yet. They cannot update this journal and grades cannot
-                    be passed back until they visit the assignment at least once.
+                    <span v-if="assignment.is_group_assignment">
+                        <b>Warning:</b> The following journal members have not visited the assignment in the active LMS
+                        (Canvas) course '{{ assignment.active_lti_course.name }}' yet:
+                        <ul>
+                            <li
+                                v-for="author in journal.authors.filter(author => author.needs_lti_link)"
+                                :key="`lti-author-${author.user.username}`"
+                            >
+                                {{ author.user.full_name }}
+                            </li>
+                        </ul>
+                        This journal cannot be updated and grades cannot be passed back until each member visits the
+                        assignment at least once.
+                    </span>
+                    <span v-else>
+                        <b>Warning:</b> This student has not visited the assignment in the active LMS (Canvas) course
+                        '{{ assignment.active_lti_course.name }}' yet. They cannot update this journal and grades cannot
+                        be passed back until they visit the assignment at least once.
+                    </span>
                 </b-alert>
                 <load-wrapper :loading="loadingNodes">
                     <div v-if="nodes.length > currentNode && currentNode !== -1">
@@ -45,6 +62,7 @@
                                 ref="entry-template-card"
                                 :journal="journal"
                                 :entryNode="nodes[currentNode]"
+                                :assignment="assignment"
                                 @check-grade="loadJournal(true)"
                             />
                         </div>
@@ -78,21 +96,63 @@
                 <b-col
                     md="6"
                     lg="12"
-                    class="mb-4"
+                    class="mb-2"
                 >
-                    <h3>Journal progress</h3>
-                    <student-card
-                        v-if="journal"
-                        :student="journal.student"
-                        :stats="journal.stats"
-                        :assignment="assignment"
-                        :class="'mb-2 no-hover'"
+                    <h3 class="theme-h3">
+                        Details
+                    </h3>
+                    <b-card
+                        :class="$root.getBorderClass($route.params.cID)"
+                        class="journal-details-card no-hover"
+                    >
+                        <journal-details
+                            v-if="!loadingNodes"
+                            :journal="journal"
+                            :assignment="assignment"
+                            class="mb-2 no-hover"
+                        />
+                        <div
+                            v-if="filteredJournals.length > 1"
+                            class="d-flex"
+                        >
+                            <b-button
+                                v-if="filteredJournals.length !== 0"
+                                :to="{ name: 'Journal', params: { cID: cID, aID: aID, jID: prevJournal.id } }"
+                                class="mr-2 flex-grow-1"
+                                tag="b-button"
+                            >
+                                <icon name="arrow-left"/>
+                                Previous
+                            </b-button>
+                            <b-button
+                                v-if="filteredJournals.length !== 0"
+                                :to="{ name: 'Journal', params: { cID: cID, aID: aID, jID: nextJournal.id } }"
+                                class="flex-grow-1"
+                                tag="b-button"
+                            >
+                                Next
+                                <icon name="arrow-right"/>
+                            </b-button>
+                        </div>
+                    </b-card>
+                </b-col>
+                <b-col
+                    v-if="journal && ($hasPermission('can_grade') || $hasPermission('can_publish_grades'))"
+                    md="6"
+                    lg="12"
+                >
+                    <h3 class="theme-h3">
+                        Grading
+                    </h3>
+                    <b-card
+                        :class="$root.getBorderClass($route.params.cID)"
+                        class="no-hover"
                     >
                         <div
-                            v-if="journal && $hasPermission('can_grade')"
+                            v-if="$hasPermission('can_grade')"
                             class="grade-section bonus-section full-width shadow"
                         >
-                            <div class="center">
+                            <div>
                                 <b-form-input
                                     v-model="journal.bonus_points"
                                     type="number"
@@ -114,45 +174,15 @@
                                 Save bonus
                             </b-button>
                         </div>
-                    </student-card>
-                </b-col>
-                <b-col
-                    v-if="$hasPermission('can_publish_grades') || filteredJournals.length > 1"
-                    md="6"
-                    lg="12"
-                >
-                    <h3>Controls</h3>
-                    <div
-                        v-if="filteredJournals.length > 1"
-                        class="d-flex"
-                    >
                         <b-button
-                            v-if="filteredJournals.length !== 0"
-                            :to="{ name: 'Journal', params: { cID: cID, aID: aID, jID: prevJournal.id } }"
-                            class="multi-form mr-2 flex-grow-1"
-                            tag="b-button"
+                            v-if="$hasPermission('can_publish_grades')"
+                            class="add-button full-width mt-1"
+                            @click="publishGradesJournal"
                         >
-                            <icon name="arrow-left"/>
-                            Previous
+                            <icon name="upload"/>
+                            Publish all grades
                         </b-button>
-                        <b-button
-                            v-if="filteredJournals.length !== 0"
-                            :to="{ name: 'Journal', params: { cID: cID, aID: aID, jID: nextJournal.id } }"
-                            class="multi-form flex-grow-1"
-                            tag="b-button"
-                        >
-                            Next
-                            <icon name="arrow-right"/>
-                        </b-button>
-                    </div>
-                    <b-button
-                        v-if="$hasPermission('can_publish_grades')"
-                        class="add-button flex-grow-1 full-width"
-                        @click="publishGradesJournal"
-                    >
-                        <icon name="upload"/>
-                        Publish all grades
-                    </b-button>
+                    </b-card>
                 </b-col>
             </b-row>
         </b-col>
@@ -162,7 +192,7 @@
 <script>
 import entryNonStudentPreview from '@/components/entry/EntryNonStudentPreview.vue'
 import timeline from '@/components/timeline/Timeline.vue'
-import studentCard from '@/components/assignment/StudentCard.vue'
+import journalDetails from '@/components/journal/JournalDetails.vue'
 import breadCrumb from '@/components/assets/BreadCrumb.vue'
 import loadWrapper from '@/components/loading/LoadWrapper.vue'
 import journalStartCard from '@/components/journal/JournalStartCard.vue'
@@ -180,7 +210,7 @@ export default {
         breadCrumb,
         loadWrapper,
         timeline,
-        studentCard,
+        journalDetails,
         journalStartCard,
         journalEndCard,
         progressNode,
@@ -197,6 +227,8 @@ export default {
             assignment: {},
             journal: null,
             loadingNodes: true,
+            editingName: false,
+            journalName: '',
         }
     },
     computed: {
@@ -374,11 +406,17 @@ export default {
 
 <style lang="sass">
 .bonus-section
-    text-align: center
-    margin: 10px 0px 0px 0px !important
+    float: left !important
+    display: block
+    margin-bottom: 0px
+    div
+        text-align: center
     .btn
         display: block
         width: 100%
         border-width: 1px 0px 0px 0px !important
         border-radius: 0px 0px 5px 5px !important
+
+.journal-details-card > .card-body
+    padding-top: 45px
 </style>

@@ -30,13 +30,13 @@
                 >
                     <icon
                         v-intro="'That\'s it! If you have any more questions, do not hesitate to contact us via the \
-                        feedback button below. This tutorial can be consulted again by clicking the info sign.'"
+                        support button at the bottom of any page. This tutorial can be consulted again by clicking \
+                        the info sign.'"
                         v-intro-step="4"
-                        v-b-tooltip.hover
-                        name="info"
+                        v-b-tooltip:hover="'Click to start a tutorial for this page'"
+                        name="info-circle"
                         scale="1.5"
-                        title="Click to start a tutorial for this page"
-                        class="info-icon"
+                        class="info-icon shift-up-5 ml-1"
                         @click.native="startTour"
                     />
                 </bread-crumb>
@@ -51,6 +51,7 @@
                     v-intro-step="3"
                     :selected="currentNode"
                     :nodes="presets"
+                    :assignment="assignmentDetails"
                     :edit="true"
                     @select-node="(node) => {
                         currentNode = node
@@ -72,27 +73,50 @@
                 >
                     <icon
                         v-intro="'That\'s it! If you have any more questions, do not hesitate to contact us via the \
-                        feedback button below. This tutorial can be consulted again by clicking the info sign.'"
+                        support button at the bottom of any page. This tutorial can be consulted again by clicking \
+                        the info sign.'"
                         v-intro-step="4"
-                        v-b-tooltip.hover
-                        name="info"
+                        v-b-tooltip:hover="'Click to start a tutorial for this page'"
+                        name="info-circle"
                         scale="1.75"
-                        title="Click to start a tutorial for this page"
-                        class="info-icon"
+                        class="info-icon shift-up-5 ml-1"
                         @click.native="startTour"
                     />
                 </bread-crumb>
 
-                <assignment-details-card
-                    v-if="currentNode === -1"
-                    :class="{ 'input-disabled' : saveRequestInFlight }"
-                    :assignmentDetails="assignmentDetails"
-                    :presetNodes="presets"
-                />
+                <div v-if="currentNode === -1">
+                    <b-card
+                        :class="$root.getBorderClass($route.params.cID)"
+                        class="no-hover"
+                    >
+                        <assignment-details
+                            ref="assignmentDetails"
+                            :class="{ 'input-disabled' : saveRequestInFlight }"
+                            :assignmentDetails="assignmentDetails"
+                            :presetNodes="presets"
+                        />
+                    </b-card>
+                    <b-card
+                        v-if="$hasPermission('can_delete_assignment')"
+                        class="no-hover border-red"
+                    >
+                        <b-button
+                            :class="{
+                                'input-disabled': assignmentDetails.lti_count > 1 && assignmentDetails.active_lti_course
+                                    && parseInt(assignmentDetails.active_lti_course.cID) ===
+                                        parseInt($route.params.cID)}"
+                            class="delete-button full-width"
+                            @click="deleteAssignment"
+                        >
+                            <icon name="trash"/>
+                            {{ assignmentDetails.course_count > 1 ? 'Remove' : 'Delete' }} assignment
+                        </b-button>
+                    </b-card>
+                </div>
 
                 <preset-node-card
                     v-else-if="presets.length > 0 && currentNode !== -1 && currentNode < presets.length"
-                    ref="entry-template-card"
+                    :key="`preset-node-${currentNode}`"
                     :class="{ 'input-disabled' : saveRequestInFlight }"
                     :currentPreset="presets[currentNode]"
                     :templates="templates"
@@ -114,7 +138,9 @@
                     class="no-hover"
                     :class="$root.getBorderClass($route.params.cID)"
                 >
-                    <h2>End of assignment</h2>
+                    <h2 class="theme-h2">
+                        End of assignment
+                    </h2>
                     <p>This is the end of the assignment.</p>
                 </b-card>
 
@@ -123,6 +149,7 @@
                     size="lg"
                     title="Edit template"
                     hideFooter
+                    noEnforceFocus
                 >
                     <template-editor
                         v-if="currentTemplate !== -1"
@@ -138,7 +165,9 @@
             xl="3"
             class="right-content-timeline-page right-content"
         >
-            <h3>Entry Templates</h3>
+            <h3 class="theme-h3">
+                Entry Templates
+            </h3>
             <div
                 v-intro="'Every assignment contains customizable <i>templates</i> which specify what the contents of \
                 each journal entry should be. There are two different types of templates:<br/><br/><ul><li><b>\
@@ -149,20 +178,34 @@
                 :class="{ 'input-disabled' : saveRequestInFlight }"
                 class="d-block"
             >
-                <template-link
-                    v-for="(template, index) in templates"
-                    :key="template.id"
-                    :template="template"
-                    @edit-template="showTemplateModal(index)"
-                    @delete-template="deleteTemplate(index)"
-                />
-                <b-button
-                    class="add-button multi-form"
-                    @click="newTemplate()"
+                <b-card
+                    :class="$root.getBorderClass($route.params.cID)"
+                    class="no-hover"
                 >
-                    <icon name="plus"/>
-                    Create New Template
-                </b-button>
+                    <div
+                        v-if="templates.length > 0"
+                        class="template-list-header"
+                    >
+                        <b class="float-right">
+                            Type
+                        </b>
+                        <b>Name</b>
+                    </div>
+                    <template-link
+                        v-for="(template, index) in templates"
+                        :key="template.id"
+                        :template="template"
+                        @edit-template="showTemplateModal(index)"
+                        @delete-template="deleteTemplate(index)"
+                    />
+                    <b-button
+                        class="add-button mt-2 full-width"
+                        @click="newTemplate()"
+                    >
+                        <icon name="plus"/>
+                        Create New Template
+                    </b-button>
+                </b-card>
             </div>
         </b-col>
 
@@ -183,7 +226,7 @@
 <script>
 import timeline from '@/components/timeline/Timeline.vue'
 import breadCrumb from '@/components/assets/BreadCrumb.vue'
-import formatAssignmentDetailsCard from '@/components/format/FormatAssignmentDetailsCard.vue'
+import assignmentDetails from '@/components/assignment/AssignmentDetails.vue'
 import formatTemplateLink from '@/components/format/FormatTemplateLink.vue'
 import formatPresetNodeCard from '@/components/format/FormatPresetNodeCard.vue'
 import formatAddPresetNode from '@/components/format/FormatAddPresetNode.vue'
@@ -191,12 +234,13 @@ import templateEdit from '@/components/template/TemplateEdit.vue'
 
 import formatAPI from '@/api/format.js'
 import preferencesAPI from '@/api/preferences.js'
+import assignmentAPI from '@/api/assignment.js'
 
 export default {
     name: 'FormatEdit',
     components: {
         breadCrumb,
-        'assignment-details-card': formatAssignmentDetailsCard,
+        'assignment-details': assignmentDetails,
         'template-link': formatTemplateLink,
         'preset-node-card': formatPresetNodeCard,
         'add-preset-node': formatAddPresetNode,
@@ -264,12 +308,6 @@ export default {
                 })
         },
         saveFormat () {
-            let missingAssignmentName = false
-            let missingPointMax = false
-            let unlockAfterDue = false
-            let unlockAfterLock = false
-            let dueAfterLock = false
-
             let presetUnlockBeforeUnlock = false
             let presetUnlockAfterDue = false
             let presetUnlockAfterLock = false
@@ -277,7 +315,6 @@ export default {
             let presetDueAfterDue = false
             let presetDueAfterLock = false
             let presetLockBeforeUnlock = false
-            let presetLockAfterDue = false
             let presetLockAfterLock = false
             let presetUnlockAfterPresetDue = false
             let presetUnlockAfterPresetLock = false
@@ -304,34 +341,8 @@ export default {
                 }
             })
 
-            if (!/\S/.test(this.assignmentDetails.name)) {
-                missingAssignmentName = true
-                this.$toasted.error('Assignment name is missing. Please check the assignment details and try again.')
-            }
-
-            if (!missingPointMax && Number.isNaN(parseInt(this.assignmentDetails.points_possible, 10))) {
-                missingPointMax = true
-                this.$toasted.error('Points possible is missing. Please check the assignment details and try again.')
-            }
-
-            if (!unlockAfterDue && this.assignmentDetails.unlock_date && this.assignmentDetails.due_date
-                && Date.parse(this.assignmentDetails.unlock_date) > Date.parse(this.assignmentDetails.due_date)) {
-                unlockAfterDue = true
-                this.$toasted.error(
-                    'The assignment is due before the unlock date. Please check the assignment details and try again.')
-            }
-            if (!unlockAfterLock && this.assignmentDetails.unlock_date && this.assignmentDetails.lock_date
-                && Date.parse(this.assignmentDetails.unlock_date) > Date.parse(this.assignmentDetails.lock_date)) {
-                unlockAfterLock = true
-                this.$toasted.error(
-                    'The assignment lock date is before the unlock date. Please check the assignment details and try'
-                    + ' again.')
-            }
-            if (!dueAfterLock && this.assignmentDetails.due_date && this.assignmentDetails.lock_date
-                && Date.parse(this.assignmentDetails.due_date) > Date.parse(this.assignmentDetails.lock_date)) {
-                dueAfterLock = true
-                this.$toasted.error(
-                    'The assignment lock date is before the due date. Please check the timeline and try again.')
+            if (this.$refs.assignmentDetails && !this.$refs.assignmentDetails.validateDetails()) {
+                return
             }
 
             this.presets.forEach((preset) => {
@@ -444,12 +455,6 @@ export default {
                     this.$toasted.error('One or more presets have a lock date before the assignment unlock date. '
                         + 'Please check the timeline and try again.')
                 }
-                if (!presetLockAfterDue && this.assignmentDetails.due_date
-                    && Date.parse(preset.lock_date) > Date.parse(this.assignmentDetails.due_date)) {
-                    presetLockAfterDue = true
-                    this.$toasted.error('One or more presets have a lock date after the assignment due date. '
-                        + 'Please check the timeline and try again.')
-                }
                 if (!presetLockAfterLock && this.assignmentDetails.lock_date
                     && Date.parse(preset.lock_date) > Date.parse(this.assignmentDetails.lock_date)) {
                     presetLockAfterLock = true
@@ -458,12 +463,10 @@ export default {
                 }
             })
 
-            if (missingAssignmentName || missingPointMax || unlockAfterDue || unlockAfterLock
-                || dueAfterLock || presetUnlockBeforeUnlock || presetUnlockAfterDue
+            if (presetUnlockBeforeUnlock || presetUnlockAfterDue
                 || presetUnlockAfterLock || presetDueBeforeUnlock || presetDueAfterDue
-                || presetDueAfterLock || presetLockBeforeUnlock || presetLockAfterDue
-                || presetUnlockAfterPresetDue || presetUnlockAfterPresetLock
-                || presetDueAfterPresetLock || presetLockAfterLock || presetInvalidDue
+                || presetDueAfterLock || presetLockBeforeUnlock || presetUnlockAfterPresetDue
+                || presetUnlockAfterPresetLock || presetDueAfterPresetLock || presetLockAfterLock || presetInvalidDue
                 || presetInvalidLock || presetInvalidUnlock || presetInvalidTemplate
                 || presetInvalidTarget || targetsOutOfOrder || targetTooHigh || untitledTemplates) {
                 return
@@ -551,6 +554,29 @@ export default {
             }
             return value
         },
+        editJournals () {
+            alert('Not implemented yet')
+        },
+        deleteAssignment () {
+            if (this.assignmentDetails.course_count > 1
+                ? window.confirm('Are you sure you want to remove this assignment from the course?')
+                : window.confirm('Are you sure you want to delete this assignment?')) {
+                assignmentAPI.delete(
+                    this.assignmentDetails.id,
+                    this.$route.params.cID,
+                    {
+                        customSuccessToast: this.assignmentDetails.course_count > 1
+                            ? 'Removed assignment' : 'Deleted assignment',
+                    },
+                )
+                    .then(() => this.$router.push({
+                        name: 'Course',
+                        params: {
+                            cID: this.$route.params.cID,
+                        },
+                    }))
+            }
+        },
     },
     beforeRouteLeave (to, from, next) {
         if (this.isChanged && !window.confirm('Unsaved changes will be lost if you leave. Do you wish to continue?')) {
@@ -566,4 +592,7 @@ export default {
 
 <style lang="sass">
 @import '~sass/partials/timeline-page-layout.sass'
+
+.template-list-header
+    border-bottom: 2px solid $theme-dark-grey
 </style>

@@ -26,7 +26,7 @@ class ProgressNodeFactory(factory.django.DjangoModelFactory):
     def update_journals(self, create, extracted):
         if not create:
             return
-        journals = VLE.models.Journal.objects.filter(assignment__format=self.format)
+        journals = VLE.models.Journal.all_objects.filter(assignment__format=self.format)
         utils.update_journals(journals, self)
 
 
@@ -52,5 +52,5 @@ class EntrydeadlineNodeFactory(factory.django.DjangoModelFactory):
     def update_journals(self, create, extracted):
         if not create:
             return
-        journals = VLE.models.Journal.objects.filter(assignment__format=self.format)
+        journals = VLE.models.Journal.all_objects.filter(assignment__format=self.format)
         utils.update_journals(journals, self)

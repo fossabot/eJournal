@@ -16,8 +16,8 @@ import VLE.permissions as permissions
 import VLE.utils.generic_utils as utils
 import VLE.utils.responses as response
 import VLE.validators as validators
-from VLE.models import Assignment, Content, Entry, Instance, Journal, Node, User, UserFile
-from VLE.serializers import EntrySerializer, OwnUserSerializer, UserSerializer
+from VLE.models import Entry, FileContext, Instance, Journal, Node, User
+from VLE.serializers import EntrySerializer, FileSerializer, OwnUserSerializer, UserSerializer
 from VLE.tasks import send_email_verification_link
 from VLE.utils import file_handling
 from VLE.views import lti
@@ -60,7 +60,7 @@ class UserView(viewsets.ViewSet):
         if not request.user.is_superuser:
             return response.forbidden('Only administrators are allowed to request all user data.')
 
-        serializer = UserSerializer(User.objects.all(), many=True)
+        serializer = UserSerializer(User.objects.all(), context={'user': request.user}, many=True)
         return response.success({'users': serializer.data})
 
     def retrieve(self, request, pk):
@@ -83,9 +83,9 @@ class UserView(viewsets.ViewSet):
         user = User.objects.get(pk=pk)
 
         if request.user == user or request.user.is_superuser:
-            serializer = OwnUserSerializer(user, many=False)
+            serializer = OwnUserSerializer(user, context={'user': request.user}, many=False)
         elif permissions.is_user_supervisor_of(request.user, user):
-            serializer = UserSerializer(user, many=False)
+            serializer = UserSerializer(user, context={'user': request.user}, many=False)
         else:
             return response.forbidden('You are not allowed to view this users information.')
 
@@ -132,6 +132,10 @@ class UserView(viewsets.ViewSet):
 
         username, password = utils.required_params(request.data, 'username', 'password')
 
+        if not is_test_student and email in ['', None]:
+            return response.bad_request('No email address is provided.')
+        if not is_test_student and full_name in ['', None]:
+            return response.bad_request('No full name is provided.')
         if email and User.objects.filter(email=email).exists():
             return response.bad_request('User with this email already exists.')
 
@@ -143,13 +147,13 @@ class UserView(viewsets.ViewSet):
 
         user = factory.make_user(username=username, email=email, lti_id=lti_id, full_name=full_name,
                                  is_teacher=is_teacher, verified_email=bool(lti_id) and bool(email), password=password,
-                                 profile_picture=user_image if user_image else '/unknown-profile.png',
+                                 profile_picture=user_image if user_image else settings.DEFAULT_PROFILE_PICTURE,
                                  is_test_student=is_test_student)
 
         if lti_id is None:
             send_email_verification_link.delay(user.pk)
 
-        return response.created({'user': UserSerializer(user).data})
+        return response.created({'user': OwnUserSerializer(user, context={'user': request.user}).data})
 
     def partial_update(self, request, *args, **kwargs):
         """Update an existing user.
@@ -296,8 +300,8 @@ class UserView(viewsets.ViewSet):
         if not (request.user.is_superuser or request.user.id == pk):
             return response.forbidden('You are not allowed to view this user\'s data.')
 
-        profile = UserSerializer(user).data
-        journals = Journal.objects.filter(user=pk)
+        profile = OwnUserSerializer(user, context={'user': request.user}).data
+        journals = Journal.objects.filter(authors__user=user).distinct()
         journal_dict = {}
         for journal in journals:
             # Select the nodes of this journal but only the ones with entries.
@@ -316,90 +320,6 @@ class UserView(viewsets.ViewSet):
 
         return response.file(archive_path, archive_name)
 
-    @action(methods=['get'], detail=True)
-    def download(self, request, pk):
-        """Get a user file by name if it exists.
-
-        Arguments:
-        request -- the request that was sent
-            file_name -- filename to download
-        pk -- user ID
-
-        Returns
-        On failure:
-            unauthorized -- when the user is not logged in
-            bad_request -- when the file was not found
-            forbidden -- when its not a superuser nor their own data
-        On success:
-            success -- a zip file of all the userdata with all their files
-        """
-        try:
-            pk = int(pk)
-        except ValueError:
-            return response.bad_request('We can\'t find the file you are looking for.')
-
-        if pk == 0:
-            pk = request.user.id
-
-        file_name, entry_id, node_id, content_id = utils.required_typed_params(
-            request.query_params, (str, 'file_name'), (int, 'entry_id'), (int, 'node_id'), (int, 'content_id'))
-
-        try:
-            user_file = UserFile.objects.get(author=pk, file_name=file_name, entry=entry_id, node=node_id,
-                                             content=content_id)
-
-            if user_file.author != request.user:
-                request.user.check_permission('can_view_all_journals', user_file.assignment)
-
-        except (UserFile.DoesNotExist, ValueError):
-            return response.bad_request(file_name + ' was not found.')
-
-        return response.file(user_file, user_file.file_name)
-
-    @action(methods=['post'], detail=False)
-    def upload(self, request):
-        """Upload a user file.
-
-        Checks available space for the user and max file size.
-        If the file is intended for an entry, checks if the user can edit the entry.
-        At the time of creation, the UserFile is uploaded but not attached to an entry yet. This UserFile is treated
-        as temporary untill the actual entry is created and the node and content are updated.
-
-        Arguments:
-        request -- request data
-            file -- filelike data
-            assignment_id -- assignment ID
-            content_id -- content ID, should be null when creating a NEW entry.
-
-        Returns
-        On failure:
-            unauthorized -- when the user is not logged in
-            bad_request -- when the file, assignment was not found or the validation failed.
-        On success:
-            success -- name of the file.
-        """
-        assignment_id, content_id = utils.required_params(request.POST, 'assignment_id', 'content_id')
-        assignment = Assignment.objects.get(pk=assignment_id)
-
-        request.user.check_can_view(assignment)
-
-        if not (request.FILES and 'file' in request.FILES):
-            return response.bad_request('No accompanying file found in the request.')
-        validators.validate_user_file(request.FILES['file'], request.user)
-
-        if content_id == 'null':
-            factory.make_user_file(request.FILES['file'], request.user, assignment)
-        else:
-            try:
-                content = Content.objects.get(pk=int(content_id), entry__node__journal__user=request.user)
-            except Content.DoesNotExist:
-                return response.bad_request('Content with id {:s} was not found.'.format(content_id))
-
-            request.user.check_can_edit(content.entry)
-            factory.make_user_file(request.FILES['file'], request.user, assignment, content=content)
-
-        return response.success(description='Successfully uploaded {:s}.'.format(request.FILES['file'].name))
-
     @action(['post'], detail=False)
     def set_profile_picture(self, request):
         """Update user profile picture.
@@ -415,14 +335,22 @@ class UserView(viewsets.ViewSet):
         On success:
             success -- a zip file of all the userdata with all their files
         """
-        utils.required_params(request.data, 'file')
+        file_data, = utils.required_params(request.data, 'file')
+        content_file = utils.base64ToContentFile(file_data, 'profile_picture')
+        validators.validate_user_file(content_file, request.user)
 
-        validators.validate_profile_picture_base64(request.data['file'])
-
-        request.user.profile_picture = request.data['file']
+        file = FileContext.objects.create(
+            file=content_file,
+            file_name=content_file.name,
+            author=request.user,
+            is_temp=False,
+            in_rich_text=True,
+        )
+        request.user.profile_picture = file.download_url(access_id=True)
         request.user.save()
+        file_handling.remove_unused_user_files(request.user)
 
-        return response.success(description='Successfully updated profile picture')
+        return response.created(FileSerializer(file).data)
 
     def get_permissions(self):
         if self.request.path == '/users/' and self.request.method == 'POST':

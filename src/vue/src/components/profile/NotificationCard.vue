@@ -1,6 +1,6 @@
 <template>
     <div>
-        <h4 class="mb-2 mt-4">
+        <h4 class="theme-h4 mb-2 mt-4">
             <span>Email notifications</span>
         </h4>
         <b-card
@@ -11,18 +11,18 @@
                 class="float-right"
                 :isActive="$store.getters['preferences/gradeNotifications']"
                 @parentActive="getGradeNotification"/>
-            <h2 class="field-heading multi-form">Grade updates</h2>
+            <h2 class="theme-h2 field-heading multi-form">Grade updates</h2>
             <toggle-switch
                 class="float-right"
                 :isActive="$store.getters['preferences/commentNotifications']"
                 @parentActive="getCommentNotification"/>
-            <h2 class="field-heading multi-form">Comments</h2> -->
+            <h2 class="theme-h2 field-heading multi-form">Comments</h2> -->
             <toggle-switch
                 :isActive="$store.getters['preferences/upcomingDeadlineNotifications']"
                 class="float-right"
                 @parentActive="getUpcomingDeadlineNotification"
             />
-            <h2 class="field-heading multi-form">
+            <h2 class="theme-h2 field-heading multi-form">
                 Upcoming deadlines
             </h2>
         </b-card>

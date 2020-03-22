@@ -19,7 +19,7 @@
             </b-button>
         </div>
         <hr/>
-        <div v-if="mode === 'edit'">
+        <div v-show="mode === 'edit'">
             <b-input
                 id="template-name"
                 v-model="template.name"
@@ -36,10 +36,13 @@
                     @click.stop
                     @click="togglePresetOnly"
                 >
-                    <icon name="times"/>
+                    <icon name="lock"/>
                     Preset-only
                 </b-button>
-                <icon name="info-circle"/>
+                <icon
+                    name="info-circle"
+                    class="shift-up-3"
+                />
                 This template can only be used for preset entries you add to the timeline
             </div>
             <div
@@ -51,15 +54,18 @@
                     @click.stop
                     @click="togglePresetOnly"
                 >
-                    <icon name="check"/>
+                    <icon name="unlock"/>
                     Unlimited
                 </b-button>
-                <icon name="info-circle"/>
+                <icon
+                    name="info-circle"
+                    class="shift-up-3"
+                />
                 This template can be freely used by students as often as they want<br/>
             </div>
             <draggable
                 v-model="template.field_set"
-                :options="{ handle:'.handle' }"
+                handle=".handle"
                 @start="startDrag"
                 @end="endDrag"
                 @update="onUpdate"
@@ -87,6 +93,7 @@
                             <text-editor
                                 v-if="showEditors"
                                 :id="`rich-text-editor-field-${template.id}-${field.location}`"
+                                :key="`rich-text-editor-field-${template.id}-${field.location}`"
                                 v-model="field.description"
                                 :basic="true"
                                 :displayInline="true"
@@ -99,7 +106,7 @@
                                 <b-select
                                     v-model="field.type"
                                     :options="fieldTypes"
-                                    class="multi-form mr-2"
+                                    class="theme-select multi-form mr-2"
                                     @change="field.options = ''"
                                 />
                                 <b-button
@@ -132,11 +139,11 @@
                                         @keyup.enter.native="addSelectionOption($event.target, field)"
                                     />
                                     <b-button
-                                        class="float-right multi-form"
+                                        class="float-right multi-form add-button"
                                         @click.stop="addSelectionOption($event.target.previousElementSibling, field)"
                                     >
                                         <icon name="plus"/>
-                                        Add option
+                                        Add
                                     </b-button>
                                 </div>
                                 <div v-if="field.options">
@@ -161,7 +168,7 @@
                             <div class="handle d-inline d-sm-block">
                                 <icon
                                     class="move-icon"
-                                    name="arrows"
+                                    name="arrows-alt"
                                     scale="1.75"
                                 />
                             </div>
@@ -185,7 +192,7 @@
             </b-button>
         </div>
         <template-preview
-            v-else
+            v-if="mode !== 'edit'"
             :template="template"
         />
     </b-card>
@@ -351,6 +358,4 @@ export default {
         @include md-max
             width: 100%
             margin-bottom: 10px
-    svg
-        fill: grey
 </style>

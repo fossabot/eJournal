@@ -3,13 +3,15 @@ Serializers.
 
 Functions to convert certain data to other formats.
 """
+from django.conf import settings
 from django.db.models import Min, Q
 from django.utils import timezone
 from rest_framework import serializers
 
 import VLE.permissions as permissions
-from VLE.models import (Assignment, Comment, Content, Course, Entry, Field, Format, Grade, Group, Instance, Journal,
-                        Node, Participation, Preferences, PresetNode, Role, Template, User)
+from VLE.models import (Assignment, AssignmentParticipation, Comment, Content, Course, Entry, Field, FileContext,
+                        Format, Grade, Group, Instance, Journal, Node, Participation, Preferences, PresetNode, Role,
+                        Template, User)
 from VLE.utils import generic_utils as utils
 from VLE.utils.error_handling import VLEParticipationError, VLEProgrammingError
 
@@ -23,12 +25,14 @@ class InstanceSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
     groups = serializers.SerializerMethodField()
+    username = serializers.SerializerMethodField()
+    profile_picture = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('username', 'full_name', 'profile_picture', 'is_teacher', 'lti_id', 'id',
+        fields = ('username', 'full_name', 'profile_picture', 'is_teacher', 'id',
                   'role', 'groups', 'is_test_student')
-        read_only_fields = ('id', 'lti_id', 'is_teacher', 'username', 'is_test_student')
+        read_only_fields = ('id', 'is_teacher', 'is_test_student')
 
     def get_role(self, user):
         if 'course' not in self.context or not self.context['course']:
@@ -41,6 +45,24 @@ class UserSerializer(serializers.ModelSerializer):
             return role.name
         else:
             return None
+
+    def get_username(self, user):
+        if 'user' not in self.context or not self.context['user']:
+            return None
+
+        if not (self.context['user'].is_supervisor_of(user) or self.context['user'] == user):
+            return None
+
+        return user.username
+
+    def get_profile_picture(self, user):
+        if 'user' not in self.context or not self.context['user']:
+            return settings.DEFAULT_PROFILE_PICTURE
+
+        if not self.context['user'].can_view(user):
+            return settings.DEFAULT_PROFILE_PICTURE
+
+        return user.profile_picture
 
     def get_groups(self, user):
         if 'course' not in self.context or not self.context['course']:
@@ -121,6 +143,22 @@ class GroupSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'course', 'lti_id')
 
 
+class AssignmentParticipationSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField()
+    needs_lti_link = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AssignmentParticipation
+        fields = ('id', 'journal', 'assignment', 'user', 'needs_lti_link')
+        read_only_fields = ('id', 'journal', 'assignment')
+
+    def get_user(self, participation):
+        return UserSerializer(participation.user, context=self.context).data
+
+    def get_needs_lti_link(self, participation):
+        return participation.needs_lti_link()
+
+
 class ParticipationSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
     course = serializers.SerializerMethodField()
@@ -149,13 +187,16 @@ class AssignmentDetailsSerializer(serializers.ModelSerializer):
     course_count = serializers.SerializerMethodField()
     lti_count = serializers.SerializerMethodField()
     active_lti_course = serializers.SerializerMethodField()
+    can_change_type = serializers.SerializerMethodField()
     assigned_groups = serializers.SerializerMethodField()
     all_groups = serializers.SerializerMethodField()
 
     class Meta:
         model = Assignment
         fields = ('id', 'name', 'description', 'points_possible', 'unlock_date', 'due_date', 'lock_date',
-                  'is_published', 'course_count', 'lti_count', 'active_lti_course', 'assigned_groups', 'all_groups')
+                  'is_published', 'course_count', 'lti_count', 'active_lti_course', 'is_group_assignment',
+                  'can_set_journal_name', 'can_set_journal_image', 'can_lock_journal', 'can_change_type',
+                  'remove_grade_upon_leaving_group', 'assigned_groups', 'all_groups', )
         read_only_fields = ('id', )
 
     def get_course_count(self, assignment):
@@ -182,6 +223,9 @@ class AssignmentDetailsSerializer(serializers.ModelSerializer):
             return None
         return None
 
+    def get_can_change_type(self, assignment):
+        return not assignment.has_entries()
+
 
 class AssignmentSerializer(serializers.ModelSerializer):
     deadline = serializers.SerializerMethodField()
@@ -191,6 +235,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
     courses = serializers.SerializerMethodField()
     course_count = serializers.SerializerMethodField()
     journals = serializers.SerializerMethodField()
+    is_group_assignment = serializers.SerializerMethodField()
     active_lti_course = serializers.SerializerMethodField()
     lti_courses = serializers.SerializerMethodField()
 
@@ -199,11 +244,14 @@ class AssignmentSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('id', )
 
+    def get_is_group_assignment(self, assignment):
+        return assignment.is_group_assignment
+
     def get_deadline(self, assignment):
         # Student deadlines
         if 'user' in self.context and self.context['user'] and \
            self.context['user'].has_permission('can_have_journal', assignment):
-            journal = Journal.objects.get(assignment=assignment, user=self.context['user'])
+            journal = Journal.objects.filter(assignment=assignment, authors__user=self.context['user']).first()
             deadline, name = self._get_student_deadline(journal, assignment)
 
             return {
@@ -231,37 +279,37 @@ class AssignmentSerializer(serializers.ModelSerializer):
         It checks for the first entrydeadline that still need to submitted and still can be, or for the first
         progressnode that is not yet fullfilled.
         """
-        nodes = utils.get_sorted_nodes(journal)
         t_grade = 0
         deadline = None
         name = None
 
-        for node in nodes:
-            if node.entry:
-                grade = node.entry.grade
-            else:
-                grade = None
+        if journal is not None:
+            for node in utils.get_sorted_nodes(journal):
+                if node.entry:
+                    grade = node.entry.grade
+                else:
+                    grade = None
 
-            # Sum published grades to check if PROGRESS node is fullfiled
-            if node.type in [Node.ENTRY, Node.ENTRYDEADLINE] and grade and grade.grade:
-                if grade.published:
-                    t_grade += grade.grade
-            # Set the deadline to the first unfilled ENTRYDEADLINE node date
-            elif node.type == Node.ENTRYDEADLINE and not node.entry and node.preset.due_date > timezone.now():
-                deadline = node.preset.due_date
-                name = node.preset.forced_template.name
-                break
-            # Set the deadline to first not completed PROGRESS node date
-            elif node.type == Node.PROGRESS:
-                if node.preset.target > t_grade and node.preset.due_date > timezone.now():
+                # Sum published grades to check if PROGRESS node is fullfiled
+                if node.type in [Node.ENTRY, Node.ENTRYDEADLINE] and grade and grade.grade:
+                    if grade.published:
+                        t_grade += grade.grade
+                # Set the deadline to the first unfilled ENTRYDEADLINE node date
+                elif node.type == Node.ENTRYDEADLINE and not node.entry and node.preset.due_date > timezone.now():
                     deadline = node.preset.due_date
-                    name = "{:g}/{:g} points".format(t_grade, node.preset.target)
+                    name = node.preset.forced_template.name
                     break
+                # Set the deadline to first not completed PROGRESS node date
+                elif node.type == Node.PROGRESS:
+                    if node.preset.target > t_grade and node.preset.due_date > timezone.now():
+                        deadline = node.preset.due_date
+                        name = "{:g}/{:g} points".format(t_grade, node.preset.target)
+                        break
 
         # If no deadline is found, but the points possible has not been reached, make assignment due date the deadline
         if deadline is None and t_grade < assignment.points_possible:
-            if journal.assignment.due_date or \
-               journal.assignment.lock_date and journal.assignment.lock_date < timezone.now():
+            if assignment.due_date or \
+               assignment.lock_date and assignment.lock_date < timezone.now():
                 deadline = assignment.due_date
                 name = 'End of assignment'
 
@@ -272,21 +320,33 @@ class AssignmentSerializer(serializers.ModelSerializer):
             return None
         if not self.context['user'].has_permission('can_have_journal', assignment):
             return None
-        journal = Journal.objects.get(assignment=assignment, user=self.context['user'])
-        if not self.context['user'].can_view(journal):
+        try:
+            journal = Journal.objects.get(assignment=assignment, authors__user=self.context['user'])
+            if not self.context['user'].can_view(journal):
+                return None
+            return journal.pk
+        except Journal.DoesNotExist:
             return None
-        return journal.pk
 
     def get_journals(self, assignment):
-        """Retrieves the journals of an assignment of the users who have the permission
-        to own a journal.
-        """
+        """Retrieves the journals of an assignment."""
         if 'journals' in self.context and 'course' in self.context \
            and self.context['journals'] and self.context['course']:
+            # Group assignment retrieves all journals
+            if assignment.is_group_assignment:
+                # First select all journals with authors, then add journals without any author
+                journals = Journal.objects.filter(
+                    Q(assignment=assignment, authors__isnull=False) |
+                    Q(assignment=assignment, authors__isnull=True)
+                )
+            # Normal assignments should only get the journals of users that should have a journal
+            else:
+                journals = Journal.objects.filter(assignment=assignment)
             course = self.context['course']
             users = course.participation_set.filter(role__can_have_journal=True).values('user')
-            journals = Journal.objects.filter(assignment=assignment).filter(user__in=users)
-            return JournalSerializer(journals, many=True, context=self.context).data
+            return JournalSerializer(
+                journals.filter(Q(authors__user__in=users) | Q(authors__isnull=True)).distinct(), many=True,
+                context=self.context).data
         else:
             return None
 
@@ -301,6 +361,8 @@ class AssignmentSerializer(serializers.ModelSerializer):
         users = User.objects.filter(
             participation__course=course, participation__role__can_have_journal=True
         )
+
+        # Get grade compared to users in the group
         participation = Participation.objects.filter(user=self.context['user'], course=course)
         if participation.exists():
             participation = participation.first()
@@ -308,16 +370,16 @@ class AssignmentSerializer(serializers.ModelSerializer):
                 users = users.filter(participation__groups=participation.groups.first())
 
         stats = {}
-        journal_set = Journal.objects.filter(assignment=assignment).filter(user__in=users)
+        journal_set = Journal.objects.filter(assignment=assignment).filter(authors__user__in=users)
 
         # Grader stats
         if self.context['user'].has_permission('can_grade', assignment):
             stats['needs_marking'] = journal_set \
                 .filter(Q(node__entry__grade__grade=None) | Q(node__entry__grade=None),
-                        node__entry__isnull=False).count()
+                        node__entry__isnull=False).values('node').count()
             stats['unpublished'] = journal_set \
                 .filter(node__entry__isnull=False, node__entry__grade__published=False,
-                        node__entry__grade__grade__isnull=False).count()
+                        node__entry__grade__grade__isnull=False).values('node').count()
         # Other stats
         stats['average_points'] = sum([journal.get_grade() for journal in journal_set]) / (journal_set.count() or 1)
 
@@ -375,17 +437,26 @@ class NodeSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
     last_edited_by = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
-        fields = ('id', 'entry', 'author', 'text', 'published', 'creation_date', 'last_edited', 'last_edited_by')
+        fields = ('id', 'entry', 'author', 'text', 'published', 'creation_date', 'last_edited', 'last_edited_by',
+                  'can_edit')
         read_only_fields = ('id', 'entry', 'author', 'timestamp')
 
     def get_author(self, comment):
-        return UserSerializer(comment.author).data
+        return UserSerializer(comment.author, context={'user': self.context.get('user', None)}).data
 
     def get_last_edited_by(self, comment):
         return None if not comment.last_edited_by else comment.last_edited_by.full_name
+
+    def get_can_edit(self, comment):
+        user = self.context.get('user', None)
+        if not user:
+            return False
+
+        return comment.can_edit(user)
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -397,14 +468,17 @@ class RoleSerializer(serializers.ModelSerializer):
 
 class JournalSerializer(serializers.ModelSerializer):
     stats = serializers.SerializerMethodField()
-    student = serializers.SerializerMethodField()
+    authors = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
     grade = serializers.SerializerMethodField()
     needs_lti_link = serializers.SerializerMethodField()
 
     class Meta:
         model = Journal
-        fields = ('id', 'bonus_points', 'grade', 'student', 'needs_lti_link', 'stats')
-        read_only_fields = ('id', 'assignment', 'user', 'grade_url', 'sourcedid', 'grade')
+        fields = ('id', 'bonus_points', 'grade', 'authors', 'needs_lti_link', 'stats', 'name', 'image', 'author_limit',
+                  'locked')
+        read_only_fields = ('id', 'assignment', 'authors', 'grade')
 
     def get_grade(self, journal):
         return journal.get_grade()
@@ -412,10 +486,18 @@ class JournalSerializer(serializers.ModelSerializer):
     def get_needs_lti_link(self, journal):
         return journal.needs_lti_link()
 
-    def get_student(self, journal):
-        return UserSerializer(journal.user, context=self.context).data
+    def get_authors(self, journal):
+        return AssignmentParticipationSerializer(journal.authors.all(), many=True, context=self.context).data
+
+    def get_name(self, journal):
+        return journal.get_name()
+
+    def get_image(self, journal):
+        return journal.get_image()
 
     def get_stats(self, journal):
+        if 'user' not in self.context or not self.context['user'].can_view(journal):
+            return None
         return {
             'acquired_points': journal.get_grade(),
             'graded': journal.node_set.filter(entry__grade__grade__isnull=False).count(),
@@ -482,12 +564,20 @@ class EntrySerializer(serializers.ModelSerializer):
     editable = serializers.SerializerMethodField()
     grade = serializers.SerializerMethodField()
     comments = serializers.SerializerMethodField()
+    author = serializers.SerializerMethodField()
+    last_edited_by = serializers.SerializerMethodField()
 
     class Meta:
         model = Entry
         fields = ('id', 'creation_date', 'template', 'content', 'editable',
-                  'grade', 'last_edited', 'comments')
+                  'grade', 'last_edited', 'comments', 'author', 'last_edited_by')
         read_only_fields = ('id', 'template', 'creation_date', 'content', 'grade')
+
+    def get_author(self, entry):
+        return entry.author.full_name
+
+    def get_last_edited_by(self, entry):
+        return None if entry.last_edited_by is None else entry.last_edited_by.full_name
 
     def get_template(self, entry):
         return TemplateSerializer(entry.template).data
@@ -549,10 +639,33 @@ class TemplateSerializer(serializers.ModelSerializer):
 
 
 class ContentSerializer(serializers.ModelSerializer):
+    data = serializers.SerializerMethodField()
+
     class Meta:
         model = Content
-        fields = '__all__'
+        fields = ('entry', 'field', 'data', )
         read_only_fields = ('id', )
+
+    def get_data(self, content):
+        if content.field.type in Field.FILE_TYPES:
+            try:
+                return FileSerializer(FileContext.objects.get(pk=content.data)).data
+            except FileContext.DoesNotExist:
+                return None
+
+        return content.data
+
+
+class FileSerializer(serializers.ModelSerializer):
+    download_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FileContext
+        fields = ('download_url', 'file_name', 'id', )
+
+    def get_download_url(self, file):
+        # Get access_id if file is in rich text
+        return file.download_url(access_id=file.in_rich_text)
 
 
 class FieldSerializer(serializers.ModelSerializer):

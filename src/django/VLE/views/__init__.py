@@ -4,6 +4,7 @@ from VLE.views.assignment import AssignmentView
 from VLE.views.comment import CommentView
 from VLE.views.course import CourseView
 from VLE.views.entry import EntryView
+from VLE.views.file import FileView
 from VLE.views.format import FormatView
 from VLE.views.grade import GradeView
 from VLE.views.group import GroupView
@@ -32,5 +33,6 @@ router.register(r'journals', JournalView, basename='journal')
 router.register(r'entries', EntryView, basename='entry')
 router.register(r'grades', GradeView, basename='grades')
 router.register(r'formats', FormatView, basename='format')
+router.register(r'files', FileView, basename='file')
 
 urlpatterns = router.urls

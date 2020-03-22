@@ -4,7 +4,7 @@
         <profile-data ref="profileData"/>
         <notification-card/>
         <grading-card v-if="showGradeSettings"/>
-        <h4 class="mb-2 mt-4">
+        <h4 class="theme-h4 mb-2 mt-4">
             <span>Password</span>
         </h4>
         <password-card ref="passData"/>

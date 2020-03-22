@@ -1,6 +1,6 @@
 <template>
     <div>
-        <h4 class="mb-2">
+        <h4 class="theme-h4 mb-2">
             <span>Manage course details</span>
         </h4>
         <b-card
@@ -8,7 +8,7 @@
             :class="$root.getBorderClass($route.params.uID)"
         >
             <b-form @submit.prevent="onSubmit">
-                <h2 class="field-heading required">
+                <h2 class="theme-h2 field-heading required">
                     Course name
                 </h2>
                 <b-input
@@ -17,7 +17,7 @@
                     :readonly="!$hasPermission('can_edit_course_details')"
                     placeholder="Course name"
                 />
-                <h2 class="field-heading required">
+                <h2 class="theme-h2 field-heading required">
                     Course abbreviation
                 </h2>
                 <b-input
@@ -29,32 +29,32 @@
                 />
                 <b-row>
                     <b-col cols="6">
-                        <h2 class="field-heading required">
+                        <h2 class="theme-h2 field-heading">
                             Start date
                             <tooltip tip="Start date of the course"/>
                         </h2>
-                        <flat-pickr
-                            v-model="course.startdate"
-                            class="multi-form multi-date-input theme-input full-width"
-                            :class="{ 'input-disabled': !$hasPermission('can_edit_course_details') }"
-                            :config="{
-                                maxDate: course.enddate
-                            }"
-                        />
+                        <reset-wrapper v-model="course.startdate">
+                            <flat-pickr
+                                v-model="course.startdate"
+                                class="multi-form full-width"
+                                :class="{ 'input-disabled': !$hasPermission('can_edit_course_details') }"
+                                :config="startDateConfig"
+                            />
+                        </reset-wrapper>
                     </b-col>
                     <b-col cols="6">
-                        <h2 class="field-heading required">
+                        <h2 class="theme-h2 field-heading">
                             End date
                             <tooltip tip="End date of the course"/>
                         </h2>
-                        <flat-pickr
-                            v-model="course.enddate"
-                            class="multi-form multi-date-input theme-input full-width"
-                            :class="{ 'input-disabled': !$hasPermission('can_edit_course_details') }"
-                            :config="{
-                                minDate: course.startdate
-                            }"
-                        />
+                        <reset-wrapper v-model="course.enddate">
+                            <flat-pickr
+                                v-model="course.enddate"
+                                class="multi-form full-width"
+                                :class="{ 'input-disabled': !$hasPermission('can_edit_course_details') }"
+                                :config="endDateConfig"
+                            />
+                        </reset-wrapper>
                     </b-col>
                 </b-row>
                 <b-button
@@ -84,9 +84,25 @@ export default {
             required: true,
         },
     },
+    computed: {
+        startDateConfig () {
+            const additionalConfig = {}
+            if (this.course.enddate) {
+                additionalConfig.maxDate = new Date(this.course.enddate)
+            }
+            return Object.assign({}, additionalConfig, this.$root.flatPickrConfig)
+        },
+        endDateConfig () {
+            const additionalConfig = {}
+            if (this.course.startdate) {
+                additionalConfig.minDate = new Date(this.course.startdate)
+            }
+            return Object.assign({}, additionalConfig, this.$root.flatPickrConfig)
+        },
+    },
     methods: {
         formFilled () {
-            return this.course.name && this.course.abbreviation && this.course.startdate && this.course.enddate
+            return this.course.name && this.course.abbreviation
         },
         onSubmit () {
             if (this.formFilled()) {

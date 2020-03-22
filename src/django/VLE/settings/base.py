@@ -24,8 +24,10 @@ sentry_sdk.init(
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BASELINK = os.environ['BASELINK']
+API_URL = os.environ['API_URL']
 
 STATIC_URL = '/static/'
+DEFAULT_PROFILE_PICTURE = '/unknown-profile.png'
 # NOTE: Public media directory (not used as such, should probably be renamed.)
 MEDIA_URL = 'media/'
 
@@ -167,7 +169,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/2.0/topics/i18n/
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'CET'
 USE_I18N = True
 USE_L10N = True
 USE_TZ = False

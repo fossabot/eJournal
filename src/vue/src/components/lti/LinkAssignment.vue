@@ -6,7 +6,7 @@
         >
             <main-card
                 v-if="linkable.assignments.length > 0"
-                :key="`course-${linkable.course.id}-copy`"
+                :key="`course-${linkable.course.id}-import`"
                 :line1="linkable.course.name"
                 :line2="linkable.course.startdate ? (linkable.course.startdate.substring(0, 4) +
                     (linkable.course.enddate ? ` - ${linkable.course.enddate.substring(0, 4)}` : '')) : ''"
@@ -20,7 +20,7 @@
             >
                 <assignment-card
                     v-for="assignment in linkable.assignments"
-                    :key="`assignment-${assignment.id}-copy`"
+                    :key="`assignment-${assignment.id}-import`"
                     :assignment="assignment"
                     @click.native="linkAssignment(assignment.id, assignment.lti_count)"
                 />

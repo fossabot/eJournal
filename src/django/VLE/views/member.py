@@ -19,7 +19,9 @@ class MemberView(viewsets.ViewSet):
 
         request.user.check_permission('can_edit_course_user_group', group.course)
 
-        serializer = ParticipationSerializer(Participation.objects.filter(groups=group), many=True)
+        serializer = ParticipationSerializer(
+            Participation.objects.filter(groups=group), context={'course': group.course, 'user': request.user},
+            many=True)
         return response.success({'members': serializer.data})
 
     def create(self, request):
@@ -31,7 +33,8 @@ class MemberView(viewsets.ViewSet):
 
         member.groups.add(group)
         member.save()
-        users = UserSerializer(group.course.users, context={'course': group.course}, many=True).data
+        users = UserSerializer(
+            group.course.users, context={'course': group.course, 'user': request.user}, many=True).data
         return response.created({'participants': users})
 
     def destroy(self, request, pk):

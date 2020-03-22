@@ -3,10 +3,15 @@ File handling related utilites.
 """
 import json
 import os
+import pathlib
+import re
 import shutil
+import uuid
 
 from django.conf import settings
-from django.db.models import Q
+
+import VLE.models
+from VLE.utils.error_handling import VLEBadRequest, VLEPermissionError
 
 
 def get_path(instance, filename):
@@ -14,6 +19,20 @@ def get_path(instance, filename):
 
     Uploaded files not part of an entry yet, and are treated as temporary untill linked to an entry."""
     return str(instance.author.id) + '/' + str(instance.assignment.id) + '/' + filename
+
+
+def get_file_path(instance, filename):
+    """Upload user files into their respective directories. Following MEDIA_ROOT/uID/<category>/?[id/]<filename>"""
+    if instance.is_temp:
+        return('{}/tempfiles/{}'.format(instance.author.id, filename))
+    elif instance.journal is not None:
+        return '{}/journalfiles/{}/{}'.format(instance.author.id, instance.journal.id, filename)
+    elif instance.assignment is not None:
+        return '{}/assignmentfiles/{}/{}'.format(instance.author.id, instance.assignment.id, filename)
+    elif instance.course is not None:
+        return '{}/coursefiles/{}/{}'.format(instance.author.id, instance.course.id, filename)
+    else:
+        return '{}/userfiles/{}'.format(instance.author.id, filename)
 
 
 def get_feedback_file_path(instance, filename):
@@ -47,22 +66,115 @@ def compress_all_user_data(user, extra_data_dict=None, archive_extension='zip'):
     return archive_ouput_path, '{}.{}'.format(archive_name, archive_extension)
 
 
-def make_permanent_file_content(user_file, content, node):
-    """Upates a UserFile content, node and enty. Removing temp status."""
-    user_file.content = content
-    user_file.node = node
-    user_file.entry = content.entry
-    user_file.save()
+def establish_file(author, identifier, course=None, assignment=None, journal=None, content=None, comment=None,
+                   in_rich_text=False):
+    """establish files, after this they won't be removed."""
+    if str(identifier).isdigit():
+        file_context = VLE.models.FileContext.objects.get(pk=identifier)
+    else:
+        file_context = VLE.models.FileContext.objects.get(access_id=identifier)
+
+    if file_context.author != author:
+        raise VLEPermissionError('You are not allowed to update files of other users')
+    if not file_context.is_temp:
+        raise VLEBadRequest('You are not allowed to update established files')
+
+    if comment:
+        journal = comment.entry.node.journal
+    if content:
+        journal = content.entry.node.journal
+    if journal:
+        assignment = journal.assignment
+    if assignment:
+        if not course:
+            course = assignment.get_active_course(author)
+
+    file_context.comment = comment
+    file_context.content = content
+    file_context.journal = journal
+    file_context.assignment = assignment
+    file_context.course = course
+    file_context.is_temp = False
+    file_context.in_rich_text = in_rich_text
+
+    # Move the file on filesystem to a permanent location
+    initial_path = file_context.file.path
+    file_context.file.name = get_file_path(file_context, file_context.file_name)
+    new_folder = os.path.join(settings.MEDIA_ROOT, get_file_path(file_context, ''))
+
+    new_path = os.path.join(settings.MEDIA_ROOT, file_context.file.name)
+
+    # Prevent potential name clash on filesystem
+    while os.path.exists(str(new_path)):
+        p = pathlib.Path(new_path)
+        random_file_name = '{}-{}{}'.format(p.stem, uuid.uuid4(), p.suffix)
+        file_context.file.name = str(pathlib.Path(file_context.file.name).with_name(random_file_name))
+        new_path = p.with_name(random_file_name)
+
+    os.makedirs(new_folder, exist_ok=True)
+    os.rename(initial_path, str(new_path))
+
+    file_context.save()
+
+    if content and not in_rich_text:
+        content.data = str(file_context.pk)
+        content.save()
+
+    return file_context
 
 
-def get_temp_user_file(user, assignment, file_name, entry=None, node=None, content=None):
-    """Retrieves the most recently added tempfile specified by assignment and name.
-
-    Returns None if no file was found."""
-    return user.userfile_set.filter(author=user, assignment=assignment, node=node, entry=entry,
-                                    content=content, file_name=file_name).order_by('-creation_date').first()
+def get_files_from_rich_text(rich_text):
+    re_access_ids = re.compile(r'\/files\/[0-9]+\?access_id=([a-zA-Z0-9]+)')
+    return VLE.models.FileContext.objects.filter(access_id__in=re.findall(re_access_ids, rich_text), is_temp=True)
 
 
-def remove_temp_user_files(user):
+def establish_rich_text(author, rich_text, course=None, assignment=None, journal=None, comment=None, content=None):
+    if rich_text is None or len(rich_text) < 128:
+        return
+    for file in get_files_from_rich_text(rich_text):
+        establish_file(author, file.access_id, course, assignment, journal, content, comment, in_rich_text=True)
+
+
+def remove_unused_user_files(user):
     """Deletes floating user files."""
-    user.userfile_set.filter(Q(node=None) | Q(entry=None) | Q(content=None)).delete()
+    # Remove temp images
+    VLE.models.FileContext.objects.filter(author=user, is_temp=True).delete()
+
+    # Remove overwritten files
+    for file in VLE.models.FileContext.objects.filter(author=user, content__isnull=False):
+        if file.content.field.type in VLE.models.Field.FILE_TYPES:  # Check if file is replaced
+            if str(file.pk) != file.content.data:
+                file.delete()
+        # Remove rich_text files
+        elif file.content.field.type == VLE.models.Field.RICH_TEXT:  # Check if url is not in field anymore
+            if not file.content.data or str(file.access_id) not in file.content.data:
+                file.delete()
+    for file in VLE.models.FileContext.objects.filter(author=user, comment__isnull=False):
+        # Check if url is not in comment anymore
+        if not file.comment.text or str(file.access_id) not in file.comment.text:
+            file.delete()
+    for file in VLE.models.FileContext.objects.filter(
+       author=user, journal__isnull=False, comment__isnull=True, content__isnull=True):
+        # Check if url is not the journal image anymore
+        if not file.journal.image or str(file.access_id) not in file.journal.image:
+            file.delete()
+    for file in VLE.models.FileContext.objects.filter(
+       author=user, course__isnull=True, assignment__isnull=True, journal__isnull=True):
+        # Check if url is not the profile picture
+        if not file.author.profile_picture or str(file.access_id) not in file.author.profile_picture:
+            file.delete()
+    for file in VLE.models.FileContext.objects.filter(author=user, assignment__isnull=False, journal__isnull=True):
+        # Check if url is not in assignment anymore
+        if not file.assignment.description or str(file.access_id) not in file.assignment.description:
+            found = False
+            for field in VLE.models.Field.objects.filter(template__format__assignment=file.assignment):
+                if field.description and str(file.access_id) in field.description:  # Nor is it in a field
+                    found = True
+                    break
+            if not found:
+                for node in VLE.models.PresetNode.objects.filter(format__assignment=file.assignment):
+                    if node.description and str(file.access_id) in node.description:  # Nor is it in a field
+                        found = True
+                        break
+            if not found:  # Only then delete the file
+                file.delete()

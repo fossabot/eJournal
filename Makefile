@@ -53,7 +53,7 @@ setup-no-input:
 
 	sudo apt install npm -y
 	sudo npm install npm@latest -g
-	sudo apt install nodejs python3 python3-pip pep8 libpq-dev python3-dev postgresql postgresql-contrib rabbitmq-server -y
+	sudo apt install nodejs python3 python3-pip pep8 libpq-dev python3-dev postgresql postgresql-contrib rabbitmq-server python3-setuptools -y
 
 	make setup-venv requirements_file=local.txt
 
@@ -68,7 +68,7 @@ setup-no-input:
 setup-travis:
 	(sudo apt-cache show python3.6 | grep "Package: python3.6") || (sudo add-apt-repository ppa:deadsnakes/ppa -y; sudo apt update) || echo "0"
 	sudo apt install npm -y
-	sudo apt install nodejs python3 python3-pip pep8 -y
+	sudo apt install nodejs python3 python3-pip pep8 python3-setuptools -y
 
 	sudo pip3 install virtualenv
 	virtualenv -p python3 venv
@@ -86,7 +86,7 @@ setup-venv:
 		source ./venv/bin/activate && \
 		pip install -r requirements/$(requirements_file) && \
 		isort -rc src/django/ && \
-		ansible-playbook ./system_configuration_tools/provision-local.yml --ask-become-pass --ask-vault-pass && \
+		ansible-playbook ./config/provision-local.yml --ask-become-pass --ask-vault-pass && \
 		deactivate'
 
 ##### DEPLOY COMMANDS ######
@@ -95,22 +95,22 @@ ansible-test-connection:
 	@bash -c 'source ./venv/bin/activate && ansible -m ping all --ask-become-pass && deactivate'
 
 run-ansible-provision:
-	@bash -c 'source ./venv/bin/activate && ansible-playbook ./system_configuration_tools/provision-servers.yml --ask-become-pass --ask-vault-pass && deactivate'
+	@bash -c 'source ./venv/bin/activate && ansible-playbook ./config/provision-servers.yml --ask-become-pass --ask-vault-pass && deactivate'
 
 run-ansible-deploy:
-	@bash -c 'source ./venv/bin/activate && ansible-playbook ./system_configuration_tools/provision-servers.yml --tags "deploy_back,deploy_front" --ask-become-pass --ask-vault-pass && deactivate'
+	@bash -c 'source ./venv/bin/activate && ansible-playbook ./config/provision-servers.yml --tags "deploy_back,deploy_front" --ask-become-pass --ask-vault-pass && deactivate'
 
 run-ansible-deploy-front:
-	@bash -c 'source ./venv/bin/activate && ansible-playbook ./system_configuration_tools/provision-servers.yml --tags "deploy_front" --ask-become-pass --ask-vault-pass && deactivate'
+	@bash -c 'source ./venv/bin/activate && ansible-playbook ./config/provision-servers.yml --tags "deploy_front" --ask-become-pass --ask-vault-pass && deactivate'
 
 run-ansible-deploy-back:
-	@bash -c 'source ./venv/bin/activate && ansible-playbook ./system_configuration_tools/provision-servers.yml --tags "deploy_back" --ask-become-pass --ask-vault-pass && deactivate'
+	@bash -c 'source ./venv/bin/activate && ansible-playbook ./config/provision-servers.yml --tags "deploy_back" --ask-become-pass --ask-vault-pass && deactivate'
 
 run-ansible-backup:
-	@bash -c 'source ./venv/bin/activate && ansible-playbook ./system_configuration_tools/provision-servers.yml --tags "backup" --ask-become-pass --ask-vault-pass && deactivate'
+	@bash -c 'source ./venv/bin/activate && ansible-playbook ./config/provision-servers.yml --tags "backup" --ask-become-pass --ask-vault-pass && deactivate'
 
 run-ansible-preset_db:
-	@bash -c 'source ./venv/bin/activate && ansible-playbook ./system_configuration_tools/provision-servers.yml --tags "run_preset_db" --ask-become-pass --ask-vault-pass && deactivate'
+	@bash -c 'source ./venv/bin/activate && ansible-playbook ./config/provision-servers.yml --tags "run_preset_db" --ask-become-pass --ask-vault-pass && deactivate'
 
 ##### MAKEFILE COMMANDS #####
 
@@ -154,6 +154,7 @@ preset-db:
 	@read -r a
 	make preset-db-no-input
 preset-db-no-input:
+	rm -rf src/django/media/*
 	make postgres-reset
 	make postgres-init-development
 	make migrate-back

@@ -7,12 +7,15 @@ import pytest
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db.utils import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
 
 import VLE.factory
 import VLE.utils.generic_utils as utils
-from VLE.models import Assignment, Course, Entry, Format, Journal, Node, Participation, PresetNode, Role, Template
+from VLE.models import (Assignment, AssignmentParticipation, Course, Entry, Format, Journal, Node, Participation,
+                        PresetNode, Role, Template)
 from VLE.serializers import AssignmentSerializer
 from VLE.utils.error_handling import VLEParticipationError
 from VLE.views.assignment import day_neutral_datetime_increment, set_assignment_dates
@@ -23,7 +26,14 @@ class AssignmentAPITest(TestCase):
         self.teacher = factory.Teacher()
         self.admin = factory.Admin()
         self.course = factory.Course(author=self.teacher)
-        self.create_params = {'name': 'test', 'description': 'test_description', 'course_id': self.course.pk}
+        self.student = factory.Student()
+        self.participating = factory.Participation(user=self.student, course=self.course)
+        self.create_params = {
+            'name': 'test',
+            'description': 'test_description',
+            'points_possible': 10,
+            'course_id': self.course.pk
+        }
 
     def test_rest(self):
         # Test the basic rest functionality as a superuser
@@ -48,6 +58,39 @@ class AssignmentAPITest(TestCase):
                       create_status=403,
                       user=factory.Student())
 
+    def test_create_assignment(self):
+        lti_params = {**self.create_params, **{'lti_id': 'new_lti_id'}}
+        resp = api.create(self, 'assignments', params=lti_params, user=self.teacher)['assignment']
+        assignment = Assignment.objects.get(pk=resp['id'])
+        assert assignment.active_lti_id in assignment.lti_id_set, 'lti id should be set in the lti_id_set as well'
+        assert assignment.active_lti_id in assignment.courses.first().assignment_lti_id_set, \
+            'lti id should be set in the course assignment_lti_id_set as well'
+
+        # Test creation with default params is not a group assignment
+        assignment = api.create(self, 'assignments', params=self.create_params, user=self.teacher)['assignment']
+        assert 'is_group_assignment' in assignment and not assignment['is_group_assignment'], \
+            'Default assignment should be individual'
+
+        # Test required fields
+        api.create(self, 'assignments', params={}, user=self.teacher, status=400)
+        api.create(self, 'assignments', params={'name': 'test'}, user=self.teacher, status=400)
+        api.create(self, 'assignments', params={'points_possible': 5}, user=self.teacher, status=400)
+
+        # Test creation of group assignment
+        params = {
+            'name': 'test',
+            'description': 'test_description',
+            'points_possible': 10,
+            'course_id': self.course.pk,
+            'is_group_assignment': True,
+            'remove_grade_upon_leaving_group': True,
+        }
+        assignment = api.create(self, 'assignments', params=params, user=self.teacher)['assignment']
+        assert 'is_group_assignment' in assignment and assignment['is_group_assignment'], \
+            'Assignment with group size should be a group assignment'
+        assert 'remove_grade_upon_leaving_group' in assignment and assignment['remove_grade_upon_leaving_group'], \
+            'Assignment should keep settings on creation'
+
     def test_get(self):
         student = factory.Student()
         assignment = factory.Assignment(courses=[self.course])
@@ -62,6 +105,11 @@ class AssignmentAPITest(TestCase):
         resp = api.get(self, 'assignments', params={'pk': assignment.pk, 'course_id': self.course.pk},
                        user=self.teacher)['assignment']
         assert resp['journals'] is not None, 'Response should include teacher serializer'
+
+        # Check group assignment
+        group_assignment = factory.GroupAssignment()
+        student = factory.AssignmentParticipation(assignment=group_assignment).user
+        api.get(self, 'assignments', params={'pk': group_assignment.pk}, user=student)
 
     def test_get_assignment_with_given_course(self):
         assignment = factory.Assignment()
@@ -93,10 +141,10 @@ class AssignmentAPITest(TestCase):
         assignment.assigned_groups.add(group)
         journal = factory.Journal(assignment=assignment)
         journal_not_viewable = factory.Journal(assignment=assignment)
-        p = Participation.objects.get(user=journal.user, course=assignment.courses.first())
+        p = Participation.objects.get(user=journal.authors.first().user, course=assignment.courses.first())
         p.groups.add(group)
-        assert not journal_not_viewable.user.can_view(assignment)
-        assert journal.user.can_view(assignment)
+        assert not journal_not_viewable.authors.first().user.can_view(assignment)
+        assert journal.authors.first().user.can_view(assignment)
 
     def test_list(self):
         course2 = factory.Course(author=self.teacher)
@@ -118,25 +166,24 @@ class AssignmentAPITest(TestCase):
         resp = api.get(self, 'assignments', user=self.teacher)['assignments']
         assert len(resp) == 3, 'Without a course supplied, it should return all assignments connected to user'
 
-    def test_create(self):
-        lti_params = {**self.create_params, **{'lti_id': 'new_lti_id'}}
-        resp = api.create(self, 'assignments', params=lti_params, user=self.teacher)['assignment']
-        assignment = Assignment.objects.get(pk=resp['id'])
-        assert assignment.active_lti_id in assignment.lti_id_set, 'lti id should be set in the lti_id_set as well'
-        assert assignment.active_lti_id in assignment.courses.first().assignment_lti_id_set, \
-            'lti id should be set in the course assignment_lti_id_set as well'
-
-    def test_update(self):
+    def test_update_assignment(self):
         assignment = api.create(self, 'assignments', params=self.create_params, user=self.teacher)['assignment']
 
         # Try to publish the assignment
-        # TODO: Test cannot unpublish when there are entries inside
         api.update(self, 'assignments', params={'pk': assignment['id'], 'published': True},
                    user=factory.Student(), status=403)
         api.update(self, 'assignments', params={'pk': assignment['id'], 'published': True},
                    user=self.teacher)
         api.update(self, 'assignments', params={'pk': assignment['id'], 'published': True},
                    user=factory.Admin())
+
+        # Test script sanitation
+        params = {
+            'pk': assignment['id'],
+            'description': '<script>alert("asdf")</script>Rest'
+        }
+        resp = api.update(self, 'assignments', params=params, user=self.teacher)['assignment']
+        assert resp['description'] != params['description']
 
     def test_delete(self):
         teach_course = factory.Course(author=self.teacher)
@@ -188,28 +235,28 @@ class AssignmentAPITest(TestCase):
         api.delete(
             self, 'assignments', params={'pk': assignment.pk, 'course_id': course2.pk}, user=factory.Admin())
 
-    def test_copyable(self):
+    def test_importable(self):
         teacher = factory.Teacher()
         course = factory.Course(author=teacher)
         assignment = factory.TemplateAssignment(courses=[course])
 
-        # Check copyable return values
-        resp = api.get(self, 'assignments/copyable', user=teacher)['data']
-        assert resp[0]['assignments'][0]['id'] == assignment.pk, 'copyable assignment should be displayed'
+        # Check importable return values
+        resp = api.get(self, 'assignments/importable', user=teacher)['data']
+        assert resp[0]['assignments'][0]['id'] == assignment.pk, 'importable assignment should be displayed'
         assert len(resp[0]['assignments']) == 1
-        assert resp[0]['course']['id'] == course.id, 'copyable course should be displayed'
+        assert resp[0]['course']['id'] == course.id, 'importable course should be displayed'
 
-        student = factory.Journal(assignment=assignment).user
-        data = api.get(self, 'assignments/copyable', user=student, status=200)['data']
-        assert len(data) == 0, 'A student should not be able to see any copyable assignments'
+        student = factory.Journal(assignment=assignment).authors.first().user
+        data = api.get(self, 'assignments/importable', user=student, status=200)['data']
+        assert len(data) == 0, 'A student should not be able to see any importable assignments'
 
         r = Participation.objects.get(course=course, user=teacher).role
         r.can_edit_assignment = False
         r.save()
-        data = api.get(self, 'assignments/copyable', user=teacher)['data']
-        assert len(data) == 0, 'A teacher requires can_edit_assignment to see copyable assignments.'
+        data = api.get(self, 'assignments/importable', user=teacher)['data']
+        assert len(data) == 0, 'A teacher requires can_edit_assignment to see importable assignments.'
 
-    def test_assignment_copy(self):
+    def test_assignment_import(self):
         start2018_2019 = datetime.datetime(year=2018, month=9, day=1)
         start2019_2020 = datetime.datetime(year=2019, month=9, day=1)
         end2018_2019 = start2019_2020 - relativedelta(days=1)
@@ -221,9 +268,9 @@ class AssignmentAPITest(TestCase):
             startdate=start2018_2019,
             enddate=end2019_2020,
         )
-        not_copy_course = factory.Course()
+        not_import_course = factory.Course()
         source_assignment = factory.TemplateAssignment(
-            courses=[course, not_copy_course],
+            courses=[course, not_import_course],
             unlock_date=start2018_2019,
             due_date=end2018_2019,
             lock_date=end2018_2019,
@@ -249,8 +296,8 @@ class AssignmentAPITest(TestCase):
         # Create student participation and accompanying journal
         factory.Participation(user=student, course=course, role=Role.objects.get(course=course, name='Student'))
         assert Participation.objects.filter(course=course).count() == 2
-        source_student_journal = Journal.objects.get(user=student, assignment=source_assignment)
-        VLE.factory.make_journal(user=teacher, assignment=source_assignment)
+        source_student_journal = Journal.objects.get(authors__user=student, assignment=source_assignment)
+        VLE.factory.make_journal(author=teacher, assignment=source_assignment)
         assert Journal.objects.filter(assignment=source_assignment).count() == 1, \
             'Teacher assignment should not show up in count'
         source_entries = []
@@ -258,7 +305,7 @@ class AssignmentAPITest(TestCase):
         for _ in range(number_of_source_student_journal_entries):
             source_entries.append(factory.Entry(template=source_template, node__journal=source_student_journal))
 
-        assert Node.objects.count() == 8, \
+        assert Node.objects.count() == 10, \
             '2 nodes for the presets for teacher and student each, 4 for the student entries'
         assert source_entries[0].node.journal == source_student_journal
         assert Entry.objects.filter(
@@ -272,11 +319,11 @@ class AssignmentAPITest(TestCase):
         before_source_templates = Template.objects.filter(format=source_assignment.format)
         before_source_format_resp = api.get(self, 'formats', params={'pk': source_assignment.pk}, user=teacher)
 
-        pre_copy_format_count = Format.objects.count()
-        pre_copy_journal_count = Journal.objects.count()
-        pre_copy_entry_count = Entry.objects.count()
-        pre_copy_node_count = Node.objects.count()
-        pre_copy_preset_node_count = PresetNode.objects.count()
+        pre_import_format_count = Format.objects.count()
+        pre_import_journal_count = Journal.all_objects.count()
+        pre_import_entry_count = Entry.objects.count()
+        pre_import_node_count = Node.objects.count()
+        pre_import_preset_node_count = PresetNode.objects.count()
         resp = api.post(self, 'assignments/{}/copy'.format(source_assignment.pk), params={
                 'course_id': course.pk,
                 'months_offset': 0,
@@ -284,20 +331,28 @@ class AssignmentAPITest(TestCase):
         created_assignment = Assignment.objects.get(pk=resp['assignment_id'])
         created_format = created_assignment.format
 
-        assert pre_copy_format_count + 1 == Format.objects.count(), 'One additional format is created'
+        assert not created_assignment.is_published, 'Imported assignment should not be published'
+        assert pre_import_journal_count == Journal.all_objects.count(), \
+            '''No journals should not be created before the assignment is published.'''
+        created_assignment.is_published = True
+        created_assignment.save()
+
+        assert pre_import_format_count + 1 == Format.objects.count(), 'One additional format is created'
         assert created_format == Format.objects.last(), 'Last created format should be the new assignment format'
-        assert pre_copy_journal_count * 2 == Journal.objects.count(), \
-            'A journal should be created for each of the existing course users'
-        assert pre_copy_entry_count == Entry.objects.count(), 'No additional entries are created'
-        assert pre_copy_node_count + 4 == Node.objects.count(), 'Both student and teacher receive nodes for the presets'
-        assert pre_copy_preset_node_count + 2 == PresetNode.objects.count(), \
-            'The progress and preset nodes are copied'
+        assert pre_import_journal_count * 2 - 1 == Journal.all_objects.count(), \
+            '''A journal should be created for each of the existing course users.
+               However, old teacher should not get journal'''
+        assert pre_import_entry_count == Entry.objects.count(), 'No additional entries are created'
+        assert pre_import_node_count + 4 == Node.objects.count(), \
+            'Both student and teacher receive nodes for the presets'
+        assert pre_import_preset_node_count + 2 == PresetNode.objects.count(), \
+            'The progress and preset nodes are imported'
         assert before_source_preset_nodes.count() == PresetNode.objects.filter(
-            format=created_assignment.format).count(), 'All preset nodes should be copied along.'
-        assert created_assignment.active_lti_id is None, 'Copied assignment should not be linked to LTI'
-        assert created_assignment.lti_id_set == [], 'Copied assignment should not be linked to LTI'
+            format=created_assignment.format).count(), 'All preset nodes should be imported along.'
+        assert created_assignment.active_lti_id is None, 'Imported assignment should not be linked to LTI'
+        assert created_assignment.lti_id_set == [], 'Imported assignment should not be linked to LTI'
         assert created_assignment.courses.count() == 1 and course in created_assignment.courses.all(), \
-            'Only the course where we call copy from should be part of the created assignment course set'
+            'Only the course where we call import from should be part of the created assignment course set'
 
         resp = api.post(self, 'assignments/{}/copy'.format(source_assignment.pk), params={
                 'course_id': course.pk,
@@ -307,57 +362,58 @@ class AssignmentAPITest(TestCase):
         created_assignment = Assignment.objects.get(pk=resp['assignment_id'])
         created_format = created_assignment.format
         assert created_assignment.author == teacher
-        assert created_assignment.active_lti_id == 'test', 'Copied assignment should not be linked to LTI'
-        assert created_assignment.lti_id_set == ['test'], 'Copied assignment should not be linked to LTI'
+        assert not created_assignment.is_published, 'Imported assignment should not be published'
+        assert created_assignment.active_lti_id == 'test', 'Imported assignment should not be linked to LTI'
+        assert created_assignment.lti_id_set == ['test'], 'Imported assignment should not be linked to LTI'
 
         after_source_preset_nodes = PresetNode.objects.filter(format=source_assignment.format)
         after_source_templates = Template.objects.filter(format=source_assignment.format)
         after_source_format_resp = api.get(self, 'formats', params={'pk': source_assignment.pk}, user=teacher)
         created_format_resp = api.get(self, 'formats', params={'pk': created_assignment.pk}, user=teacher)
 
-        # Validate that the entire copied response format is unchanged
+        # Validate that the entire imported response format is unchanged
         assert before_source_format_resp == after_source_format_resp, 'Source format should remain unchanged'
         # The check above is extensive, but limited by the serializer, so let us check the db fully.
         assert before_source_preset_nodes.count() == after_source_preset_nodes.count() \
             and before_source_templates.count() == after_source_templates.count(), \
-            'Format of the copy target should remain unchanged'
+            'Format of the import target should remain unchanged'
         for before_n, after_n in zip(before_source_preset_nodes, after_source_preset_nodes):
-            assert equal_models(before_n, after_n), 'Copy target preset nodes should remain unchanged'
+            assert equal_models(before_n, after_n), 'Import target preset nodes should remain unchanged'
         for before_t, after_t in zip(before_source_templates, after_source_templates):
-            assert equal_models(before_t, after_t), 'Copy target templates should remain unchanged'
+            assert equal_models(before_t, after_t), 'Import target templates should remain unchanged'
         assert len(utils.get_journal_entries(source_student_journal)) == number_of_source_student_journal_entries, \
             'Old entries should not be removed'
 
         assert created_format.pk == created_format_resp['format']['id'], \
-            'The most recently created (fresh copy) format, should be returned.'
+            'The most recently created (fresh import) format, should be returned.'
 
-        # Validate copy response results
+        # Validate import response results
         o = before_source_format_resp['format']  # original
         a = after_source_format_resp['format']
         c = created_format_resp['format']
         assert o['id'] != c['id'], 'Created format should be a new format'
         assert o['id'] == a['id'], 'Original format should be the same'
-        # Validate template copy results
+        # Validate template import results
         for o_t, a_t, c_t in zip(o['templates'], a['templates'], c['templates']):
             assert c_t['id'] != a_t['id'], 'Should be a new template'
-        # Validate preset copy results
+        # Validate preset import results
         for o_p, a_p, c_p in zip(o['presets'], a['presets'], c['presets']):
             assert c_p['id'] != a_p['id'], 'Should be a new preset'
 
-        # Validate the copy result values without the meddling of the serializer
+        # Validate the import result values without the meddling of the serializer
         created_preset_nodes = PresetNode.objects.filter(format=created_format)
         created_templates = Template.objects.filter(format=created_format)
         assert before_source_preset_nodes.count() == created_preset_nodes.count() \
             and before_source_templates.count() == created_templates.count(), \
-            'Format of the copy should be equal to the copy target'
+            'Format of the import should be equal to the import target'
         for before_n, created_n in zip(before_source_preset_nodes, created_preset_nodes):
             assert equal_models(before_n, created_n, ignore=['id', 'format', 'forced_template']), \
-                'Copy preset nodes should be equal'
+                'Import preset nodes should be equal'
         for before_t, created_t in zip(before_source_templates, created_templates):
             assert equal_models(before_t, created_t, ignore=['id', 'format', 'forced_template']), \
-                'Copy target templates should be equal'
+                'Import target templates should be equal'
 
-        # Copy again, but now update all dates
+        # Import again, but now update all dates
         resp = api.post(self, 'assignments/{}/copy'.format(source_assignment.pk), params={
                 'course_id': course.pk,
                 'months_offset': 12,
@@ -376,20 +432,20 @@ class AssignmentAPITest(TestCase):
                     else:
                         assert relativedelta(parser.parse(value), parser.parse(o_p[key])).years == 1
 
-        # The copy result values should still be equal apart from the dates
+        # The import result values should still be equal apart from the dates
         created_preset_nodes = PresetNode.objects.filter(format=created_format)
         created_templates = Template.objects.filter(format=created_format)
         assert before_source_preset_nodes.count() == created_preset_nodes.count() \
             and before_source_templates.count() == created_templates.count(), \
-            'Format of the copy should be equal to the copy target'
+            'Format of the import should be equal to the import target'
         for before_n, created_n in zip(before_source_preset_nodes, created_preset_nodes):
             assert equal_models(before_n, created_n,
                                 ignore=['id', 'format', 'forced_template', 'unlock_date', 'due_date', 'lock_date']), \
-                'Copy preset nodes should be equal'
+                'Import preset nodes should be equal'
         for before_t, created_t in zip(before_source_templates, created_templates):
             assert equal_models(before_t, created_t,
                                 ignore=['id', 'format', 'forced_template', 'unlock_date', 'due_date', 'lock_date']), \
-                'Copy target templates should be equal'
+                'Import target templates should be equal'
 
         created_progress_node = created_preset_nodes.filter(type=Node.PROGRESS).first()
         created_deadline_node = created_preset_nodes.filter(type=Node.ENTRYDEADLINE).first()
@@ -457,15 +513,15 @@ class AssignmentAPITest(TestCase):
             'LTI ids added to the assignment should als be added to the lti_id_set'
 
         journal = factory.Journal(assignment=ltiAssignment1)
-        journal.grade_url = 'Not None'
-        journal.sourcedid = 'Not None'
+        journal.authors.first().grade_url = 'Not None'
+        journal.authors.first().sourcedid = 'Not None'
         journal.save()
         ltiAssignment1.active_lti_id = 'new lti id'
         ltiAssignment1.save()
         # Refresh the journal instance after the assignment update
         journal = Journal.objects.get(pk=journal.pk)
 
-        assert journal.grade_url is None and journal.sourcedid is None, \
+        assert journal.authors.first().grade_url is None and journal.authors.first().sourcedid is None, \
             'Updating the active LTI id of an assignment should reset the grade_url and sourcedid of all nested ' \
             'journals'
 
@@ -475,7 +531,7 @@ class AssignmentAPITest(TestCase):
         teacher = assignment.courses.first().author
         assignment.points_possible = 10
 
-        resp = api.get(self, 'assignments/upcoming', user=journal.user)['upcoming']
+        resp = api.get(self, 'assignments/upcoming', user=journal.authors.first().user)['upcoming']
         assert resp[0]['deadline']['name'] == 'End of assignment', \
             'Default end of assignment should be shown'
 
@@ -484,21 +540,21 @@ class AssignmentAPITest(TestCase):
             'Default no deadline for a teacher be shown'
 
         progress = VLE.factory.make_progress_node(assignment.format, timezone.now() + datetime.timedelta(days=3), 7)
-        utils.update_journals(assignment.journal_set.all(), progress)
+        utils.update_journals(assignment.journal_set.distinct(), progress)
 
-        resp = api.get(self, 'assignments/upcoming', user=journal.user)['upcoming']
+        resp = api.get(self, 'assignments/upcoming', user=journal.authors.first().user)['upcoming']
         assert resp[0]['deadline']['name'] == '0/7 points', \
             'When not having completed an progress node, that should be shown'
 
         entrydeadline = VLE.factory.make_entrydeadline_node(
             assignment.format, timezone.now() + datetime.timedelta(days=1), assignment.format.template_set.first())
-        utils.update_journals(assignment.journal_set.all(), entrydeadline)
+        utils.update_journals(assignment.journal_set.distinct(), entrydeadline)
 
-        resp = api.get(self, 'assignments/upcoming', user=journal.user)['upcoming']
+        resp = api.get(self, 'assignments/upcoming', user=journal.authors.first().user)['upcoming']
         assert resp[0]['deadline']['name'] == assignment.format.template_set.first().name, \
             'When not having completed an entry deadline, that should be shown'
 
-        entry = factory.Entry(node=Node.objects.get(preset=entrydeadline))
+        entry = factory.Entry(node=Node.objects.get(journal=journal, preset=entrydeadline))
 
         resp = api.get(self, 'assignments/upcoming', user=teacher)['upcoming']
         assert resp[0]['deadline']['date'] is not None, \
@@ -514,27 +570,60 @@ class AssignmentAPITest(TestCase):
         assert resp[0]['deadline']['date'] is None, \
             'With only graded & published entries no deadline for a teacher be shown'
 
-        resp = api.get(self, 'assignments/upcoming', user=journal.user)['upcoming']
+        resp = api.get(self, 'assignments/upcoming', user=journal.authors.first().user)['upcoming']
         assert resp[0]['deadline']['name'] == '5/7 points', \
             'With only graded & published entries progres node should be the deadline'
 
         api.create(self, 'grades', params={'entry_id': entry.pk, 'grade': 7, 'published': True}, user=teacher)
-        resp = api.get(self, 'assignments/upcoming', user=journal.user)['upcoming']
+        resp = api.get(self, 'assignments/upcoming', user=journal.authors.first().user)['upcoming']
         assert resp[0]['deadline']['name'] == 'End of assignment', \
             'With full points of progress node, end of assignment should be shown'
 
         api.create(self, 'grades', params={'entry_id': entry.pk, 'grade': 10, 'published': True}, user=teacher)
-        resp = api.get(self, 'assignments/upcoming', user=journal.user)['upcoming']
+        resp = api.get(self, 'assignments/upcoming', user=journal.authors.first().user)['upcoming']
         assert resp[0]['deadline']['name'] is None, \
             'With full points of assignment, no deadline should be shown'
 
+    def test_publish_all_assignment_grades(self):
+        grade_to_publish = factory.Grade(published=False)
+        journal = grade_to_publish.entry.node.journal
+        grade_published = factory.Grade(published=True, entry__node__journal=journal)
+        grade_other_journal = factory.Grade(published=False)
+
+        # Make sure setup is correct
+        assert Entry.objects.get(pk=grade_published.entry.pk).grade.published
+        assert not Entry.objects.get(pk=grade_to_publish.entry.pk).grade.published
+        assert not Entry.objects.get(pk=grade_other_journal.entry.pk).grade.published
+
+        api.patch(
+            self, 'grades/publish_all_assignment_grades', params={'assignment_id': journal.assignment.pk},
+            user=journal.assignment.author)
+
+        assert Entry.objects.get(pk=grade_published.entry.pk).grade.published, \
+            'published grades should stay published'
+        assert Entry.objects.get(pk=grade_to_publish.entry.pk).grade.published, \
+            'unpublished grades should now be published'
+        assert not Entry.objects.get(pk=grade_other_journal.entry.pk).grade.published, \
+            'grades not in assignment should not be published'
+
     def test_get_active_course(self):
-        future_course = factory.Course(startdate=timezone.now() + datetime.timedelta(weeks=2))
-        teacher = future_course.author
-        later_future_course = factory.Course(startdate=timezone.now() + datetime.timedelta(weeks=5))
-        assignment = factory.Assignment(courses=[future_course, later_future_course])
+        no_startdate = factory.Course(startdate=None)
+        teacher = no_startdate.author
+        second_no_startdate = factory.Course(startdate=None, author=teacher)
+        assignment = factory.Assignment(courses=[no_startdate, second_no_startdate])
+        assert assignment.get_active_course(teacher) == no_startdate, \
+            'Select first course with no startdate if there are no other courses to select from'
+        assert assignment.get_active_course(factory.Student()) is None, \
+            'When someone is not related to the assignment, it should not respond with any course'
+
+        future_course = factory.Course(startdate=timezone.now() + datetime.timedelta(weeks=2), author=teacher)
+        assignment.courses.add(future_course)
+        later_future_course = factory.Course(startdate=timezone.now() + datetime.timedelta(weeks=5), author=teacher)
+        assignment.courses.add(later_future_course)
         assert assignment.get_active_course(teacher) == future_course, \
             'Select first upcomming course as there is no LTI course or course that has already started'
+        assert assignment.get_active_course(factory.Student()) is None, \
+            'When someone is not related to the assignment, it should not respond with any course'
 
         past_course = factory.Course(startdate=timezone.now() - datetime.timedelta(weeks=5), author=teacher)
         assignment.courses.add(past_course)
@@ -542,6 +631,8 @@ class AssignmentAPITest(TestCase):
         assignment.courses.add(recent_course)
         assert assignment.get_active_course(teacher) == recent_course, \
             'Select most recent course as there is no LTI course'
+        assert assignment.get_active_course(factory.Student()) is None, \
+            'When someone is not related to the assignment, it should not respond with any course'
 
         lti_course = factory.LtiCourseFactory(startdate=timezone.now() + datetime.timedelta(weeks=1), author=teacher)
         assignment.courses.add(lti_course)
@@ -551,6 +642,8 @@ class AssignmentAPITest(TestCase):
         assignment.save()
         assert assignment.get_active_course(teacher) == lti_course, \
             'Select LTI course above all other courses'
+        assert assignment.get_active_course(factory.Student()) is None, \
+            'When someone is not related to the assignment, it should not respond with any course'
 
         past = factory.Course(startdate=timezone.now() - datetime.timedelta(days=1))
         assignment.courses.add(past)
@@ -610,3 +703,134 @@ class AssignmentAPITest(TestCase):
         assert assignment.unlock_date is None and assignment.due_date is None \
             and assignment.lock_date is None, \
             'Unset dates should not be modified'
+
+    def test_create_journals(self):
+        course_before = factory.Course()
+        course_after = factory.Course()
+        teacher = course_before.author
+        student_before = factory.Student()
+        student_after = factory.Student()
+        normal_before = factory.Assignment(courses=[course_before])
+        factory.GroupAssignment(courses=[course_before])
+        normal_unpublished = factory.Assignment(courses=[course_before], is_published=False)
+        factory.Participation(user=student_before, course=course_before)
+        normal_after = factory.Assignment(courses=[course_before])
+        group_after = factory.GroupAssignment(courses=[course_before])
+        journals = Journal.all_objects.filter(authors__user=student_before)
+
+        assert journals.filter(assignment=normal_before).exists(), 'Normal assignment should get journals'
+        assert journals.filter(assignment=normal_after).exists(), \
+            'Journal needs to be created even when student is added later'
+        assert journals.count() == 2, 'Two journals should be created'
+        journals = Journal.all_objects.filter(authors__user=teacher)
+        assert journals.count() == 2, 'Teacher should also get 2 journals'
+
+        normal_unpublished.is_group_assignment = False
+        normal_unpublished.is_published = True
+        normal_unpublished.save()
+        journals = Journal.all_objects.filter(authors__user=student_before)
+        assert journals.count() == 3, 'After publishing an extra journal needs to be created'
+        journals = Journal.all_objects.filter(authors__user=teacher)
+        assert journals.count() == 3, 'Teacher should also get 3 journals'
+
+        factory.Participation(user=student_after, course=course_after)
+        normal_after.add_course(course_after)
+        group_after.add_course(course_after)
+        journals = Journal.all_objects.filter(authors__user=student_after)
+        assert journals.filter(assignment=normal_after, authors__user=student_after).exists(), \
+            'Normal assignment should get journals also for students where course is added later'
+        assert journals.count() == 1, 'Only normal_after should generate journal for that student'
+
+    def test_assignment_participation_unique(self):
+        journal = factory.Journal()
+        student = journal.authors.first().user
+        assignment = journal.assignment
+
+        self.assertRaises(IntegrityError, AssignmentParticipation.objects.create, user=student, assignment=assignment)
+
+    def test_participants_without_journal(self):
+        assignment = factory.GroupAssignment()
+        ap1 = factory.AssignmentParticipation(user=factory.Student(), assignment=assignment)
+        ap2 = factory.AssignmentParticipation(user=factory.Student(), assignment=assignment)
+        ap3_in_journal = factory.AssignmentParticipation(user=factory.Student(), assignment=assignment)
+        j1 = factory.GroupJournal(assignment=assignment)
+        j1.authors.add(ap3_in_journal)
+        t1 = factory.Participation(
+            user=factory.Teacher(), course=assignment.courses.first(),
+            role=Role.objects.get(course=assignment.courses.first(), name='Teacher'))
+        t2 = assignment.author
+
+        api.get(
+            self, 'assignments/participants_without_journal', params={'pk': assignment.pk},
+            user=ap1.user, status=403)
+        participants = api.get(
+            self, 'assignments/participants_without_journal', params={'pk': assignment.pk},
+            user=t2, status=200)['participants']
+
+        ids = [p['id'] for p in participants]
+        assert ap2.user.pk in ids, 'check if student is in response'
+        assert ap1.user.pk in ids, 'check if student is in response'
+        assert ap3_in_journal.user.pk not in ids, 'check if student that is in journal is not in response'
+        assert t1.user.pk not in ids, 'check if teacher is not in response'
+        assert t2.pk not in ids, 'check if author of assignment is not in response'
+
+    def test_bonus_helper(self):
+        def test_bonus_helper(content, status=200, user=self.teacher, delimiter=','):
+            if delimiter != ',':
+                content = content.replace(',', delimiter)
+            BOUNDARY = 'BoUnDaRyStRiNg'
+            MULTIPART_CONTENT = 'multipart/form-data; boundary=%s' % BOUNDARY
+            bonus_file = SimpleUploadedFile('bonus.csv', str.encode(content), content_type='text/csv')
+
+            return api.post(
+                self, 'assignments/{}/add_bonus_points'.format(assignment.pk), params={'file': bonus_file},
+                user=user, content_type=MULTIPART_CONTENT, status=status)['description']
+
+        journal = factory.Journal(assignment__courses=[self.course])
+        assignment = journal.assignment
+        student_bonus = journal.authors.first().user
+
+        for d in [',', ';']:
+            resp = test_bonus_helper(
+                '{},2\n{},3'.format(student_bonus.username, assignment.author.username), status=400, delimiter=d)
+            assert 'non_participants' in resp and len(resp['non_participants']) == 1, \
+                'Teacher should not be able to get bonus points'
+
+            resp = test_bonus_helper(
+                '{},2\n{},3'.format(student_bonus.username, student_bonus.username), status=400, delimiter=d)
+            assert 'duplicates' in resp and len(resp['duplicates']) == 1, \
+                'Duplicates should not be able to work, even with different numbers'
+
+            resp = test_bonus_helper(
+                '{},2\n{},3'.format(student_bonus.username, factory.Student().username), status=400, delimiter=d)
+            assert 'non_participants' in resp and len(resp['non_participants']) == 1, \
+                'Users that are not participating should not be able to get bonus points'
+
+            resp = test_bonus_helper(
+                '{},2\n{},3'.format(student_bonus.username, 'non_exiting_student_hgfdswjhgq'), status=400, delimiter=d)
+            assert 'unknown_users' in resp and len(resp['unknown_users']) == 1, \
+                'Users that are not registerd should not be able to get bonus points'
+
+            resp = test_bonus_helper(
+                '{},2\n{},3\n{},4\n{},5\n{},3\nasdf,asdf'.format(
+                    student_bonus.username, 'non_exiting_student_hgfdswjhgq', factory.Student().username,
+                    assignment.author.username, student_bonus.username), status=400, delimiter=d)
+            assert 'unknown_users' in resp and 'non_participants' in resp and 'duplicates' in resp and \
+                'incorrect_format_lines' in resp, \
+                'Multiple errors should be returned at once'
+
+            test_bonus_helper(
+                '{},2'.format(student_bonus.username), status=200, delimiter=d)
+            assert Journal.objects.get(pk=journal.pk).get_grade() == 2 + journal.get_grade(), \
+                'Bonus points should be added'
+
+        # With ; this would return 2 lines as it cannot find the correct delimiter, therefor this test is only once
+        resp = test_bonus_helper(
+            '{},2\n{},,3'.format(student_bonus.username, assignment.author.username), status=400)
+        assert 'incorrect_format_lines' in resp and len(resp['incorrect_format_lines']) == 1, \
+            'Incorrect formatted lines should return error'
+
+        # Non related teachers should not be able to update the bonus points
+        test_bonus_helper('{},2'.format(student_bonus.username), user=factory.Teacher(), status=403)
+        # Nor should students
+        test_bonus_helper('{},2'.format(student_bonus.username), user=student_bonus, status=403)

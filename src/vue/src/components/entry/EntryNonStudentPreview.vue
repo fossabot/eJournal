@@ -61,7 +61,7 @@
                     <icon name="hourglass-half"/>
                 </div>
 
-                <h2 class="mb-2">
+                <h2 class="theme-h2 mb-2">
                     {{ entryNode.entry.template.name }}
                 </h2>
                 <entry-fields
@@ -69,20 +69,23 @@
                     :template="entryNode.entry.template"
                     :completeContent="completeContent"
                     :displayMode="true"
-                    :authorUID="journal.student.id"
+                    :journalID="journal.id"
                     :entryID="entryNode.entry.id"
                 />
             </div>
             <hr class="full-width"/>
             <div class="timestamp">
-                <span
-                    v-if="$root.beautifyDate(entryNode.entry.last_edited)
-                        === $root.beautifyDate(entryNode.entry.creation_date)"
-                >
+                <span v-if="entryNode.entry.last_edited_by == null">
                     Submitted on: {{ $root.beautifyDate(entryNode.entry.creation_date) }}
+                    <template v-if="assignment && assignment.is_group_assignment">
+                        by {{ entryNode.entry.author }}
+                    </template>
                 </span>
                 <span v-else>
                     Last edited: {{ $root.beautifyDate(entryNode.entry.last_edited) }}
+                    <template v-if="assignment && assignment.is_group_assignment">
+                        by {{ entryNode.entry.last_edited_by }}
+                    </template>
                 </span>
                 <b-badge
                     v-if="entryNode.due_date && new Date(entryNode.due_date) < new Date(entryNode.entry.last_edited)"
@@ -106,6 +109,7 @@
             size="lg"
             title="Grade history"
             hideFooter
+            noEnforceFocus
         >
             <b-card class="no-hover">
                 <b-table
@@ -141,7 +145,9 @@
                     </template>
                 </b-table>
                 <div v-else>
-                    <h4>No grades available</h4>
+                    <h4 class="theme-h4">
+                        No grades available
+                    </h4>
                     <hr class="m-0 mb-1"/>
                     This entry has not yet been graded.
                 </div>
@@ -153,7 +159,7 @@
         :class="$root.getBorderClass($route.params.cID)"
         class="no-hover"
     >
-        <h2 class="mb-2">
+        <h2 class="theme-h2 mb-2">
             {{ entryNode.template.name }}
         </h2>
         <b>No submission for this student</b>
@@ -173,7 +179,7 @@ export default {
         dropdownButton,
         entryFields,
     },
-    props: ['entryNode', 'journal'],
+    props: ['entryNode', 'journal', 'assignment'],
     data () {
         return {
             completeContent: [],

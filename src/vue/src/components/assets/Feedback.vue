@@ -1,6 +1,6 @@
 <template>
     <b-card class="no-hover">
-        <h2 class="multi-form">
+        <h2 class="theme-h2 multi-form">
             How can we help you?
             <div
                 v-b-tooltip.hover
@@ -9,17 +9,20 @@
             >
                 <img
                     src="/gb-flag.svg"
-                    class="support-lang-flag mr-1"
+                    class="theme-img support-lang-flag mr-1"
                 />
                 <img
                     src="/nl-flag.svg"
-                    class="support-lang-flag"
+                    class="theme-img support-lang-flag"
                 />
             </div>
         </h2>
-        Hi {{ this.$store.getters['user/fullName'] }}, thanks for reaching out to eJournal support.
+        Hi {{ $store.getters['user/fullName'] }}, thanks for reaching out to eJournal support.
         Please select the support category that best fits your situation:
-        <div class="full-width d-flex justify-content-center mt-2">
+        <div
+            :class="{ 'input-disabled': !$store.getters['user/verifiedEmail'] }"
+            class="full-width d-flex justify-content-center mt-2"
+        >
             <b-button
                 class="delete-button mr-2 flex-grow-1"
                 :class="{'active': type === 'bug'}"
@@ -41,7 +44,7 @@
                     contentPlaceholder = 'How does feature \'X\' work? Help is much appreciated!'
                 }"
             >
-                <icon name="info"/>
+                <icon name="info-circle"/>
                 Help
             </b-button>
             <b-button
@@ -57,6 +60,19 @@
                 Feedback
             </b-button>
         </div>
+        <b-alert
+            v-if="!$store.getters['user/verifiedEmail']"
+            show
+            class="mt-3 mb-0"
+        >
+            Support is only available for users with a verified email address.
+            Please verify your email address on your
+            <a
+                href="/Profile"
+            >
+                <b>profile</b>
+            </a>.
+        </b-alert>
         <div v-if="type">
             <hr/>
             <b-input

@@ -4,13 +4,16 @@ factory.py.
 The factory has all kinds of functions to create entries in the database.
 Sometimes this also supports extra functionallity like adding courses to assignments.
 """
+from datetime import timedelta
+
 import requests
 from django.conf import settings
 from django.utils import timezone
 
 import VLE.validators as validators
-from VLE.models import (Assignment, Comment, Content, Course, Entry, Field, Format, Grade, Group, Instance, Journal,
-                        Node, Participation, PresetNode, Role, Template, User, UserFile)
+from VLE.models import (Assignment, AssignmentParticipation, Comment, Content, Course, Entry, Field, Format, Grade,
+                        Group, Instance, Journal, Node, Participation, PresetNode, Role, Template, User)
+from VLE.utils.error_handling import VLEBadRequest
 
 
 def make_instance(allow_standalone_registration=None):
@@ -22,7 +25,7 @@ def make_instance(allow_standalone_registration=None):
     return instance
 
 
-def make_user(username, password=None, email=None, lti_id=None, profile_picture='/unknown-profile.png',
+def make_user(username, password=None, email=None, lti_id=None, profile_picture=settings.DEFAULT_PROFILE_PICTURE,
               is_superuser=False, is_teacher=False, full_name=None, verified_email=False, is_staff=False,
               is_test_student=False):
     """Create a user.
@@ -65,9 +68,6 @@ def make_participation(user=None, course=None, role=None, groups=None):
         participation.groups.set(groups)
         participation.save()
 
-    for assignment in course.assignment_set.all():
-        if not Journal.objects.filter(assignment=assignment, user=user).exists():
-            make_journal(assignment, user)
     return participation
 
 
@@ -115,7 +115,9 @@ def make_course_group(name, course, lti_id=None):
 
 def make_assignment(name, description, author=None, format=None, active_lti_id=None,
                     points_possible=10, is_published=None, unlock_date=None, due_date=None,
-                    lock_date=None, course_ids=None, courses=None):
+                    lock_date=None, courses=[], is_group_assignment=False,
+                    can_set_journal_name=False, can_set_journal_image=False, can_lock_journal=False,
+                    remove_grade_upon_leaving_group=False):
     """Make a new assignment.
 
     Arguments:
@@ -134,16 +136,13 @@ def make_assignment(name, description, author=None, format=None, active_lti_id=N
         if due_date:
             format = make_default_format(due_date, points_possible)
         else:
-            format = make_default_format(timezone.now(), points_possible)
+            format = make_default_format(timezone.now() + timedelta(days=365), points_possible)
 
-    assign = Assignment(name=name, description=description, author=author, format=format, active_lti_id=active_lti_id)
-    assign.save()
-    if course_ids:
-        for course_id in course_ids:
-            assign.courses.add(Course.objects.get(pk=course_id))
-    if courses:
-        for course in courses:
-            assign.courses.add(course)
+    assign = Assignment(name=name, description=description, author=author, format=format,
+                        is_group_assignment=is_group_assignment, active_lti_id=active_lti_id,
+                        can_set_journal_name=can_set_journal_name, can_set_journal_image=can_set_journal_image,
+                        can_lock_journal=can_lock_journal,
+                        remove_grade_upon_leaving_group=remove_grade_upon_leaving_group)
     if points_possible is not None:
         assign.points_possible = points_possible
     if is_published is not None:
@@ -162,9 +161,8 @@ def make_assignment(name, description, author=None, format=None, active_lti_id=N
         assign.lock_date = lock_date
     assign.save()
 
-    for user in User.objects.filter(participation__course__in=assign.courses.all()).distinct():
-        if not Journal.objects.filter(assignment=assign, user=user).exists():
-            make_journal(assign, user)
+    for course in courses:
+        assign.add_course(course)
 
     return assign
 
@@ -228,12 +226,10 @@ def make_node(journal, entry=None, type=Node.ENTRY, preset=None):
     journal -- journal the node belongs to.
     entry -- entry the node belongs to.
     """
-    node = Node(type=type, entry=entry, preset=preset, journal=journal)
-    node.save()
-    return node
+    return Node.objects.get_or_create(type=type, entry=entry, preset=preset, journal=journal)[0]
 
 
-def make_journal(assignment, user):
+def make_journal(assignment, author=None, author_limit=None):
     """Make a new journal.
 
     First creates all nodes defined by the format.
@@ -241,30 +237,35 @@ def make_journal(assignment, user):
     as those in the format, so any changes should
     be reflected in the Nodes as well.
     """
-    if Journal.all_objects.filter(assignment=assignment, user=user).exists():
-        return Journal.all_objects.get(assignment=assignment, user=user)
-    preset_nodes = assignment.format.presetnode_set.all()
-    journal = Journal(assignment=assignment, user=user)
-    journal.save()
+    if assignment.is_group_assignment:
+        if author is not None:
+            raise VLEBadRequest('Group journals should not be initialized with an author')
+        journal = Journal.objects.create(assignment=assignment, author_limit=author_limit)
 
-    for preset_node in preset_nodes:
-        Node(type=preset_node.type,
-             journal=journal,
-             preset=preset_node).save()
+    else:
+        if author_limit is not None:
+            raise VLEBadRequest('Non group-journals should not be initialized with an author_limit')
+        if Journal.all_objects.filter(assignment=assignment, authors__user=author).exists():
+            return Journal.all_objects.get(assignment=assignment, authors__user=author)
+
+        ap = AssignmentParticipation.objects.filter(assignment=assignment, user=author).first()
+        if ap is None:
+            ap = AssignmentParticipation.objects.create(assignment=assignment, user=author)
+            journal = Journal.all_objects.get(assignment=assignment, authors__in=[ap])
+        else:
+            journal = Journal.objects.create(assignment=assignment)
+            journal.authors.add(ap)
+
     return journal
 
 
-def make_entry(template):
-    """Create a new entry in a journal.
+def make_assignment_participation(assignment, author):
+    """Make a new assignment participation."""
+    return AssignmentParticipation.objects.create(assignment=assignment, user=author)
 
-    Posts it at the specified moment, or when unset, now.
-    Arguments:
-    journal -- is the journal to post the entry in.
-    posttime -- is the time of posting (defaults: now).
-    """
-    # TODO: Too late logic.
 
-    entry = Entry(template=template)
+def make_entry(template, author):
+    entry = Entry(template=template, author=author)
     entry.save()
     return entry
 
@@ -296,66 +297,31 @@ def make_content(entry, data, field=None):
     return content
 
 
-def make_role_default_no_perms(name, course, can_edit_course_details=False, can_delete_course=False,
-                               can_edit_course_roles=False, can_view_course_users=False, can_add_course_users=False,
-                               can_delete_course_users=False, can_add_course_user_group=False,
-                               can_delete_course_user_group=False, can_edit_course_user_group=False,
-                               can_add_assignment=False, can_delete_assignment=False, can_edit_assignment=False,
-                               can_view_all_journals=False, can_grade=False, can_publish_grades=False,
-                               can_view_grade_history=False, can_have_journal=False, can_comment=False,
-                               can_edit_staff_comment=False, can_view_unpublished_assignment=False):
+def make_role_default_no_perms(name, course, *args, **kwargs):
     """Make a role with all permissions set to false.
 
     Arguments:
     name -- name of the role (needs to be unique)
     can_... -- permission
     """
-    role = Role(
+    permissions = {permission: kwargs.get(permission, False) for permission in Role.PERMISSIONS}
+    role = Role.objects.create(
         name=name,
         course=course,
-
-        can_edit_course_details=can_edit_course_details,
-        can_delete_course=can_delete_course,
-        can_edit_course_roles=can_edit_course_roles,
-        can_view_course_users=can_view_course_users,
-        can_add_course_users=can_add_course_users,
-        can_delete_course_users=can_delete_course_users,
-        can_add_course_user_group=can_add_course_user_group,
-        can_delete_course_user_group=can_delete_course_user_group,
-        can_edit_course_user_group=can_edit_course_user_group,
-        can_add_assignment=can_add_assignment,
-        can_delete_assignment=can_delete_assignment,
-
-        can_edit_assignment=can_edit_assignment,
-        can_view_unpublished_assignment=can_view_unpublished_assignment,
-        can_view_all_journals=can_view_all_journals,
-        can_grade=can_grade,
-        can_publish_grades=can_publish_grades,
-        can_view_grade_history=can_view_grade_history,
-        can_have_journal=can_have_journal,
-        can_comment=can_comment,
-        can_edit_staff_comment=can_edit_staff_comment
+        **permissions
     )
-    role.save()
     return role
 
 
-def make_role_default_all_perms(name, course, can_edit_course_details=True, can_delete_course=True,
-                                can_edit_course_roles=True, can_view_course_users=True, can_add_course_users=True,
-                                can_delete_course_users=True, can_add_course_user_group=True,
-                                can_delete_course_user_group=True, can_edit_course_user_group=True,
-                                can_add_assignment=True, can_delete_assignment=True, can_edit_assignment=True,
-                                can_view_all_journals=True, can_grade=True, can_publish_grades=True,
-                                can_view_grade_history=True, can_have_journal=True, can_comment=True,
-                                can_edit_staff_comment=True, can_view_unpublished_assignment=True):
+def make_role_default_all_perms(name, course, *args, **kwargs):
     """Makes a role with all permissions set to true."""
-    return make_role_default_no_perms(name, course, can_edit_course_details, can_delete_course, can_edit_course_roles,
-                                      can_view_course_users, can_add_course_users, can_delete_course_users,
-                                      can_add_course_user_group, can_delete_course_user_group,
-                                      can_edit_course_user_group, can_add_assignment, can_delete_assignment,
-                                      can_edit_assignment, can_view_all_journals, can_grade, can_publish_grades,
-                                      can_view_grade_history, can_have_journal, can_comment, can_edit_staff_comment,
-                                      can_view_unpublished_assignment)
+    permissions = {permission: kwargs.get(permission, True) for permission in Role.PERMISSIONS}
+    role = Role.objects.create(
+        name=name,
+        course=course,
+        **permissions
+    )
+    return role
 
 
 def make_role_student(name, course):
@@ -367,7 +333,7 @@ def make_role_ta(name, course):
     """Make a default teacher assitant role."""
     return make_role_default_no_perms(name, course, can_view_course_users=True, can_edit_course_user_group=True,
                                       can_view_all_journals=True, can_grade=True, can_publish_grades=True,
-                                      can_comment=True, can_view_unpublished_assignment=True)
+                                      can_comment=True, can_view_unpublished_assignment=True, can_manage_journals=True)
 
 
 def make_role_observer(name, course):
@@ -421,20 +387,3 @@ def make_grade(entry, author, grade, published=False):
     entry.save()
 
     return grade
-
-
-def make_user_file(uploaded_file, author, assignment, entry=None, node=None, content=None):
-    """Make a user file from an UploadedFile in memory.
-
-    At the time of creation, the UserFile is uploaded but not attached to an entry yet. This UserFile be treated
-    as temporary untill the actual entry is created. And the node, entry, and content are updated."""
-    return UserFile.objects.create(
-        file=uploaded_file,
-        file_name=uploaded_file.name,
-        author=author,
-        content_type=uploaded_file.content_type,
-        assignment=assignment,
-        entry=entry,
-        node=node,
-        content=content
-    )

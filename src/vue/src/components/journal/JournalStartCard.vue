@@ -3,7 +3,7 @@
         class="no-hover"
         :class="$root.getBorderClass($route.params.cID)"
     >
-        <h2 class="multi-form">
+        <h2 class="theme-h2 multi-form">
             {{ assignment.name }}
         </h2>
         <sandboxed-iframe

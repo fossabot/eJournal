@@ -15,10 +15,15 @@
                 xl="4"
                 class="left-content-timeline-page"
             >
-                <bread-crumb v-if="$root.lgMax"/>
+                <bread-crumb v-if="$root.lgMax">
+                    <template v-if="assignment.is_group_assignment">
+                        - {{ journal.name }}
+                    </template>
+                </bread-crumb>
                 <timeline
                     :selected="currentNode"
                     :nodes="nodes"
+                    :assignment="assignment"
                     @select-node="selectNode"
                 />
             </b-col>
@@ -29,13 +34,19 @@
                 xl="8"
                 class="main-content-timeline-page"
             >
-                <bread-crumb v-if="$root.xl"/>
+                <bread-crumb v-if="$root.xl">
+                    <template v-if="assignment.is_group_assignment">
+                        - {{ journal.name }}
+                    </template>
+                </bread-crumb>
                 <b-alert
-                    v-if="journal && journal.needs_lti_link && assignment && assignment.active_lti_course"
+                    v-if="journal && journal.needs_lti_link"
                     show
                 >
-                    <b>Warning:</b> You cannot update this journal until you visit the assignment in your LMS
-                    (Canvas) course '{{ assignment.active_lti_course.name }}' at least once.
+                    <b>Warning:</b> You cannot update this journal until
+                    {{ assignment.is_group_assignment ? 'all group members' : 'you' }}
+                    visit the assignment though the LMS (Canvas) course
+                    '{{ assignment.active_lti_course.name }}' at least once.
                 </b-alert>
                 <load-wrapper :loading="loadingNodes">
                     <div
@@ -47,6 +58,7 @@
                             <entry-node
                                 ref="entry-template-card"
                                 :journal="journal"
+                                :assignment="assignment"
                                 :cID="cID"
                                 :entryNode="nodes[currentNode]"
                                 @edit-node="adaptData"
@@ -58,6 +70,7 @@
                                 <entry-node
                                     ref="entry-template-card"
                                     :journal="journal"
+                                    :assignment="assignment"
                                     :cID="cID"
                                     :entryNode="nodes[currentNode]"
                                     @edit-node="adaptData"
@@ -79,7 +92,7 @@
                                     :class="$root.getBorderClass($route.params.cID)"
                                     class="no-hover"
                                 >
-                                    <h2 class="mb-2">
+                                    <h2 class="theme-h2 mb-2">
                                         {{ nodes[currentNode].template.name }}
                                     </h2>
                                     <hr class="full-width"/>
@@ -123,17 +136,17 @@
             xl="3"
             class="right-content-timeline-page right-content"
         >
-            <h3>Journal progress</h3>
+            <h3 class="theme-h3">
+                Details
+            </h3>
             <b-card
                 :class="$root.getBorderClass($route.params.cID)"
-                class="no-hover"
+                class="journal-details-card no-hover"
             >
-                <progress-bar
-                    v-if="journal.stats"
-                    :currentPoints="journal.stats.acquired_points"
-                    :totalPoints="assignment.points_possible"
-                    :bonusPoints="journal.bonus_points"
-                    :comparePoints="assignment.stats ? assignment.stats.average_points : -1"
+                <journal-details
+                    v-if="!loadingNodes"
+                    :journal="journal"
+                    :assignment="assignment"
                 />
             </b-card>
 
@@ -160,9 +173,9 @@ import addCard from '@/components/journal/AddCard.vue'
 import timeline from '@/components/timeline/Timeline.vue'
 import breadCrumb from '@/components/assets/BreadCrumb.vue'
 import loadWrapper from '@/components/loading/LoadWrapper.vue'
-import progressBar from '@/components/assets/ProgressBar.vue'
 import journalStartCard from '@/components/journal/JournalStartCard.vue'
 import journalEndCard from '@/components/journal/JournalEndCard.vue'
+import journalDetails from '@/components/journal/JournalDetails.vue'
 import progressNode from '@/components/entry/ProgressNode.vue'
 
 import journalAPI from '@/api/journal.js'
@@ -177,10 +190,10 @@ export default {
         timeline,
         entryNode,
         entryPreview,
-        progressBar,
         progressNode,
         journalStartCard,
         journalEndCard,
+        journalDetails,
     },
     props: ['cID', 'aID', 'jID'],
     data () {
@@ -191,6 +204,8 @@ export default {
             journal: {},
             assignment: '',
             loadingNodes: true,
+            editingName: false,
+            journalName: '',
         }
     },
     computed: {
@@ -217,8 +232,7 @@ export default {
             .then((assignment) => {
                 this.assignment = assignment
 
-                if ((!this.assignment.unlock_date || new Date(this.assignment.unlock_date) < new Date())
-                    && (!this.assignment.lock_date || new Date(this.assignment.lock_date) > new Date())) {
+                if (!this.assignment.unlock_date || new Date(this.assignment.unlock_date) < new Date()) {
                     journalAPI.getNodes(this.jID)
                         .then((nodes) => {
                             this.nodes = nodes
@@ -227,6 +241,8 @@ export default {
                                 this.currentNode = this.findEntryNode(parseInt(this.$route.query.nID, 10))
                             }
                         })
+                } else {
+                    this.loadingNodes = false
                 }
             })
 
@@ -235,7 +251,7 @@ export default {
     },
     methods: {
         adaptData (editedData) {
-            this.nodes[this.currentNode] = editedData
+            // this.nodes[this.currentNode] = editedData
             entryAPI.update(this.nodes[this.currentNode].entry.id, { content: editedData.entry.content })
                 .then((entry) => { this.nodes[this.currentNode].entry = entry })
         },
@@ -335,3 +351,8 @@ export default {
     },
 }
 </script>
+
+<style lang="sass">
+.journal-details-card > .card-body
+    padding-top: 45px
+</style>

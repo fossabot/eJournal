@@ -3,30 +3,29 @@ import xml.etree.cElementTree as ET
 import oauth2
 from django.conf import settings
 
-from VLE.models import Counter, Entry
+from VLE.models import Counter
 
 
 class GradePassBackRequest(object):
     """Class to send Grade replace lti requests."""
 
-    def __init__(self, key, secret, journal, send_score=False, result_data=None, submitted_at=None):
+    def __init__(self, author, grade, send_score=False, result_data=None, submitted_at=None):
         """
         Create the instance to set the needed variables.
 
         Arguments:
         key -- key for the oauth communication
         secret -- secret for the oauth communication
-        journal -- journal database object
+        author -- journal author (AssignmentParticipation)
         """
-        self.key = key
-        self.secret = secret
-        self.url = None if journal is None else journal.grade_url
-        self.sourcedid = None if journal is None else journal.sourcedid
+        self.key = settings.LTI_KEY
+        self.secret = settings.LTI_SECRET
+        self.url = None if author is None else author.grade_url
+        self.sourcedid = None if author is None else author.sourcedid
         self.timestamp = submitted_at
-
-        if send_score and journal and journal.assignment and journal.assignment.points_possible:
-            score = journal.get_grade()
-            score /= float(journal.assignment.points_possible)
+        self.author = author
+        if send_score and author and author.assignment and author.assignment.points_possible:
+            score = grade / float(author.assignment.points_possible)
             self.score = str(min(score, 1.0))
         else:
             self.score = None
@@ -35,15 +34,10 @@ class GradePassBackRequest(object):
     @classmethod
     def get_message_id_and_increment(cls):
         """Get the current count for message_id and increment this count."""
-        try:
-            message_id_counter = Counter.objects.get(name='message_id')
-        except Counter.DoesNotExist:
-            message_id_counter = Counter.objects.create(name='message_id')
-
+        message_id_counter = Counter.objects.get_or_create(name='message_id')[0]
         count = message_id_counter.count
         message_id_counter.count += 1
         message_id_counter.save()
-
         return str(count)
 
     def create_xml(self):
@@ -112,10 +106,17 @@ class GradePassBackRequest(object):
                 body=self.create_xml(),
                 headers={'Content-Type': 'application/xml'}
             )
-            return self.parse_return_xml(content)
-        return {'severity': 'status',
-                'code_mayor': 'No grade passback url set',
-                'description': 'not found'}
+            return {
+                'user': self.author.user.username,
+                'grade': 'NOT UPDATED' if self.score is None else self.score,
+                'result_data': self.result_data,
+                **self.parse_return_xml(content),
+            }
+        return {
+            'severity': 'status',
+            'code_mayor': 'No grade passback url set',
+            'description': 'not found'
+        }
 
     def parse_return_xml(self, xml):
         """
@@ -152,34 +153,3 @@ class GradePassBackRequest(object):
 
         return {'severity': severity, 'code_mayor': code_mayor,
                 'description': description}
-
-
-def change_entry_vle_coupling(journal, status):
-    Entry.objects.filter(grade__published=True, node__journal=journal).exclude(
-        vle_coupling=Entry.LINK_COMPLETE).update(vle_coupling=status)
-
-
-# TODO Move to celery, however order and return is tricky
-def replace_result(journal):
-    """Replace a grade on the LTI instance based on the request.
-
-    Arguments:
-        journal -- the journal of which the grade needs to be updated through lti.
-
-    returns the lti reponse.
-    """
-    change_entry_vle_coupling(journal, Entry.GRADING)
-
-    if journal.sourcedid is None or journal.grade_url is None:
-        return None
-
-    secret = settings.LTI_SECRET
-    key = settings.LTI_KEY
-
-    grade_request = GradePassBackRequest(key, secret, journal, send_score=True)
-    response = grade_request.send_post_request()
-
-    if response['code_mayor'] == 'success':
-        change_entry_vle_coupling(journal, Entry.LINK_COMPLETE)
-
-    return response

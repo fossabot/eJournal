@@ -2,16 +2,15 @@
 <template>
     <!-- eslint-disable vue/attribute-hyphenation -->
     <multiselect
-        v-model="valueCopy"
-        class="theme-select"
+        :value="value"
         :label="label"
         :trackBy="trackBy ? trackBy : label"
         :maxHeight="500"
         :class="{
             'hide-single': multiple,
-            'force-show-placeholder': multiple && !isOpen && (valueCopy === null || valueCopy.length === 0),
+            'force-show-placeholder': multiple && !isOpen && (!value || !value.length),
             'show-search': isOpen && searchable,
-            'show-limit': valueCopy && valueCopy.length > 0,
+            'show-limit': value && value.length,
         }"
         :options="sortedOptions"
         :multiple="multiple"
@@ -24,15 +23,12 @@
         :showLabels="false"
         :placeholder="placeholder"
         open-direction="bottom"
-        @input="updateSelection"
-        @open="() => {
-            isOpen = true
-            sortOptions()
-        }"
+        @input="newValue => $emit('input', newValue)"
+        @open="() => { isOpen = true }"
         @close="() => { isOpen = false }"
     >
         <span slot="limit">
-            {{ valueCopy.length > 0 ? valueCopy.length : 'No' }} {{ multiSelectText }}
+            {{ (value && value.length) ? value.length : 'No' }} {{ multiSelectText }}
         </span>
         <template slot="placeholder">
             {{ placeholder }}
@@ -85,40 +81,21 @@ export default {
     },
     data () {
         return {
-            valueCopy: [],
-            sortedOptions: [],
             isOpen: false,
         }
     },
-    watch: {
-        value: {
-            immediate: true,
-            handler (newValue) {
-                if (newValue !== null && newValue !== undefined) {
-                    this.valueCopy = newValue.slice()
-                }
-                if (!this.isOpen) {
-                    this.sortOptions()
-                }
-            },
-        },
-    },
-    methods: {
-        updateSelection (newValue) {
-            this.$emit('input', newValue)
-        },
-        sortOptions () {
-            this.sortedOptions = this.options.slice()
-            this.sortedOptions.sort((a, b) => {
-                const indexA = this.valueCopy.indexOf(a)
-                const indexB = this.valueCopy.indexOf(b)
-                if (indexA >= 0 && indexB === -1) {
-                    return -1
-                }
-                if (indexA === -1 && indexB >= 0) {
-                    return 1
-                }
-                return this.options.indexOf(a) - this.options.indexOf(b)
+    computed: {
+        sortedOptions () {
+            if (!Array.isArray(this.options)) return []
+
+            const optionsCopy = this.options.slice()
+            return optionsCopy.sort((option1, option2) => {
+                const selected1 = this.value && this.value.includes(option1)
+                const selected2 = this.value && this.value.includes(option2)
+                if (selected1 && !selected2) return -1
+                if (!selected1 && selected2) return 1
+                if (option1.name < option2.name) return -1
+                return 1
             })
         },
     },
@@ -130,7 +107,7 @@ export default {
 @import '~sass/modules/breakpoints.sass'
 @import '~sass/partials/shadows.sass'
 
-.multiselect.theme-select
+.multiselect
     color: $theme-dark-blue
     .multiselect__tags
         @extend .shadow
@@ -141,17 +118,17 @@ export default {
         user-select: none
         position: relative
         cursor: default
-        height: 1.575rem
         font-family: 'Roboto Condensed', sans-serif
-        font-size: 1.2em
-        border-radius: 5px !important
-        border: 1px solid $theme-dark-grey !important
+        font-size: 1.1em
+        border-radius: 5px
+        border: 1px solid $theme-dark-grey
         padding: 0.375rem 0.75rem
         z-index: 20
         white-space: nowrap
         overflow: hidden
         .multiselect__placeholder, .multiselect__single
             color: inherit
+            text-transform: capitalize
             font-size: inherit
             margin: 0px
             padding: 0px
@@ -159,6 +136,10 @@ export default {
             display: none
         span
             display: none
+    &.no-right-radius
+        .multiselect__tags
+            border-top-right-radius: 0 !important
+            border-bottom-right-radius: 0 !important
     &.show-limit .multiselect__tags span
         display: inline-block
     &.show-search .multiselect__tags
@@ -199,14 +180,16 @@ export default {
     &.multiselect--active
         .multiselect__tags
             box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23) !important
+            max-height: 1.575em
     &.multiselect--above
         .multiselect__content-wrapper
             border-radius: 5px 5px 0px 0px !important
             padding-bottom: 10px
             padding-top: 0px
             transform: translateY(10px)
-    .multiselect__option--highlight, .multiselect__option--highlight::after
+    span.multiselect__option--highlight, span.multiselect__option--highlight::after
         background: $theme-medium-grey !important
+        color: $theme-dark-blue
     .multiselect__option--selected
         font-weight: 400
     .multiselect__option--selected::before

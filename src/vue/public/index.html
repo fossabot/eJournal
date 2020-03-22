@@ -13,6 +13,12 @@
         <meta name="msapplication-config" content="/favicon/browserconfig.xml?v=3">
         <meta name="theme-color" content="#252c39">
         <title>eJournal</title>
+        <script>
+            // TODO: Check if not triggered by anything other than IE.
+            if (navigator.userAgent.match(/(MSIE|Trident\/)/)) {
+                location.replace('/unsupported-browser.html')
+            }
+        </script>
     </head>
 
     <body style="height: 100%">
