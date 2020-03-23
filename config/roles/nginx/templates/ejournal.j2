@@ -96,6 +96,7 @@ server {
     # The same list demands some headers
     add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload";
     add_header Content-Security-Policy "frame-ancestors {{ csp_frame_ancestors_whitelist }};";
+    add_header Content-Security-Policy "script-src 'self' 'unsafe-inline'";
     # Prevent MIME type sniffing for security
     add_header X-Content-Type-Options "nosniff";
     # Enable XSS Protection in case user's browser has disabled it

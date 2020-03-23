@@ -19,7 +19,7 @@ virtualenv_python_version: python3.5
 
 
 # Backup settings
-run_backups: true
+run_backups: false
 backup_dir: "/backup"
 maintenance_dir: "/var/www/maintenance/{{ application_name }}"
 media_backup_dir: "{{ backup_dir }}/media"
