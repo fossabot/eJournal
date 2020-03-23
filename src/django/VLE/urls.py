@@ -28,6 +28,7 @@ from VLE.views import common, email, lti, user
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
+    url(r'^silk/', include('silk.urls', namespace='silk')),
 
     url(r'^', include(('VLE.views', 'VLE.views'), namespace='VLE')),
 

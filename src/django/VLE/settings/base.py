@@ -23,6 +23,11 @@ sentry_sdk.init(
 )
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+
 BASELINK = os.environ['BASELINK']
 API_URL = os.environ['API_URL']
 
@@ -90,6 +95,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_celery_results',
     'django_celery_beat',
+    'silk',
 ]
 
 REST_FRAMEWORK = {
@@ -117,6 +123,7 @@ SIMPLE_JWT = {
 }
 
 MIDDLEWARE = [
+    'silk.middleware.SilkyMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
