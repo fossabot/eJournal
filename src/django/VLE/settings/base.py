@@ -33,6 +33,7 @@ MEDIA_URL = 'media/'
 
 SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
 
+SILKY_PYTHON_PROFILER = True
 
 # Email settings
 EMAIL_BACKEND = 'anymail.backends.mailgun.EmailBackend'
