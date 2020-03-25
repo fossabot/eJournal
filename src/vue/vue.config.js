@@ -19,6 +19,7 @@ module.exports = {
                 CustomEnv: {
                     API_URL: JSON.stringify(process.env.API_URL),
                     SENTRY_DSN: JSON.stringify(process.env.SENTRY_DSN),
+                    SENTRY_BASE_URL: JSON.stringify(process.env.SENTRY_BASE_URL),
                     SENTRY_ORGANIZATION_SLUG: JSON.stringify(process.env.SENTRY_ORGANIZATION_SLUG),
                     SENTRY_PROJECT_SLUG: JSON.stringify(process.env.SENTRY_PROJECT_SLUG),
                 },

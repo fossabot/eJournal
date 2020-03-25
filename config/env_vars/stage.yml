@@ -7,8 +7,8 @@ git_branch: develop
 
 # Sentry settings
 sentry_dsn: https://4035465aa52c48e6830cc8456bbc0549@sentry.ejournal.app/2
-sentry_organization_slug: ejournal-test
-sentry_project_slug: ejournal-test
+sentry_organization_slug: ejournal
+sentry_project_slug: ejournal
 
 
 # Database settings.
