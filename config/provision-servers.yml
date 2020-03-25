@@ -15,7 +15,7 @@
   roles:
     - base
     - db
-    # - certbot
+    - certbot
     - rabbitmq
     - web
     - celery
