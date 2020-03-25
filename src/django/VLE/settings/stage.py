@@ -22,7 +22,7 @@ BACKUP_DIR = os.environ['BACKUP_DIR']
 
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ORIGIN_REGEX_WHITELIST = (
-    r'^(https?://)?(\w+\.)?ejournal\.app$',
+    r'^(https?://)?([a-zA-Z0-9_\-]+\.)?ejournal\.app$',
 )
 
 USER_MAX_FILE_SIZE_BYTES = 10485760
