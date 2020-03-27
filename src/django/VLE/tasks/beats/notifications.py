@@ -18,6 +18,7 @@ def _send_deadline_mail(deadline, journal):
         course = assignment.get_active_course(author.user)
         email_data = {}
         email_data['heading'] = 'Upcoming deadline'
+        email_data['full_name'] = author.user.full_name
         email_data['main_content'] = '''\
         You have an unfinished deadline coming up for {} in {}.'''.format(course.name, assignment.name)
         email_data['extra_content'] = 'Date: {}'.format(deadline['due_date'])
