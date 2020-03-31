@@ -5,16 +5,20 @@ import datetime
 from celery import shared_task
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
-from django.db.models import Q, Sum
+from django.db.models import Q
 from django.template.loader import render_to_string
+from django.utils import timezone
 from django.utils.html import strip_tags
 
-from VLE.models import Entry, Journal, Node, PresetNode
+from VLE.models import Journal, Node, PresetNode
 
 
 def _send_deadline_mail(deadline, journal):
     assignment = journal.assignment
-    for author in journal.authors.all():
+    emails_sent_to = []
+    # remove where the user does not want to recieve an email.
+    for author in journal.authors.filter(
+       user__verified_email=True, user__preferences__upcoming_deadline_notifications=True):
         course = assignment.get_active_course(author.user)
         email_data = {}
         email_data['heading'] = 'Upcoming deadline'
@@ -40,6 +44,8 @@ def _send_deadline_mail(deadline, journal):
 
         email.attach_alternative(html_content, 'text/html')
         email.send()
+        emails_sent_to.append(author.user.email)
+    return emails_sent_to
 
 
 def _send_deadline_mails(deadline_query):
@@ -51,11 +57,9 @@ def _send_deadline_mails(deadline_query):
     deadline_query -- query of PresetNodes
     """
     emails_sent_to = []
-    # Remove all filled entrydeadline, and remove where the user does not want to recieve an email.
+    # Remove all filled entrydeadline
     no_submissions = Q(type=Node.ENTRYDEADLINE, node__entry__isnull=True) | Q(type=Node.PROGRESS)
-    notifications_enabled = Q(node__journal__authors__user__preferences__upcoming_deadline_notifications=True)
-    verified_email = Q(node__journal__authors__user__verified_email=True)
-    deadlines = deadline_query.filter(notifications_enabled & verified_email & no_submissions)\
+    deadlines = deadline_query.filter(no_submissions).distinct()\
                               .values('node', 'node__journal', 'due_date', 'type', 'target')
     for deadline in deadlines:
         # Only send to users who have a journal
@@ -65,15 +69,10 @@ def _send_deadline_mails(deadline_query):
             continue
 
         # Dont send a mail when the target points is reached
-        if deadline['type'] == Node.PROGRESS and \
-           (Entry.objects.filter(node__journal=journal, creation_date__lt=deadline['due_date'],
-                                 grade__published=True)
-                         .aggregate(Sum('grade__grade'))['grade__grade__sum'] or 0) > deadline['target']:
+        if deadline['type'] == Node.PROGRESS and journal.get_grade() > deadline['target']:
             continue
 
-        _send_deadline_mail(deadline, journal)
-        for author in journal.authors.all():
-            emails_sent_to.append(author.user.email)
+        emails_sent_to += _send_deadline_mail(deadline, journal)
 
     return emails_sent_to
 
@@ -87,12 +86,12 @@ def send_upcoming_deadlines():
     """
     upcoming_day_deadlines = PresetNode.objects.filter(
         due_date__range=(
-            datetime.datetime.utcnow().date() + datetime.timedelta(days=1),
-            datetime.datetime.utcnow().date() + datetime.timedelta(days=2)))
-    _send_deadline_mails(upcoming_day_deadlines)
+            timezone.now().date() + datetime.timedelta(days=1),
+            timezone.now().date() + datetime.timedelta(days=2)))
+    emails_sent_to = _send_deadline_mails(upcoming_day_deadlines)
     upcoming_week_deadlines = PresetNode.objects.filter(
         due_date__range=(
-            datetime.datetime.utcnow().date() + datetime.timedelta(days=7),
-            datetime.datetime.utcnow().date() + datetime.timedelta(days=8)))
-    emails_sent_to = _send_deadline_mails(upcoming_week_deadlines)
+            timezone.now().date() + datetime.timedelta(days=7),
+            timezone.now().date() + datetime.timedelta(days=8)))
+    emails_sent_to += _send_deadline_mails(upcoming_week_deadlines)
     return emails_sent_to

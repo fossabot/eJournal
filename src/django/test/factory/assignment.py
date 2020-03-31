@@ -21,6 +21,7 @@ class AssignmentFactory(factory.django.DjangoModelFactory):
     can_set_journal_name = False
     can_set_journal_image = False
     can_lock_journal = False
+    points_possible = 10
 
     format = factory.SubFactory('test.factory.format.FormatFactory')
 
@@ -47,21 +48,19 @@ class AssignmentFactory(factory.django.DjangoModelFactory):
                 self.author = self.courses.first().author
                 self.save()
 
-
-class TemplateAssignmentFactory(AssignmentFactory):
     @factory.post_generation
-    def add_templates(self, create, extracted):
+    def add_timeline(self, create, extracted):
         if not create:
             return
 
-        template = Template.objects.create(format=self.format, name="template 1 - required summary")
-        self.format.template_set.add(template)
-        Field.objects.create(type=Field.TEXT, title="Title", location=1, template=template, required=True)
-        Field.objects.create(type=Field.RICH_TEXT, title="Summary", location=2, template=template, required=True)
-        template = Template.objects.create(format=self.format, name="template 2 - optional summary")
-        self.format.template_set.add(template)
-        Field.objects.create(type=Field.TEXT, title="Title", location=1, template=template, required=False)
-        Field.objects.create(type=Field.RICH_TEXT, title="Summary", location=2, template=template, required=False)
+        template1 = Template.objects.create(format=self.format, name="template 1 - required summary")
+        self.format.template_set.add(template1)
+        Field.objects.create(type=Field.TEXT, title="Title", location=1, template=template1, required=True)
+        Field.objects.create(type=Field.RICH_TEXT, title="Summary", location=2, template=template1, required=True)
+        template2 = Template.objects.create(format=self.format, name="template 2 - optional summary")
+        self.format.template_set.add(template2)
+        Field.objects.create(type=Field.TEXT, title="Title", location=1, template=template2, required=False)
+        Field.objects.create(type=Field.RICH_TEXT, title="Summary", location=2, template=template2, required=False)
 
 
 class LtiAssignmentFactory(AssignmentFactory):
