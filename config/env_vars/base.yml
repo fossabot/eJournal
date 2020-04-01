@@ -37,3 +37,7 @@ mailgun_api_key: !vault |
           36623936396531626363366231366335383632663939656163356235393539653436313433616534
           646335383833373734396330303761306137
 test_mailgun_sender_domain: test.ejournal.app
+
+
+# Sentry settings
+sentry_base_url: https://sentry.ejournal.app/

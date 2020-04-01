@@ -4,6 +4,27 @@ else
 TOTEST=
 endif
 
+ifeq (,$(wildcard ./pass.txt))
+ansible_use = --ask-vault-pass
+else
+ansible_use = --vault-password-file pass.txt
+endif
+
+ifdef no_become
+become =
+else
+become = --ask-become-pass
+endif
+
+ifndef branch
+branch=`git rev-parse --abbrev-ref HEAD`
+endif
+ifndef host
+host=staging
+endif
+
+vars = --extra-vars "git_branch=${branch} deploy_host=${host}"
+
 postgres_db = ejournal
 postgres_test_db = test_$(postgres_db)
 postgres_dev_user = ejournal
@@ -92,25 +113,36 @@ setup-venv:
 ##### DEPLOY COMMANDS ######
 
 ansible-test-connection:
-	@bash -c 'source ./venv/bin/activate && ansible -m ping all --ask-become-pass && deactivate'
+	bash -c 'source ./venv/bin/activate && \
+	ansible -m ping all ${become}'
 
 run-ansible-provision:
-	@bash -c 'source ./venv/bin/activate && ansible-playbook ./config/provision-servers.yml --ask-become-pass --ask-vault-pass && deactivate'
+	bash -c 'source ./venv/bin/activate && \
+	ansible-playbook config/provision-servers.yml ${become} ${ansible_use} ${vars}'
 
 run-ansible-deploy:
-	@bash -c 'source ./venv/bin/activate && ansible-playbook ./config/provision-servers.yml --tags "deploy_back,deploy_front" --ask-become-pass --ask-vault-pass && deactivate'
+	bash -c 'source ./venv/bin/activate && \
+	ansible-playbook config/provision-servers.yml ${become} ${ansible_use} ${vars} --tags "deploy_front,deploy_back"'
 
 run-ansible-deploy-front:
-	@bash -c 'source ./venv/bin/activate && ansible-playbook ./config/provision-servers.yml --tags "deploy_front" --ask-become-pass --ask-vault-pass && deactivate'
+	bash -c 'source ./venv/bin/activate && \
+	ansible-playbook config/provision-servers.yml ${become}  ${ansible_use} ${vars} --tags "deploy_front"'
 
 run-ansible-deploy-back:
-	@bash -c 'source ./venv/bin/activate && ansible-playbook ./config/provision-servers.yml --tags "deploy_back" --ask-become-pass --ask-vault-pass && deactivate'
+	bash -c 'source ./venv/bin/activate && \
+	ansible-playbook config/provision-servers.yml ${become}  ${ansible_use} ${vars} --tags "deploy_back"'
 
 run-ansible-backup:
-	@bash -c 'source ./venv/bin/activate && ansible-playbook ./config/provision-servers.yml --tags "backup" --ask-become-pass --ask-vault-pass && deactivate'
+	bash -c 'source ./venv/bin/activate && \
+	ansible-playbook config/provision-servers.yml ${become}  ${ansible_use} ${vars} --tags "backup"'
 
 run-ansible-preset_db:
-	@bash -c 'source ./venv/bin/activate && ansible-playbook ./config/provision-servers.yml --tags "run_preset_db" --ask-become-pass --ask-vault-pass && deactivate'
+	bash -c 'source ./venv/bin/activate && \
+	ansible-playbook config/provision-servers.yml ${become} ${ansible_use} ${vars} --tags "run_preset_db"'
+
+run-ansible-restore-latest:
+	bash -c 'source ./venv/bin/activate && \
+	ansible-playbook config/provision-servers.yml ${become} ${ansible_use} ${vars} --tags "restore_latest"'
 
 ##### MAKEFILE COMMANDS #####
 
