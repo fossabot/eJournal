@@ -22,7 +22,7 @@
             {{ journal.name }}
         </span>
         <progress-bar
-            :currentPoints="journal.stats.acquired_points"
+            :currentPoints="journal.grade"
             :totalPoints="assignment.points_possible"
             :comparePoints="assignment && assignment.stats ? assignment.stats.average_points : -1"
             :bonusPoints="journal.bonus_points"
@@ -70,15 +70,6 @@ export default {
         },
     },
     computed: {
-        journalAuthorUsername () {
-            if (this.journal.authors && this.journal.authors.length > 0) {
-                return this.journal.authors[0].user.username
-            }
-            return ''
-        },
-        journalName () {
-            return this.journal.name
-        },
         canManageJournal () {
             return this.assignment.is_group_assignment && (this.assignment.can_set_journal_name
                 || this.assignment.can_set_journal_image || this.$hasPermission('can_grade'))

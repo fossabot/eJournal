@@ -18,43 +18,31 @@ export default {
         const sortOptions = {
             name: (a, b) => compare(a.name, b.name),
             username: (a, b) => {
-                if (a.authors.length > 0 && b.authors.length > 0) {
-                    return compare(a.authors[0].user.username, b.authors[0].user.username)
-                } else if (a.authors.length > 0) {
+                if (a.author_count > 0 && b.author_count > 0) {
+                    return compare(a.usernames, b.usernames)
+                } else if (a.author_count > 0) {
                     return -1
-                } else if (b.authors.length > 0) {
+                } else if (b.author_count > 0) {
                     return 1
                 }
                 return 0
             },
-            markingNeeded: (a, b) => compare(a.stats.submitted - a.stats.graded, b.stats.submitted - b.stats.graded),
-            points: (a, b) => compare(a.stats.acquired_points, b.stats.acquired_points),
+            markingNeeded: (a, b) => compare(a.stats.marking_needed, b.stats.marking_needed),
+            points: (a, b) => compare(a.grade, b.grade),
         }
 
         function groupFilter (journal) {
             if (groups === null) {
                 return false
             }
-            const groupsList = []
-            journal.authors.forEach((student) => {
-                if (student.user.groups) {
-                    student.user.groups.forEach((group) => {
-                        if (!groupsList.includes(group)) {
-                            groupsList.push(group.id)
-                        }
-                    })
-                }
-            })
 
-            return groups.some(group => groupsList.includes(group.id))
+            return groups.some(group => journal.groups.includes(group.id))
         }
 
         function searchFilter (journal) {
             return journal.name.toLowerCase().includes(searchValue.toLowerCase())
-                || journal.authors.some(
-                    author => author.user.username.toLowerCase().includes(searchValue.toLowerCase()))
-                || journal.authors.some(
-                    author => author.user.full_name.toLowerCase().includes(searchValue.toLowerCase()))
+                || journal.usernames.toLowerCase().includes(searchValue.toLowerCase())
+                || journal.full_names.toLowerCase().includes(searchValue.toLowerCase())
         }
         let filteredJournals = journals
         if (groups !== null && groups.length !== 0) {
