@@ -124,13 +124,13 @@ def establish_file(author, identifier, course=None, assignment=None, journal=Non
 
 
 def get_files_from_rich_text(rich_text):
+    if rich_text is None or len(rich_text) < 128:
+        return []
     re_access_ids = re.compile(r'\/files\/[0-9]+\?access_id=([a-zA-Z0-9]+)')
     return VLE.models.FileContext.objects.filter(access_id__in=re.findall(re_access_ids, rich_text), is_temp=True)
 
 
 def establish_rich_text(author, rich_text, course=None, assignment=None, journal=None, comment=None, content=None):
-    if rich_text is None or len(rich_text) < 128:
-        return
     for file in get_files_from_rich_text(rich_text):
         establish_file(author, file.access_id, course, assignment, journal, content, comment, in_rich_text=True)
 
