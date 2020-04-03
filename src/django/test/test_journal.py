@@ -1,6 +1,7 @@
 import test.factory as factory
 from test.utils import api
 
+from django.conf import settings
 from django.test import TestCase
 
 import VLE.factory
@@ -24,16 +25,46 @@ class JournalAPITest(TestCase):
         group_course = self.group_assignment.courses.first()
         self.g_teacher = group_course.author
 
-    def test_get(self):
+    def test_get_journal(self):
         payload = {'assignment_id': self.assignment.pk, 'course_id': self.course.pk}
         # Test list
         api.get(self, 'journals', params=payload, user=self.student, status=403)
         api.get(self, 'journals', params=payload, user=self.teacher)
 
         # Test get
-        api.get(self, 'journals', params={'pk': self.journal.pk}, user=self.student)
-        api.get(self, 'journals', params={'pk': self.journal.pk}, user=self.teacher)
+        journal_resp = api.get(self, 'journals', params={'pk': self.journal.pk}, user=self.student)['journal']
+        assert not journal_resp['usernames'], 'students should not get other usernames'
+        assert not journal_resp['needs_lti_link'], 'student should not need an LTI link if it is not an LTI assignment'
+        journal_resp = api.get(self, 'journals', params={'pk': self.journal.pk}, user=self.teacher)['journal']
+        assert journal_resp['usernames'], 'teacher should get a list of usernames'
+        assert not journal_resp['needs_lti_link'], 'student should not need an LTI link if it is not an LTI assignment'
         api.get(self, 'journals', params={'pk': self.journal.pk}, user=factory.Teacher(), status=403)
+
+        lti_journal = factory.Journal(assignment=factory.LtiAssignment())
+        lti_ap = lti_journal.authors.first()
+
+        journal_resp = api.get(self, 'journals', params={'pk': lti_journal.pk}, user=lti_ap.user)['journal']
+        assert lti_journal.authors.first().user.full_name in journal_resp['needs_lti_link'], \
+            'student need an LTI link if it is an LTI assignment'
+
+        lti_ap.sourcedid = 'filled'
+        lti_ap.save()
+        journal_resp = api.get(self, 'journals', params={'pk': lti_journal.pk}, user=lti_ap.user)['journal']
+        assert lti_journal.authors.first().user.full_name not in journal_resp['needs_lti_link'], \
+            'student should not need an LTI link if student has a sources id'
+
+    def test_journal_get_image(self):
+        assert self.journal.get_image() == settings.DEFAULT_PROFILE_PICTURE
+        self.student.profile_picture = 'new_image'
+        self.student.save()
+        assert self.journal.get_image() == 'new_image'
+
+        second_ap = factory.AssignmentParticipation(assignment=self.group_assignment)
+        self.group_journal.authors.add(second_ap)
+        assert self.group_journal.get_image() == settings.DEFAULT_PROFILE_PICTURE
+        second_ap.user.profile_picture = 'new_image'
+        second_ap.user.save()
+        assert Journal.objects.get(pk=self.group_journal.pk).get_image() == 'new_image'
 
     def test_create_journal(self):
         payload = {
@@ -220,6 +251,35 @@ class JournalAPITest(TestCase):
         self.group_journal.locked = True
         self.group_journal.save()
         api.update(self, 'journals/join', params={'pk': self.group_journal.pk}, user=self.g_student, status=400)
+
+    def test_get_members(self):
+        # Test students that are not added to the journal are NOT allowed to view other members
+        api.get(
+            self, 'journals/get_members', params={'pk': self.group_journal.pk},
+            user=self.g_student, status=403)
+        api.get(
+            self, 'journals/get_members', params={'pk': self.group_journal.pk},
+            user=factory.Teacher(), status=403)
+
+        # Test before adding student, that student is not returned
+        members = api.get(
+            self, 'journals/get_members', params={'pk': self.group_journal.pk},
+            user=self.g_teacher)['authors']
+        assert self.g_student.pk not in [m['id'] for m in members]
+        api.update(
+            self, 'journals/add_members', params={'pk': self.group_journal.pk, 'user_ids': [self.g_student.pk]},
+            user=self.g_teacher)
+
+        # Test after adding student, that student is returned
+        members = api.get(
+            self, 'journals/get_members', params={'pk': self.group_journal.pk},
+            user=self.g_teacher)['authors']
+        assert self.g_student.pk not in [m['id'] for m in members]
+
+        # Test students that are added to the journal ARE allowed to view other members
+        api.get(
+            self, 'journals/get_members', params={'pk': self.group_journal.pk},
+            user=self.g_student)
 
     def test_add_members(self):
         assert not Journal.objects.get(pk=self.group_journal.pk).authors.filter(user=self.g_student).exists(), \

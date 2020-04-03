@@ -10,7 +10,7 @@ class JournalFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = 'VLE.Journal'
 
-    assignment = factory.SubFactory('test.factory.assignment.TemplateAssignmentFactory')
+    assignment = factory.SubFactory('test.factory.assignment.AssignmentFactory')
 
     @factory.post_generation
     def add_user_to_assignment(self, create, extracted):

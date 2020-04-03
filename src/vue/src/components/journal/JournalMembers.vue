@@ -22,12 +22,12 @@
                     v-if="journal.author_limit > 1"
                     class="text-grey"
                 >
-                    ({{ journal.authors.length }}/{{ journal.author_limit }})
+                    ({{ journal.author_count }}/{{ journal.author_limit }})
                 </b>
             </b>
         </div>
         <div
-            v-for="author in journal.authors"
+            v-for="author in authors"
             :key="`journal-member-${author.user.id}`"
             class="member"
         >
@@ -65,13 +65,14 @@
             </span>
         </div>
         <div
-            v-if="journal.authors.length === 0"
+            v-if="journal.author_count === 0"
             class="member text-grey"
         >
             No members yet
         </div>
         <div
-            v-if="$hasPermission('can_manage_journals') && journal.authors.length < journal.author_limit"
+            v-if="$hasPermission('can_manage_journals') && (journal.author_limit === 0 ||
+                journal.author_count < journal.author_limit)"
             class="d-flex mt-3 full-width"
         >
             <theme-select
@@ -116,6 +117,7 @@ export default {
         return {
             participantsToAdd: [],
             saveRequestInFlight: false,
+            authors: [],
         }
     },
     computed: {
@@ -124,6 +126,7 @@ export default {
         }),
     },
     created () {
+        journalAPI.getMembers(this.journal.id).then((authors) => { this.authors = authors })
         if (this.$hasPermission('can_manage_journals')) {
             this.getParticipantsWithoutJournal()
         }
@@ -131,7 +134,7 @@ export default {
     methods: {
         leaveJournal () {
             if (window.confirm('Are you sure you want to leave this journal?'
-                + `${this.journal.authors.length === 1 ? ' Since you are the last member of this journal, doing so '
+                + `${this.journal.author_count === 1 ? ' Since you are the last member of this journal, doing so '
                 + 'will reset the journal and remove all its entries. This action cannot be undone.' : ''}`)) {
                 journalAPI.leave(this.journal.id)
                     .then(() => {
@@ -146,13 +149,15 @@ export default {
         },
         kickFromJournal (user) {
             if (window.confirm(`Are you sure you want to remove ${user.full_name} from this journal?`
-                + `${this.journal.authors.length === 1 ? ' Since they are the last member of this journal, doing so '
+                + `${this.journal.author_count === 1 ? ' Since they are the last member of this journal, doing so '
                 + 'will reset the journal and remove all its entries. This action cannot be undone.' : ''}`)) {
                 journalAPI.kick(this.journal.id, user.id, { responseSuccessToast: true })
                     .then(() => {
                         this.getParticipantsWithoutJournal()
-                        this.journal.authors = this.journal.authors.filter(author => author.user.id !== user.id)
-                        if (this.journal.authors.length === 0) {
+                        this.authors = this.authors.filter(author => author.user.id !== user.id)
+                        this.journal.author_count = this.authors.length
+                        this.journal.usernames = this.authors.map(author => author.user.username).join(', ')
+                        if (this.journal.author_count === 0 && this.$router.app.$route.name !== 'Assignment') {
                             this.$router.push(this.$root.assignmentRoute(this.assignment))
                         }
                     })
@@ -173,7 +178,7 @@ export default {
                 })
         },
         addMembers () {
-            if (this.journal.author_limit > 1 && this.journal.authors.length + this.participantsToAdd.length
+            if (this.journal.author_limit > 1 && this.journal.author_count + this.participantsToAdd.length
                 > this.journal.author_limit) {
                 this.$toasted.error('Adding these members would exceed this journal\'s member limit.')
             } else if (this.participantsToAdd.length === 0) {
@@ -186,8 +191,10 @@ export default {
                 }, [])
 
                 journalAPI.addMembers(this.journal.id, idsToAdd)
-                    .then((journal) => {
-                        this.journal.authors = journal.authors
+                    .then((authors) => {
+                        this.authors = authors
+                        this.journal.author_count = this.authors.length
+                        this.journal.usernames = this.authors.map(author => author.user.username).join(', ')
                         this.saveRequestInFlight = false
                         this.getParticipantsWithoutJournal()
                         this.participantsToAdd = []

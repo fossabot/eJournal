@@ -40,10 +40,10 @@
                         (Canvas) course '{{ assignment.active_lti_course.name }}' yet:
                         <ul>
                             <li
-                                v-for="author in journal.authors.filter(author => author.needs_lti_link)"
-                                :key="`lti-author-${author.user.username}`"
+                                v-for="name in journal.needs_lti_link"
+                                :key="`lti-author-${name}`"
                             >
-                                {{ author.user.full_name }}
+                                {{ name }}
                             </li>
                         </ul>
                         This journal cannot be updated and grades cannot be passed back until each member visits the
@@ -228,7 +228,6 @@ export default {
             journal: null,
             loadingNodes: true,
             editingName: false,
-            journalName: '',
         }
     },
     computed: {

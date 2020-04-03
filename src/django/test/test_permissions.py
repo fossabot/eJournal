@@ -4,6 +4,7 @@ test_permissions.py
 This file tests whether all permissions behave as required.
 """
 import datetime
+import test.factory as test_factory
 from test.factory.user import DEFAULT_PASSWORD
 
 from django.core.validators import ValidationError
@@ -46,19 +47,42 @@ class PermissionTests(TestCase):
         assert self.user.has_permission('can_delete_assignment', self.course_independent)
 
         assert not self.user.has_permission('can_delete_course_user_group', self.course_independent)
-        self.assertRaises(VLEParticipationError, self.user.has_permission, 'can_delete_assignment', self.course1)
-        self.assertRaises(VLEParticipationError, self.user.has_permission, 'can_delete_assignment', self.course2)
+        assert not self.user.has_permission('can_delete_assignment', self.course1)
+        assert not self.user.has_permission('can_delete_assignment', self.course2)
 
     def test_assignment_permission(self):
-        """Test whether the user has only the given assignment permission."""
-        role = factory.make_role_default_no_perms("SD", self.course_independent, can_have_journal=True)
-        factory.make_participation(self.user, self.course_independent, role)
+        assignment = test_factory.Assignment()
+        other_assignment = test_factory.Assignment()
+        journal = test_factory.Journal(assignment=assignment)
+        author = assignment.author
+        student = journal.authors.first().user
+        not_teacher_perms = ['can_have_journal']
+        student_perms = ['can_have_journal', 'can_comment']
+        for permission in Role.ASSIGNMENT_PERMISSIONS:
+            assert permissions.has_assignment_permission(author, permission, assignment) != \
+                (permission in not_teacher_perms)
+            assert permissions.has_assignment_permission(student, permission, assignment) == \
+                (permission in student_perms)
 
-        assert self.user.has_permission('can_have_journal', self.assignment_independent)
+        assert not permissions.has_assignment_permission(author, 'can_comment', other_assignment)
+        assert not permissions.has_assignment_permission(student, 'can_comment', other_assignment)
+        self.assertRaises(
+            VLEProgrammingError, permissions.has_assignment_permission, student, 'can_view_course_users', assignment)
 
-        assert not self.user.has_permission('can_add_course')
-        assert not self.user.has_permission('can_edit_assignment', self.assignment_independent)
-        self.assertRaises(VLEParticipationError, self.user.has_permission, 'can_have_journal', self.assignment)
+    def test_course_permission(self):
+        course = test_factory.Course()
+        other_course = test_factory.Course()
+        journal = test_factory.Journal(assignment__courses=[course])
+        author = course.author
+        student = journal.authors.first().user
+        for permission in Role.COURSE_PERMISSIONS:
+            assert permissions.has_course_permission(author, permission, course)
+            assert not permissions.has_course_permission(student, permission, course)
+
+        assert not permissions.has_course_permission(author, 'can_delete_course', other_course)
+        assert not permissions.has_course_permission(student, 'can_delete_course', other_course)
+        self.assertRaises(
+            VLEProgrammingError, permissions.has_course_permission, student, 'can_publish_grades', course)
 
     def test_multi_course_assignment_permission(self):
         """Test whether the assignment has the correct permissions when bound to multiple courses."""
@@ -146,8 +170,8 @@ class PermissionTests(TestCase):
         assert user.has_permission('can_add_course')
 
         assert not user.has_permission('can_edit_institute_details')
-        self.assertRaises(VLEParticipationError, user.has_permission, 'can_delete_course', self.course_independent)
-        self.assertRaises(VLEParticipationError, user.has_permission, 'can_have_journal', self.assignment_independent)
+        assert not user.has_permission('can_delete_course', self.course_independent)
+        assert not user.has_permission('can_have_journal', self.assignment_independent)
 
     def test_check_permission(self):
         """Test whether check_permission throws VLEPermissionError when it should throw."""
@@ -255,30 +279,44 @@ class PermissionTests(TestCase):
         self.assertEqual(len(Role.ASSIGNMENT_PERMISSIONS), len(result))
 
     def test_is_supervisor(self):
-        middle = factory.make_user('Username2', DEFAULT_PASSWORD, email='some2@email.address', full_name='Test User')
-        student = factory.make_user('Username3', DEFAULT_PASSWORD, email='some3@email.address', full_name='Test User')
+        high_user = test_factory.Teacher()
+        middle_user = test_factory.Student()
+        low_user = test_factory.Student()
 
-        role = factory.make_role_default_no_perms("TE", self.course1,
-                                                  can_view_course_users=True, can_view_all_journals=True)
-        factory.make_participation(self.user, self.course1, role)
+        high1 = factory.make_role_default_no_perms(
+            "HIGH", self.course1, can_view_course_users=True, can_view_all_journals=True)
+        factory.make_participation(high_user, self.course1, high1)
 
-        role = factory.make_role_default_no_perms("MD", self.course1, can_view_course_users=True)
-        factory.make_participation(middle, self.course1, role)
+        high2 = factory.make_role_default_no_perms(
+            "HIGH", self.course2, can_view_course_users=True, can_view_all_journals=True)
+        factory.make_participation(high_user, self.course2, high2)
 
-        role = factory.make_role_default_no_perms("SD", self.course1)
-        factory.make_participation(student, self.course1, role)
-        factory.make_journal(self.assignment, author=student)
+        middle1 = factory.make_role_default_no_perms("MIDDLE", self.course1, can_view_course_users=True)
+        factory.make_participation(middle_user, self.course1, middle1)
 
-        assert permissions.is_user_supervisor_of(self.user, student)
-        assert permissions.is_user_supervisor_of(self.user, middle)
-        assert permissions.is_user_supervisor_of(middle, self.user)
-        assert permissions.is_user_supervisor_of(middle, student)
-        assert not permissions.is_user_supervisor_of(student, self.user)
-        assert not permissions.is_user_supervisor_of(student, middle)
+        low1 = factory.make_role_default_no_perms("LOW", self.course1)
+        low2 = factory.make_role_default_no_perms("LOW", self.course2)
+        factory.make_participation(low_user, self.course1, low1)
+        factory.make_participation(low_user, self.course2, low2)
+        factory.make_journal(self.assignment, author=low_user)
 
-        Participation.objects.get(course=self.course1, user=student).delete()
+        assert permissions.is_user_supervisor_of(high_user, low_user)
+        assert permissions.is_user_supervisor_of(high_user, middle_user)
+        assert permissions.is_user_supervisor_of(middle_user, high_user)
+        assert permissions.is_user_supervisor_of(middle_user, low_user)
+        assert not permissions.is_user_supervisor_of(low_user, high_user)
+        assert not permissions.is_user_supervisor_of(low_user, middle_user)
 
-        assert permissions.is_user_supervisor_of(self.user, student)
-        assert not permissions.is_user_supervisor_of(middle, student)
-        assert not permissions.is_user_supervisor_of(student, self.user)
-        assert not permissions.is_user_supervisor_of(student, middle)
+        Participation.objects.get(course=self.course1, user=low_user).delete()
+
+        assert permissions.is_user_supervisor_of(high_user, low_user)
+        assert not permissions.is_user_supervisor_of(middle_user, low_user)
+        assert not permissions.is_user_supervisor_of(low_user, high_user)
+        assert not permissions.is_user_supervisor_of(low_user, middle_user)
+
+        Participation.objects.get(course=self.course2, user=low_user).delete()
+
+        assert not permissions.is_user_supervisor_of(high_user, low_user)
+        assert not permissions.is_user_supervisor_of(middle_user, low_user)
+        assert not permissions.is_user_supervisor_of(low_user, high_user)
+        assert not permissions.is_user_supervisor_of(low_user, middle_user)

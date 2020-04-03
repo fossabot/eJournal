@@ -100,7 +100,7 @@ export default {
                 info.push(`${this.deadline.stats.needs_marking} entries need marking`)
             }
             if (this.deadline.stats.unpublished === 1) {
-                info.push('an entry needs to be published')
+                info.push('a grade needs to be published')
             } else if (this.deadline.stats.unpublished > 1) {
                 info.push(`${this.deadline.stats.unpublished} grades need to be published`)
             }

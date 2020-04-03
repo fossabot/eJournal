@@ -15,7 +15,7 @@ db_port: 5432
 
 # Sentry settings
 sentry_dsn: ""
-sentry_organization_slug: ejournal-test
+sentry_organization_slug: ejournal
 sentry_project_slug: ejournal-test
 
 # LTI settings.
@@ -33,8 +33,6 @@ gunicorn_max_requests: 1
 
 
 # RabbitMQ settings.
-rabbitmq_server_name: "rabbitmq-local-server"
-
 rabbitmq_admin_user: admin
 rabbitmq_admin_password: password
 

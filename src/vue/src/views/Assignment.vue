@@ -543,14 +543,15 @@ export default {
             let points = 0
 
             for (let i = 0; i < filteredJournals.length; i++) {
-                needsMarking += filteredJournals[i].stats.submitted - filteredJournals[i].stats.graded
-                unpublished += filteredJournals[i].stats.submitted - filteredJournals[i].stats.published
-                points += filteredJournals[i].stats.acquired_points
+                needsMarking += filteredJournals[i].stats.marking_needed
+                unpublished += filteredJournals[i].stats.unpublished
+                points += filteredJournals[i].grade
             }
-            this.stats = {}
-            this.stats.needsMarking = needsMarking
-            this.stats.unpublished = unpublished - needsMarking
-            this.stats.averagePoints = points / filteredJournals.length
+            this.stats = {
+                needsMarking,
+                unpublished,
+                averagePoints: points / filteredJournals.length,
+            }
         },
         resetNewJournals () {
             this.newJournalName = null

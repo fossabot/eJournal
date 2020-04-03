@@ -179,6 +179,20 @@ class EntryAPITest(TestCase):
         assert len(resp['content']) == 3 and resp['content'][2]['data'] == 'filled', \
             'Response should have filled the optional fields'
 
+    def test_optional_fields_are_none(self):
+        # As all fields are optional, data None should also work
+        all_types = factory.TemplateAllTypes(format=self.format)
+        fields = Field.objects.filter(template=all_types)
+        fields.update(required=False)
+        empty_create_params = {
+            'journal_id': self.journal.pk,
+            'template_id': all_types.pk,
+            'content': []
+        }
+        empty_create_params['content'] = [{'data': None, 'id': field.id} for field in fields]
+        resp = api.create(self, 'entries', params=empty_create_params, user=self.student)['entry']
+        api.update(self, 'entries', params={**empty_create_params, 'pk': resp['id']}, user=self.student)
+
     def test_update_entry(self):
         entry = api.create(self, 'entries', params=self.valid_create_params, user=self.student)['entry']
 

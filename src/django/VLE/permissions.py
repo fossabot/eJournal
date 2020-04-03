@@ -3,9 +3,7 @@ permissions.py.
 
 All the permission functions.
 """
-from collections import defaultdict
-
-from django.forms.models import model_to_dict
+from django.db.models import Q
 
 import VLE.models
 from VLE.utils.error_handling import VLEProgrammingError
@@ -50,12 +48,9 @@ def has_course_permission(user, permission, course):
     if user.is_superuser:
         return True
 
-    user.check_participation(course)
-
-    role = VLE.models.Participation.objects.get(user=user, course=course).role
-    permissions = model_to_dict(role)
-
-    return permission in permissions and permissions[permission]
+    return VLE.models.Role.objects.filter(
+        **{permission: True},
+        role__user=user, course=course).exists()
 
 
 def has_assignment_permission(user, permission, assignment):
@@ -78,38 +73,23 @@ def has_assignment_permission(user, permission, assignment):
             return False
         return True
 
-    user.check_participation(assignment)
+    if permission == 'can_have_journal' and VLE.models.Role.objects.filter(can_view_all_journals=True,
+       role__user=user, course__in=assignment.courses.all()).exists():
+        return False
 
-    permissions = defaultdict(lambda: False)
-    for course in assignment.courses.all():
-        if user.is_participant(course):
-            role = VLE.models.Participation.objects.get(user=user, course=course).role
-            role_permissions = model_to_dict(role)
-            permissions = {
-                key: (role_permissions[key] or permissions[key])
-                for key in VLE.models.Role.ASSIGNMENT_PERMISSIONS
-            }
-
-    # Apply negations
-    if permissions['can_have_journal'] and permissions['can_view_all_journals']:
-        permissions['can_have_journal'] = False
-
-    return permissions[permission]
+    return VLE.models.Role.objects.filter(
+        **{permission: True},
+        role__user=user, course__in=assignment.courses.all()).exists()
 
 
 def is_user_supervisor_of(supervisor, user):
     """Checks whether the user is a participant in any of the assignments where the supervisor has the permission of
     can_view_course_users or where the supervisor is linked to the user through an assignment where the supervisor
     has the permission can_view_all_journals."""
-    for course in supervisor.participations.all():
-        if supervisor.has_permission('can_view_course_users', course):
-            if course.participation_set.filter(user=user).exists():
-                return True
-            for assignment in course.assignment_set.filter(journal__authors__user__in=[user]):
-                if supervisor.has_permission('can_view_all_journals', assignment):
-                    return True
-
-    return False
+    return VLE.models.Role.objects.filter(
+        Q(can_view_all_journals=True) | Q(can_view_course_users=True),
+        role__user=supervisor,
+        course__in=VLE.models.Participation.objects.filter(user=user).values('course')).exists()
 
 
 def can_edit(user, obj):
