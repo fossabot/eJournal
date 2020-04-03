@@ -1029,17 +1029,20 @@ class Journal(models.Model):
         return self.get_full_names()
 
     def get_image(self):
-        if self.image:
-            return self.image
+        if self.image is None:
+            user_with_pic = self.authors.all().exclude(user__profile_picture=settings.DEFAULT_PROFILE_PICTURE).first()
+            if user_with_pic is not None:
+                return user_with_pic.user.profile_picture
 
-        user_with_pic = self.authors.all().exclude(user__profile_picture=settings.DEFAULT_PROFILE_PICTURE).first()
-        if user_with_pic is not None:
-            return user_with_pic.user.profile_picture
-
-        return settings.DEFAULT_PROFILE_PICTURE
+            return settings.DEFAULT_PROFILE_PICTURE
+        return self.image
 
     def get_full_names(self):
-        return ', '.join(self.authors.values_list('user__full_name', flat=True))
+        if self.authors.count() == 0:
+            return None
+        full_names = [author.user.full_name for author in self.authors.all()]
+        return ', '.join(full_names[:-1]) + \
+            (' and ' + full_names[-1]) if len(full_names) > 1 else full_names[0]
 
     def reset(self):
         Node.objects.filter(journal=self).delete()

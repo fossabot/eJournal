@@ -73,9 +73,7 @@ const actions = {
         commit(types.ACCESS_TOKEN_FETCH_COMPLETED)
         commit(types.CLEAR_REFRESH_SUBSCRIBERS)
         commit(`user/${types.LOGOUT}`, null, { root: true })
-        if (router.app.$route.name !== 'Login') {
-            router.push({ name: 'Login' })
-        }
+        router.push({ name: 'Login' })
         router.app.$toasted.error('Please login')
     },
     /* Queues all requests which fail due to an invalid access token.

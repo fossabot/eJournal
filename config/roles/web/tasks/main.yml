@@ -36,6 +36,12 @@
 - include: setup_supervisor.yml
   tags: supervisor
 
+- name: Deactivate maintenance page
+  command: mv {{ maintenance_dir }}/maintenance_on.html {{ maintenance_dir }}/maintenance_off.html
+  tags:
+    - deploy_back
+    - deploy_front
+
 - include: run_django_preset_db.yml
   tags:
     - never

@@ -22,7 +22,7 @@ const connDownFile = axios.create({
 
 const connSentry = axios.create({
     /* /api/0/projects/{organization_slug}/{project_slug}/ */
-    baseURL: `${CustomEnv.SENTRY_BASE_URL}/api/0/projects/${CustomEnv.SENTRY_ORGANIZATION_SLUG}/${CustomEnv.SENTRY_PROJECT_SLUG}/`, // eslint-disable-line
+    baseURL: `https://sentry.io/api/0/projects/${CustomEnv.SENTRY_ORGANIZATION_SLUG}/${CustomEnv.SENTRY_PROJECT_SLUG}/`,
     headers: {
         Authorization: `DSN ${CustomEnv.SENTRY_DSN}`,
     },

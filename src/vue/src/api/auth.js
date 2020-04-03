@@ -91,11 +91,11 @@ function handleError (error, connArgs) {
     const response = error.response
     const status = response.status
 
-    if (connArgs.redirect && status === statuses.UNAUTHORIZED && router.app.$route.name !== 'Login') {
+    if (connArgs.redirect && status === statuses.UNAUTHORIZED) {
         store.commit('user/LOGOUT')
         router.push({ name: 'Login' })
         toastError(error, connArgs)
-    } else if (connArgs.redirect && ERRORS_TO_REDIRECT.has(status) && router.app.$route.name !== 'ErrorPage') {
+    } else if (connArgs.redirect && ERRORS_TO_REDIRECT.has(status)) {
         router.push({
             name: 'ErrorPage',
             params: {
@@ -104,7 +104,7 @@ function handleError (error, connArgs) {
                 description: response.data.description,
             },
         })
-    } else if (!connArgs.redirect) {
+    } else {
         toastError(error, connArgs)
     }
 

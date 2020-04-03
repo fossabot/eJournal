@@ -41,7 +41,7 @@
         <b-button
             v-if="assignment.is_group_assignment && $hasPermission('can_manage_journals')"
             :class="{
-                'input-disabled': journal.author_count > 0,
+                'input-disabled': journal.authors.length > 0,
             }"
             class="delete-button"
             @click="deleteJournal"
@@ -111,7 +111,7 @@ export default {
             if (this.assignment.is_group_assignment && this.$hasPermission('can_manage_journals')
                 && this.newJournalMemberLimit !== this.journal.author_limit) {
                 if (this.newJournalMemberLimit > 0) {
-                    if (this.newJournalMemberLimit < this.journal.author_count) {
+                    if (this.newJournalMemberLimit < this.journal.authors.length) {
                         this.$toasted.error('It is not possible to set a member limit lower than the amount of '
                         + 'journal members.')
                         return

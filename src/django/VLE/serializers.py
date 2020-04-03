@@ -346,10 +346,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
             users = course.participation_set.filter(role__can_have_journal=True).values('user')
             return JournalSerializer(
                 journals.filter(Q(authors__user__in=users) | Q(authors__isnull=True)).distinct(), many=True,
-                context={
-                    **self.context,
-                    'can_view_usernames': self.context['user'].has_permission('can_view_all_journals', assignment)
-                }).data
+                context=self.context).data
         else:
             return None
 
@@ -470,60 +467,42 @@ class RoleSerializer(serializers.ModelSerializer):
 
 
 class JournalSerializer(serializers.ModelSerializer):
+    stats = serializers.SerializerMethodField()
+    authors = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
-    usernames = serializers.SerializerMethodField()
-    full_names = serializers.SerializerMethodField()
     image = serializers.SerializerMethodField()
     grade = serializers.SerializerMethodField()
-    author_count = serializers.SerializerMethodField()
-    stats = serializers.SerializerMethodField()
-    groups = serializers.SerializerMethodField()
     needs_lti_link = serializers.SerializerMethodField()
 
     class Meta:
         model = Journal
-        fields = ('id', 'bonus_points', 'grade', 'needs_lti_link', 'name', 'image', 'author_limit',
-                  'locked', 'author_count', 'stats', 'usernames', 'full_names', 'groups')
+        fields = ('id', 'bonus_points', 'grade', 'authors', 'needs_lti_link', 'stats', 'name', 'image', 'author_limit',
+                  'locked')
         read_only_fields = ('id', 'assignment', 'authors', 'grade')
 
     def get_grade(self, journal):
         return journal.get_grade()
 
     def get_needs_lti_link(self, journal):
-        if not journal.assignment.active_lti_id:
-            return None
-        return list(journal.authors.filter(sourcedid__isnull=True).values_list('user__full_name', flat=True))
+        return journal.needs_lti_link()
 
-    def get_author_count(self, journal):
-        return journal.authors.count()
+    def get_authors(self, journal):
+        return AssignmentParticipationSerializer(journal.authors.all(), many=True, context=self.context).data
 
     def get_name(self, journal):
         return journal.get_name()
 
-    def get_full_names(self, journal):
-        return journal.get_full_names()
-
-    def get_usernames(self, journal):
-        if self.context.get('can_view_usernames', False) or \
-           'user' in self.context and self.context['user'].has_permission('can_view_all_journals', journal.assignment):
-            return ', '.join(journal.authors.values_list('user__username', flat=True))
-
-        return None
-
     def get_image(self, journal):
         return journal.get_image()
 
-    def get_groups(self, journal):
-        if 'course' not in self.context:
-            return None
-        return list(Participation.objects.filter(
-            user__in=journal.authors.values('user'),
-            course=self.context['course']).values_list('groups__pk', flat=True).distinct())
-
     def get_stats(self, journal):
+        if 'user' not in self.context or not self.context['user'].can_view(journal):
+            return None
         return {
-            'unpublished': journal.node_set.filter(entry__grade__published=False).count(),
-            'marking_needed': journal.node_set.filter(entry__isnull=False, entry__grade__isnull=True).count(),
+            'acquired_points': journal.get_grade(),
+            'graded': journal.node_set.filter(entry__grade__grade__isnull=False).count(),
+            'published': journal.node_set.filter(entry__grade__published=True).count(),
+            'submitted': journal.node_set.filter(entry__isnull=False).count(),
         }
 
 

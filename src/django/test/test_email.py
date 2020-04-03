@@ -1,4 +1,3 @@
-import datetime
 import test.factory as factory
 from test.utils import api
 
@@ -6,10 +5,8 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core import mail
 from django.test import TestCase
 from django.test.utils import override_settings
-from django.utils import timezone
 
-from VLE.models import Grade, Group, Node, Participation, PresetNode, Template, User
-from VLE.tasks.beats import notifications
+import VLE.models
 
 
 class EmailAPITest(TestCase):
@@ -91,7 +88,7 @@ class EmailAPITest(TestCase):
 
         # Test everything valid
         resp = api.post(self, 'verify_email', params={'username': self.not_verified.username, 'token': token})
-        assert User.objects.get(pk=self.not_verified.pk).verified_email
+        assert VLE.models.User.objects.get(pk=self.not_verified.pk).verified_email
         assert 'Success' in resp['description']
         # Test already verified
         token = PasswordResetTokenGenerator().make_token(self.student)
@@ -129,149 +126,3 @@ class EmailAPITest(TestCase):
                      'user_agent': 'user_agent',
                      'url': 'url'
                  }, user=self.student)
-
-    def test_deadline_email(self):
-        assignment = factory.Assignment()
-
-        # ENTRYDEADLINE inside deadline
-        PresetNode.objects.create(
-            description='Entrydeadline node description',
-            due_date=timezone.now().date() + datetime.timedelta(days=7, hours=2),
-            lock_date=timezone.now().date() + datetime.timedelta(days=8),
-            type=Node.ENTRYDEADLINE,
-            forced_template=Template.objects.filter(format__assignment=assignment).first(),
-            format=assignment.format,
-        )
-        # ENTRYDEADLINE outside deadline
-        PresetNode.objects.create(
-            description='Entrydeadline node description',
-            due_date=timezone.now().date() + datetime.timedelta(days=14, hours=2),
-            lock_date=timezone.now().date() + datetime.timedelta(days=15),
-            type=Node.ENTRYDEADLINE,
-            forced_template=Template.objects.filter(format__assignment=assignment).first(),
-            format=assignment.format,
-        )
-        # PROGRESS inside deadline
-        PresetNode.objects.create(
-            description='Progress node description',
-            due_date=timezone.now().date() + datetime.timedelta(days=1, hours=2),
-            lock_date=timezone.now().date() + datetime.timedelta(days=2),
-            type=Node.PROGRESS,
-            target=5,
-            format=assignment.format,
-        )
-        # PROGRESS outside deadline
-        PresetNode.objects.create(
-            description='Progress node description',
-            due_date=timezone.now().date() + datetime.timedelta(days=14, hours=2),
-            lock_date=timezone.now().date() + datetime.timedelta(days=15),
-            type=Node.PROGRESS,
-            target=5,
-            format=assignment.format,
-        )
-
-        journal_empty = factory.Journal(assignment=assignment)
-        journal_filled = factory.Journal(assignment=assignment)
-        journal_filled_and_graded_2 = factory.Journal(assignment=assignment)
-        journal_filled_and_graded_100 = factory.Journal(assignment=assignment)
-        journal_empty_but_no_notifications = factory.Journal(
-            assignment=assignment)
-        p = journal_empty_but_no_notifications.authors.first().user.preferences
-        p.upcoming_deadline_notifications = False
-        p.save()
-
-        factory.Entry(
-            node__journal=journal_filled,
-            node=Node.objects.filter(journal=journal_filled).first(),
-            author=journal_filled.authors.first().user)
-        e_100 = factory.Entry(
-            node__journal=journal_filled_and_graded_100,
-            template=Template.objects.filter(format__assignment=assignment).first(),
-            author=journal_filled_and_graded_100.authors.first().user)
-        e_100.grade = Grade.objects.create(grade=100, published=True, entry=e_100)
-        e_100.save()
-        e_2 = factory.Entry(
-            node__journal=journal_filled_and_graded_2,
-            template=Template.objects.filter(format__assignment=assignment).first(),
-            author=journal_filled_and_graded_2.authors.first().user)
-        e_2.grade = Grade.objects.create(grade=2, published=True, entry=e_2)
-        e_2.save()
-
-        mails = notifications.send_upcoming_deadlines()
-        assert mails.count(journal_empty.authors.first().user.email) == 2, \
-            'Journal without entries should get all deadlines'
-        assert mails.count(journal_filled.authors.first().user.email) == 1, \
-            'Journal without any grade should get notified of upcoming preset node'
-        assert mails.count(journal_filled_and_graded_2.authors.first().user.email) == 2, \
-            'Journal without proper grade should get notified of upcoming preset node'
-        assert mails.count(journal_filled_and_graded_100.authors.first().user.email) == 1, \
-            'Journal with proper grade should only get notified of unfilled entries'
-        assert mails.count(journal_empty_but_no_notifications.authors.first().user.email) == 0, \
-            'Without email notifications, one should never get notified'
-
-        # Test assigned to
-        group = Group.objects.create(course=assignment.courses.first(), name='test')
-        assignment.assigned_groups.add(group)
-        group.participation_set.add(Participation.objects.get(user=journal_empty.authors.first().user))
-
-        mails = notifications.send_upcoming_deadlines()
-        assert mails.count(journal_empty.authors.first().user.email) == 2, \
-            'Authors in the assigned to groups, should get an email'
-        assert (mails.count(journal_filled.authors.first().user.email) == 0 and
-                mails.count(journal_filled_and_graded_2.authors.first().user.email) == 0 and
-                mails.count(journal_filled_and_graded_100.authors.first().user.email) == 0 and
-                mails.count(journal_empty_but_no_notifications.authors.first().user.email) == 0), \
-            'Authors not in the assigned to groups, should not get an email'
-
-    def test_deadline_email_groups(self):
-        group_assignment = factory.GroupAssignment()
-        # ENTRYDEADLINE inside deadline
-        PresetNode.objects.create(
-            description='Entrydeadline node description',
-            due_date=timezone.now().date() + datetime.timedelta(days=7, hours=5),
-            lock_date=timezone.now().date() + datetime.timedelta(days=8),
-            type=Node.ENTRYDEADLINE,
-            forced_template=Template.objects.filter(format__assignment=group_assignment).first(),
-            format=group_assignment.format,
-        )
-        # PROGRESS inside deadline
-        PresetNode.objects.create(
-            description='Progress node description',
-            due_date=timezone.now().date() + datetime.timedelta(days=1, hours=5),
-            lock_date=timezone.now().date() + datetime.timedelta(days=2),
-            type=Node.PROGRESS,
-            target=5,
-            format=group_assignment.format,
-        )
-        group_journal = factory.GroupJournal(assignment=group_assignment)
-
-        in_journal = factory.AssignmentParticipation(assignment=group_assignment)
-        group_journal.authors.add(in_journal)
-        also_in_journal = factory.AssignmentParticipation(assignment=group_assignment)
-        group_journal.authors.add(also_in_journal)
-        not_in_journal = factory.AssignmentParticipation(assignment=group_assignment)
-
-        mails = notifications.send_upcoming_deadlines()
-        assert mails.count(in_journal.user.email) == 2, \
-            'All students in journal should get a mail'
-        assert mails.count(also_in_journal.user.email) == 2, \
-            'All students in journal should get a mail'
-        assert mails.count(not_in_journal.user.email) == 0, \
-            'If not in journal, one should also not get a mail'
-
-        also_in_journal.user.verified_email = False
-        also_in_journal.user.save()
-        mails = notifications.send_upcoming_deadlines()
-        assert mails.count(in_journal.user.email) == 2, \
-            'Only student with verified mail should get an email'
-        assert mails.count(also_in_journal.user.email) == 0, \
-            'Only student with verified mail should get an email'
-
-        also_in_journal.user.verified_email = True
-        also_in_journal.user.preferences.upcoming_deadline_notifications = False
-        also_in_journal.user.preferences.save()
-        mails = notifications.send_upcoming_deadlines()
-        assert mails.count(in_journal.user.email) == 2, \
-            'Only student with verified mail should get an email'
-        assert mails.count(also_in_journal.user.email) == 0, \
-            'Only student with verified mail should get an email'

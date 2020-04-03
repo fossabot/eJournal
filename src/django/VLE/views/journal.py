@@ -12,7 +12,7 @@ import VLE.utils.grading as grading
 import VLE.utils.responses as response
 import VLE.validators as validators
 from VLE.models import Assignment, AssignmentParticipation, Course, FileContext, Journal, User
-from VLE.serializers import AssignmentParticipationSerializer, JournalSerializer
+from VLE.serializers import JournalSerializer
 from VLE.utils import file_handling
 
 
@@ -283,18 +283,6 @@ class JournalView(viewsets.ViewSet):
         serializer = JournalSerializer(journal, context={'user': request.user})
         return response.success({'journal': serializer.data})
 
-    @action(['get'], detail=True)
-    def get_members(self, request, pk):
-        """Get the list of members of the journal."""
-        journal = Journal.objects.get(pk=pk)
-
-        request.user.check_can_view(journal)
-
-        return response.success({
-            'authors': AssignmentParticipationSerializer(
-                journal.authors, many=True, context={'user': request.user}).data
-        })
-
     @action(['patch'], detail=True)
     def add_members(self, request, pk):
         """Add a member to the journal.
@@ -334,10 +322,8 @@ class JournalView(viewsets.ViewSet):
             journal.authors.add(author)
             grading.task_author_status_to_LMS.delay(journal.pk, author.pk)
 
-        return response.success({
-            'authors': AssignmentParticipationSerializer(
-                journal.authors, many=True, context={'user': request.user}).data
-        })
+        serializer = JournalSerializer(journal, context={'user': request.user})
+        return response.success({'journal': serializer.data})
 
     @action(['patch'], detail=True)
     def leave(self, request, pk):

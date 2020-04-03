@@ -205,6 +205,7 @@ export default {
             assignment: '',
             loadingNodes: true,
             editingName: false,
+            journalName: '',
         }
     },
     computed: {

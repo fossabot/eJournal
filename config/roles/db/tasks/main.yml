@@ -64,8 +64,3 @@
     - never
     - run_preset_db
   when: env != 'production'
-
-- include: restore_latest.yml
-  tags:
-    - never
-    - restore_latest

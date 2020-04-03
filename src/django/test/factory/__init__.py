@@ -1,4 +1,5 @@
-from test.factory.assignment import AssignmentFactory, GroupAssignmentFactory, LtiAssignmentFactory
+from test.factory.assignment import (AssignmentFactory, GroupAssignmentFactory, LtiAssignmentFactory,
+                                     TemplateAssignmentFactory)
 from test.factory.comment import StudentCommentFactory, TeacherCommentFactory
 from test.factory.course import CourseFactory, LtiCourseFactory
 from test.factory.entry import EntryFactory
@@ -19,6 +20,7 @@ Instance = InstanceFactory
 Assignment = AssignmentFactory
 LtiAssignment = LtiAssignmentFactory
 GroupAssignment = GroupAssignmentFactory
+TemplateAssignment = TemplateAssignmentFactory
 Course = CourseFactory
 LtiCourse = LtiCourseFactory
 

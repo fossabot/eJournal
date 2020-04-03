@@ -378,7 +378,7 @@ def make_grade(entry, author, grade, published=False):
     """
     grade = Grade.objects.create(
         entry=entry,
-        author=User.objects.get(pk=author),
+        author=User.objects.filter(pk=author).first(),
         grade=grade,
         published=published
     )

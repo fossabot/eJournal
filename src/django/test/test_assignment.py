@@ -238,7 +238,7 @@ class AssignmentAPITest(TestCase):
     def test_importable(self):
         teacher = factory.Teacher()
         course = factory.Course(author=teacher)
-        assignment = factory.Assignment(courses=[course])
+        assignment = factory.TemplateAssignment(courses=[course])
 
         # Check importable return values
         resp = api.get(self, 'assignments/importable', user=teacher)['data']
@@ -269,7 +269,7 @@ class AssignmentAPITest(TestCase):
             enddate=end2019_2020,
         )
         not_import_course = factory.Course()
-        source_assignment = factory.Assignment(
+        source_assignment = factory.TemplateAssignment(
             courses=[course, not_import_course],
             unlock_date=start2018_2019,
             due_date=end2018_2019,
@@ -526,7 +526,7 @@ class AssignmentAPITest(TestCase):
             'journals'
 
     def test_deadline(self):
-        journal = factory.Journal(assignment=factory.Assignment())
+        journal = factory.Journal(assignment=factory.TemplateAssignment())
         assignment = journal.assignment
         teacher = assignment.courses.first().author
         assignment.points_possible = 10

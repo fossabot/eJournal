@@ -14,10 +14,9 @@
                         :src="journal.image"
                     />
                     <number-badge
-                        v-if="$hasPermission('can_view_all_journals') &&
-                            journal.stats.marking_needed + journal.stats.unpublished > 0"
-                        :leftNum="journal.stats.marking_needed"
-                        :rightNum="journal.stats.unpublished"
+                        v-if="$hasPermission('can_view_all_journals') && markingNeeded + unpublished > 0"
+                        :leftNum="markingNeeded"
+                        :rightNum="unpublished"
                         :title="squareInfo"
                     />
                 </div>
@@ -30,23 +29,23 @@
                     </b>
                     <span
                         class="max-one-line shift-up-4"
-                        :title="journal.name"
+                        :title="journalAuthors"
                     >
                         <b-badge
                             v-if="journal.author_limit > 1"
-                            v-b-tooltip:hover="`This journal currently has ${ journal.author_count } of max `
+                            v-b-tooltip:hover="`This journal currently has ${ journal.authors.length } of max `
                                 + `${ journal.author_limit } members`"
                             class="text-white mr-1"
                         >
-                            {{ journal.author_count }}/{{ journal.author_limit }}
+                            {{ journal.authors.length }}/{{ journal.author_limit }}
                         </b-badge>
                         <b-badge
                             v-if="journal.author_limit === 0"
-                            v-b-tooltip:hover="`This journal currently has ${ journal.author_count } members `
+                            v-b-tooltip:hover="`This journal currently has ${ journal.authors.length } members `
                                 + 'and no member limit'"
                             class="text-white mr-1"
                         >
-                            {{ journal.author_count }}
+                            {{ journal.authors.length }}
                         </b-badge>
                         <b-badge
                             v-if="journal.locked"
@@ -61,7 +60,7 @@
                             />
                         </b-badge>
                         <span v-if="!assignment.is_group_assignment || !expanded">
-                            {{ journal.usernames }}
+                            {{ journalAuthors }}
                         </span>
                     </span>
                 </div>
@@ -72,7 +71,7 @@
                 md="5"
             >
                 <progress-bar
-                    :currentPoints="journal.grade"
+                    :currentPoints="journal.stats.acquired_points"
                     :totalPoints="assignment.points_possible"
                 />
             </b-col>
@@ -127,20 +126,46 @@ export default {
         }
     },
     computed: {
+        numMarkingNeeded () {
+            return this.journal.stats ? this.journal.stats.submitted - this.journal.stats.graded : 0
+        },
+        journalAuthors () {
+            if (this.assignment.is_group_assignment) {
+                return this.journal.authors.map(a => a.user.full_name).join(', ')
+            }
+
+            return this.journal.authors.map(a => a.user.username).join(', ')
+        },
         groups () {
-            return this.journal.groups.join(', ')
+            const groups = []
+            this.journal.authors.forEach((student) => {
+                if (student.user.groups) {
+                    student.user.groups.forEach((group) => {
+                        if (!groups.includes(group)) {
+                            groups.push(group.name)
+                        }
+                    })
+                }
+            })
+            return groups.join(', ')
+        },
+        markingNeeded () {
+            return this.journal.stats ? this.journal.stats.submitted - this.journal.stats.graded : 0
+        },
+        unpublished () {
+            return this.journal.stats ? this.journal.stats.graded - this.journal.stats.published : 0
         },
         squareInfo () {
             const info = []
-            if (this.journal.stats.marking_needed === 1) {
+            if (this.markingNeeded === 1) {
                 info.push('an entry needs marking')
-            } else if (this.journal.stats.marking_needed > 1) {
-                info.push(`${this.journal.stats.marking_needed} entries need marking`)
+            } else if (this.markingNeeded > 1) {
+                info.push(`${this.markingNeeded} entries need marking`)
             }
-            if (this.journal.stats.unpublished === 1) {
-                info.push('a grade needs to be published')
-            } else if (this.journal.stats.unpublished > 1) {
-                info.push(`${this.journal.stats.unpublished} grades need to be published`)
+            if (this.unpublished === 1) {
+                info.push('an entry needs to be published')
+            } else if (this.unpublished > 1) {
+                info.push(`${this.unpublished} grades need to be published`)
             }
             const s = info.join(' and ')
             return `${s.charAt(0).toUpperCase()}${s.slice(1)}`

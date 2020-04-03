@@ -19,13 +19,3 @@
     - deploy_back
     - deploy_front
   when: not maintenance_on_result.stat.exists
-  notify: deactivate maintenance page
-
-- debug:
-    msg: Trigger maintenance deactivation handler
-  tags:
-    - deploy_back
-    - deploy_front
-  notify: deactivate maintenance page
-  changed_when: true
-  when: maintenance_on_result.stat.exists

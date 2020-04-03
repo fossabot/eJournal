@@ -41,6 +41,8 @@ class EntrydeadlineNodeFactory(factory.django.DjangoModelFactory):
 
     type = VLE.models.Node.ENTRYDEADLINE
 
+    target = 5
+
     forced_template = factory.SubFactory('test.factory.template.TemplateFactory',
                                          format=factory.SelfAttribute('..format'))
 
