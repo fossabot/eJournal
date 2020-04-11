@@ -16,11 +16,12 @@
                 class="left-content-timeline-page"
             >
                 <bread-crumb v-if="$root.lgMax">
-                    <template v-if="assignment.is_group_assignment">
+                    <template v-if="!loadingNodes && assignment.is_group_assignment">
                         - {{ journal.name }}
                     </template>
                 </bread-crumb>
                 <timeline
+                    v-if="!loadingNodes"
                     :selected="currentNode"
                     :nodes="nodes"
                     :assignment="assignment"
@@ -35,12 +36,12 @@
                 class="main-content-timeline-page"
             >
                 <bread-crumb v-if="$root.xl">
-                    <template v-if="assignment.is_group_assignment">
+                    <template v-if="!loadingNodes && assignment.is_group_assignment">
                         - {{ journal.name }}
                     </template>
                 </bread-crumb>
                 <b-alert
-                    v-if="journal && journal.needs_lti_link"
+                    v-if="!loadingNodes && journal.needs_lti_link.length > 0 && assignment.active_lti_course"
                     show
                 >
                     <b>Warning:</b> You cannot update this journal until
@@ -51,7 +52,7 @@
                 <load-wrapper :loading="loadingNodes">
                     <div
                         v-if="nodes.length > currentNode && currentNode !== -1"
-                        :class="{'input-disabled': journal && journal.needs_lti_link && assignment
+                        :class="{'input-disabled': !loadingNodes && journal.needs_lti_link.length > 0
                             && assignment.active_lti_course}"
                     >
                         <div v-if="nodes[currentNode].type == 'e'">
@@ -201,8 +202,8 @@ export default {
             currentNode: -1,
             editedData: ['', ''],
             nodes: [],
-            journal: {},
-            assignment: '',
+            journal: null,
+            assignment: null,
             loadingNodes: true,
             editingName: false,
         }

@@ -17,6 +17,7 @@
             >
                 <bread-crumb v-if="$root.lgMax"/>
                 <timeline
+                    v-if="!loadingNodes"
                     :selected="currentNode"
                     :nodes="nodes"
                     :assignment="assignment"
@@ -32,7 +33,7 @@
             >
                 <bread-crumb v-if="$root.xl"/>
                 <b-alert
-                    v-if="journal && journal.needs_lti_link && assignment && assignment.active_lti_course"
+                    v-if="!loadingNodes && journal.needs_lti_link.length > 0 && assignment.active_lti_course"
                     show
                 >
                     <span v-if="assignment.is_group_assignment">
@@ -224,7 +225,7 @@ export default {
             progressNodes: {},
             progressPointsLeft: 0,
             assignmentJournals: [],
-            assignment: {},
+            assignment: null,
             journal: null,
             loadingNodes: true,
             editingName: false,
@@ -261,8 +262,11 @@ export default {
         this.switchJournalAssignment(this.aID)
 
         assignmentAPI.get(this.aID)
-            .then((assignment) => { this.assignment = assignment })
-        this.loadJournal(false)
+            .then((assignment) => {
+                this.assignment = assignment
+                this.loadJournal(false)
+            })
+
 
         if (store.state.filteredJournals.length === 0) {
             if (this.$hasPermission('can_view_all_journals')) {

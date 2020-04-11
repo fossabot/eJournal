@@ -491,7 +491,7 @@ class JournalSerializer(serializers.ModelSerializer):
 
     def get_needs_lti_link(self, journal):
         if not journal.assignment.active_lti_id:
-            return None
+            return []
         return list(journal.authors.filter(sourcedid__isnull=True).values_list('user__full_name', flat=True))
 
     def get_author_count(self, journal):
