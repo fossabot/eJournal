@@ -6,29 +6,28 @@ from django.test import TestCase
 import VLE.factory
 from VLE.models import Notification, gen_url
 from VLE.permissions import get_supervisors_of
-from VLE.tasks.email import send_notification
+from VLE.tasks.email import send_push_notification
 from VLE.utils.error_handling import VLEParticipationError, VLEProgrammingError
 
 
 class NotificationTest(TestCase):
-    def check_send_notification(self, notification):
+    def check_send_push_notification(self, notification):
         outbox_len = len(mail.outbox)
 
         if notification.sent:
-            send_notification(notification.pk)
+            send_push_notification(notification.pk)
             assert len(mail.outbox) == outbox_len, 'No actual mail should be sent'
             return
 
-        send_notification(notification.pk)
+        send_push_notification(notification.pk)
         assert len(mail.outbox) == outbox_len + 1, 'An actual mail should be sent'
-        print(mail.outbox[-1].body)
         for content in Notification.CONTENT[notification.type].values():
             if content is not None:
                 assert content in mail.outbox[-1].body, 'all content should be in mail'
         # assert notification.url in mail.outbox[-1].body, 'url should be in mail'
         assert notification.user.full_name in mail.outbox[-1].body, 'full name should be in mail'
 
-        send_notification(notification.pk)
+        send_push_notification(notification.pk)
         assert len(mail.outbox) == outbox_len + 1, 'Only 1 mail should be sent'
 
     def test_gen_url(self):
@@ -82,37 +81,45 @@ class NotificationTest(TestCase):
         assert other_journal.authors.first().user not in supervisors
 
     def test_comment_notification(self):
-        comment = factory.TeacherComment(published=True)
-        journal = comment.entry.node.journal
+        entry = factory.Entry()
 
-        assert Notification.objects.count() == 2, '1 comment notification is created (and 1 entry notification)'
+        notifications_before = Notification.objects.filter(type=Notification.NEW_COMMENT).count()
+        factory.TeacherComment(published=True, entry=entry)
+        journal = entry.node.journal
+
+        assert Notification.objects.filter(type=Notification.NEW_COMMENT).count() == notifications_before + 1, \
+            '1 comment notification is created (and 1 entry notification)'
         notification = Notification.objects.last()
-        assert notification.user == comment.entry.author
+        assert notification.user == entry.author
         assert not notification.sent
         assert Notification.objects.last().type == Notification.NEW_COMMENT
 
-        student_comment = factory.StudentComment(entry=comment.entry)
-        assert Notification.objects.count() == 3, '1 new comment notification is created'
+        student_comment = factory.StudentComment(entry=entry)
+        assert Notification.objects.filter(type=Notification.NEW_COMMENT).count() == notifications_before + 2, \
+            '1 new comment notification is created'
         notification = Notification.objects.last()
         assert notification.user == student_comment.entry.node.journal.assignment.courses.first().author
         assert not notification.sent, \
             'Student should not get comment notifications pushed by default'
 
-        self.check_send_notification(notification)
+        self.check_send_push_notification(notification)
 
-        factory.TeacherComment(published=False, entry=comment.entry)
-        assert Notification.objects.count() == 3, 'No new notifications should be added'
+        factory.TeacherComment(published=False, entry=entry)
+        assert Notification.objects.filter(type=Notification.NEW_COMMENT).count() == notifications_before + 2, \
+            'No new notifications should be added'
 
         journal.authors.add(factory.AssignmentParticipation(assignment=journal.assignment))
-        factory.TeacherComment(entry=comment.entry, published=True)
-        assert Notification.objects.count() == 5, '2 new notifications should be added for both students'
+        factory.TeacherComment(entry=entry, published=True)
+        assert Notification.objects.filter(type=Notification.NEW_COMMENT).count() == notifications_before + 4, \
+            '2 new comment notifications should be added for both students'
 
         factory.Participation(
             course=journal.assignment.courses.first(),
             role=journal.assignment.courses.first().role_set.filter(name='TA').first())
         # factory.AssignmentParticipation(assignment=journal.assignment, user=second_teacher)
-        factory.StudentComment(entry=comment.entry)
-        assert Notification.objects.count() == 7, '2 new notifications should be added for both teachers'
+        factory.StudentComment(entry=entry)
+        assert Notification.objects.filter(type=Notification.NEW_COMMENT).count() == notifications_before + 6, \
+            '2 new notifications should be added for both teachers'
 
         # TODO: work out how to test with delay
 
@@ -125,15 +132,16 @@ class NotificationTest(TestCase):
         assert Notification.objects.last().user == entry.node.journal.authors.first().user
         assert Notification.objects.last().type == Notification.NEW_GRADE
 
-        self.check_send_notification(Notification.objects.last())
+        self.check_send_push_notification(Notification.objects.last())
 
     def test_entry_notification(self):
+        journal = factory.Journal()
         notifications_before = Notification.objects.count()
-        factory.Entry()
+        factory.Entry(node__journal=journal)
         assert Notification.objects.count() == notifications_before + 1, '1 new notification is created'
         assert Notification.objects.last().type == Notification.NEW_ENTRY
 
-        self.check_send_notification(Notification.objects.last())
+        self.check_send_push_notification(Notification.objects.last())
 
     def test_assignment_notification(self):
         assignment = factory.Assignment(is_published=False)
@@ -142,6 +150,22 @@ class NotificationTest(TestCase):
         notifications_before = Notification.objects.count()
         assignment.is_published = True
         assignment.save()
-        assert Notification.objects.count() == notifications_before + 1, '1 only for student notification is created'
+        assert Notification.objects.count() == notifications_before + 1, 'only for student notification is created'
         assert Notification.objects.last().user == participation.user
         assert Notification.objects.last().type == Notification.NEW_ASSIGNMENT
+
+        self.check_send_push_notification(Notification.objects.last())
+
+    def test_course_notification(self):
+        course = factory.Course()
+
+        notifications_before = Notification.objects.count()
+        factory.Participation(course=course)
+        assert Notification.objects.count() == notifications_before + 1, 'participant should get notified by default'
+        assert Notification.objects.last().type == Notification.NEW_COURSE
+        VLE.factory.make_participation(
+            course=course, user=factory.Student(), role=course.role_set.get(name='Student'), notify_user=False)
+        assert Notification.objects.count() == notifications_before + 1, \
+            'participant should not get notified if specified not to'
+
+        self.check_send_push_notification(Notification.objects.last())

@@ -14,7 +14,7 @@ import VLE.models
 
 
 @shared_task
-def send_notification(notification_pk):
+def send_push_notification(notification_pk):
     notification = VLE.models.Notification.objects.get(pk=notification_pk)
     if notification.sent:
         return

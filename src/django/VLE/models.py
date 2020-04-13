@@ -19,7 +19,7 @@ from django.utils.timezone import now
 
 import VLE.permissions as permissions
 import VLE.utils.file_handling as file_handling
-from VLE.tasks.email import send_notification
+from VLE.tasks.email import send_push_notification
 from VLE.utils import sanitization
 from VLE.utils.error_handling import (VLEBadRequest, VLEParticipationError, VLEPermissionError, VLEProgrammingError,
                                       VLEUnverifiedEmailError)
@@ -538,7 +538,7 @@ class Notification(models.Model):
         if is_new:
             # Send notification on creation if user preference is set to push
             if getattr(self.user.preferences, Notification.TYPES[self.type]) == Preferences.PUSH:
-                send_notification.delay(self.pk)
+                send_push_notification.delay(self.pk)
 
 
 class Course(models.Model):
@@ -784,6 +784,7 @@ class Participation(models.Model):
 
     def save(self, *args, **kwargs):
         is_new = self._state.adding
+        notify_user = kwargs.pop('notify_user', True)
         super(Participation, self).save(*args, **kwargs)
 
         # Instance is being created (not modified)
@@ -791,6 +792,12 @@ class Participation(models.Model):
             existing = AssignmentParticipation.objects.filter(user=self.user).values('assignment')
             for assignment in Assignment.objects.filter(courses__in=[self.course]).exclude(pk__in=existing):
                 AssignmentParticipation.objects.create(assignment=assignment, user=self.user)
+            if notify_user:
+                Notification.objects.create(
+                    type=Notification.NEW_COURSE,
+                    user=self.user,
+                    url=gen_url(course=self.course, user=self.user)
+                )
 
     class Meta:
         """Meta data for the model: unique_together."""
@@ -957,10 +964,7 @@ class Assignment(models.Model):
 
         # Send notifications once an assignment is published
         if (is_new or not old_publish) and self.is_published:
-            print(AssignmentParticipation.objects.all())
             for ap in AssignmentParticipation.objects.filter(assignment=self):
-                print(ap.user)
-                print(ap.user.has_permission('can_have_journal', self))
                 if ap.user.has_permission('can_have_journal', self):
                     Notification.objects.create(
                         type=Notification.NEW_ASSIGNMENT,
