@@ -379,13 +379,11 @@ class Preferences(models.Model):
     """
     DAILY = 'd'
     WEEKLY = 'w'
-    MONTHLY = 'm'
     PUSH = 'p'
     OFF = 'o'
     FREQUENCIES = (
         (DAILY, 'd'),
         (WEEKLY, 'w'),
-        (MONTHLY, 'm'),
         (PUSH, 'p'),
         (OFF, 'o'),
     )
@@ -483,31 +481,31 @@ class Notification(models.Model):
     CONTENT = {
         NEW_COMMENT: {
             'heading': 'New comment',
-            'main_content': 'You have received a new comment on a journal. Click the button below to view',
+            'main_content': 'You have received a new comment on a journal.',
             'extra_content': None,
             'button_text': 'View comment',
         },
         NEW_GRADE: {
             'heading': 'New grade',
-            'main_content': 'You have received a new grade on a journal. Click the button below to view',
+            'main_content': 'You have received a new grade on a journal.',
             'extra_content': None,
             'button_text': 'View grade',
         },
         NEW_ENTRY: {
             'heading': 'New entry',
-            'main_content': 'Someone posted a new entry in a journal. Click the button below to view.',
+            'main_content': 'Someone posted a new entry in a journal.',
             'extra_content': None,
             'button_text': 'View entry',
         },
         NEW_COURSE: {
             'heading': 'New course',
-            'main_content': 'You were added to a course. Click the button below to view.',
+            'main_content': 'You were added to a course.',
             'extra_content': None,
             'button_text': 'View course',
         },
         NEW_ASSIGNMENT: {
             'heading': 'New assignment',
-            'main_content': 'Your teacher published a new assignment. Click the button below to view.',
+            'main_content': 'Your teacher published a new assignment.',
             'extra_content': None,
             'button_text': 'View assignment',
         }

@@ -1,0 +1,52 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+
+{% include "head.html" %}
+
+<body>
+    <table style="width: 100%; font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif; padding: 20px">
+        <tr>
+            <td style="padding: 10px" align="center">
+                {% include "header.html" %}
+                <table style="background-color: #EEEEEE; width: 100%; max-width: 600px; border-radius: 0px 0px 5px 5px">
+                    <tr>
+                        <td style="padding: 20px">
+                            <h2 style="margin-bottom: 10px; color: #252C39">{{ email_data.heading }}</h2>
+                            {% if email_data.main_content %}
+                                {% for content in email_data.main_content %}
+                                    <p style="margin-bottom: 10px; color: #252C39">
+                                        {{ content }}
+                                    </p>
+                                {% endfor %}
+                            {% endif %}
+                            {% if email_data.extra_content %}
+                                <p style="color: grey; font-weight: bold; text-align: center">
+                                    {{ email_data.extra_content }}
+                                </p>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <table style="background-color: #EEEEEE; width: 100%; max-width: 600px; border-radius: 0px 0px 5px 5px">
+                            <tr>
+                                <td style="padding-bottom: 30px; border-radius: 0px 0px 5px 5px" align="center">
+                                    <table>
+                                        <tr>
+                                            <td style="border-radius: 5px; background-color: #22648A; text-align: center">
+                                                <a href="{{ email_data.button_url }}" target="_blank" style="display: inline-block; color: #FFFFFF; font-family: 'Roboto Condensed', 'Helvetica', 'Arial', sans-serif; background-color: #22648A; border: solid 1px #3498db; border-radius: 5px; box-sizing: border-box; cursor: pointer; text-decoration: none; margin: 0; padding: 12px 25px; border-color: #22648A;">
+                                                    {{ email_data.button_text }}
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </tr>
+                </table>
+                {% include "footer.html" %}
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

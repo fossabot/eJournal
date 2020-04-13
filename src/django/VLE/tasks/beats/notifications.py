@@ -95,3 +95,72 @@ def send_upcoming_deadlines():
             timezone.now().date() + datetime.timedelta(days=8)))
     emails_sent_to += _send_deadline_mails(upcoming_week_deadlines)
     return emails_sent_to
+
+
+@shared_task
+def send_digest_notiications():
+    period = {
+        'name': 'weekly',
+        'pref': VLE.models.Preferences.WEEKLY,
+        'past': 'In the past week',
+    } if datetime.datetime.today().weekday() == 0 else {
+        'name': 'daily',
+        'pref': VLE.models.Preferences.DAILY,
+        'past': 'In the past 24 hours',
+    }
+    types = VLE.models.Notification
+    plural = {
+        types.NEW_COURSE: 'You were added to {} new courses.',
+        types.NEW_ASSIGNMENT: 'You were added to {} new assignments.',
+        types.NEW_ENTRY: '{} new entries were posted.',
+        types.NEW_GRADE: 'You received {} new grades.',
+        types.NEW_COMMENT: '{} new comments were posted.',
+    }
+    singilar = {
+        types.NEW_COURSE: 'You were added to a new course.',
+        types.NEW_ASSIGNMENT: 'You were added to a new assignment.',
+        types.NEW_ENTRY: 'A new entriy was posted.',
+        types.NEW_GRADE: 'You received a new grade.',
+        types.NEW_COMMENT: 'A new comment was posted.',
+    }
+
+    for user in VLE.models.Notification.objects.filter(sent=False).values_list('user', flat=True).distinct():
+        user = VLE.models.User.objects.get(pk=user)
+        notifications = VLE.models.Notification.objects.filter(user=user)
+        content = ['{}, you received the following notifications:'.format(period['past'])]
+        # For each type, check if user has that preference as this digest type, if so, count them per type
+        # And add a proper message together with the count to the content list
+        for type in plural.keys():
+            filtered = notifications.filter(type=type)
+            if getattr(user.preferences, types.TYPES[type]) == period['pref'] and filtered.exists():
+                filtered.update(sent=True)
+                if filtered.count() == 1:
+                    content.append(singilar[type].format(filtered.count()))
+                else:
+                    content.append(plural[type].format(filtered.count()))
+
+        if len(content) == 0:
+            continue
+
+        email_data = {
+            'heading': 'Your {} digest'.format(period),
+            'main_content': content,
+            'full_name': user.full_name,
+            'button_url': '{}/Home/'.format(settings.BASELINK),
+            'button_text': 'Go to eJournal',
+            'profile_url': '{}/Profile'.format(settings.BASELINK)
+        }
+
+        html_content = render_to_string('digest.html', {'email_data': email_data})
+        text_content = strip_tags(html_content)
+
+        email = EmailMultiAlternatives(
+            subject='{} digest - eJournal'.format(period['name'].title()),
+            body=text_content,
+            from_email='eJournal | Noreply<noreply@{}>'.format(settings.EMAIL_SENDER_DOMAIN),
+            headers={'Content-Type': 'text/plain'},
+            to=[user.email]
+        )
+
+        email.attach_alternative(html_content, 'text/html')
+        email.send()

@@ -6,6 +6,7 @@ from django.test import TestCase
 import VLE.factory
 from VLE.models import Notification, gen_url
 from VLE.permissions import get_supervisors_of
+from VLE.tasks.beats.notifications import send_digest_notiications
 from VLE.tasks.email import send_push_notification
 from VLE.utils.error_handling import VLEParticipationError, VLEProgrammingError
 
@@ -169,3 +170,9 @@ class NotificationTest(TestCase):
             'participant should not get notified if specified not to'
 
         self.check_send_push_notification(Notification.objects.last())
+
+    def test_digest(self):
+        factory.Grade()
+        send_digest_notiications()
+
+        # TODO: improve testing here
