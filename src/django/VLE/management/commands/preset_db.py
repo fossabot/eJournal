@@ -432,8 +432,8 @@ class Command(BaseCommand):
             user = user_entries['user']
             for entry_obj in user_entries['entries']:
                 for _ in range(entry_obj['amount']):
-                    entry = factory.make_entry(entry_obj['template'], user)
-                    factory.make_node(Journal.objects.get(authors__user=user, assignment=assignment), entry)
+                    node = factory.make_node(Journal.objects.get(authors__user=user, assignment=assignment))
+                    entry = factory.make_entry(entry_obj['template'], user, node)
                     if entry_obj['grade'] is not None:
                         factory.make_grade(entry, self.users['Teacher'].pk, entry_obj['grade'], entry_obj['published'])
 

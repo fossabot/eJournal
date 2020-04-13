@@ -264,9 +264,10 @@ def make_assignment_participation(assignment, author):
     return AssignmentParticipation.objects.create(assignment=assignment, user=author)
 
 
-def make_entry(template, author):
-    entry = Entry(template=template, author=author)
-    entry.save()
+def make_entry(template, author, node):
+    entry = Entry.objects.create(template=template, author=author, node=node)
+    entry.node.entry = entry
+    entry.node.save()
     return entry
 
 

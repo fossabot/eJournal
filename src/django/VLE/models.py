@@ -48,13 +48,13 @@ def gen_url(node=None, journal=None, assignment=None, course=None, user=None):
             raise VLEProgrammingError('(gen_url) if course is not supplied, user needs to be supplied')
         course = assignment.get_active_course(user)
 
-    url = '{}/Home/Course/{}'.format(settings.BASELINK, course)
+    url = '{}/Home/Course/{}'.format(settings.BASELINK, course.pk)
     if assignment:
-        url += '/Assignment/{}'.format(assignment)
+        url += '/Assignment/{}'.format(assignment.pk)
         if journal:
-            url += '/Journal/{}'.format(journal)
+            url += '/Journal/{}'.format(journal.pk)
             if node:
-                url += '?nID={}'.format(node)
+                url += '?nID={}'.format(node.pk)
 
     return url
 
@@ -477,9 +477,33 @@ class Notification(models.Model):
     CONTENT = {
         NEW_COMMENT: {
             'heading': 'New comment',
-            'main_content': 'You have received a new comment on a journal. Please click the button below to view',
+            'main_content': 'You have received a new comment on a journal. Click the button below to view',
             'extra_content': None,
             'button_text': 'View comment',
+        },
+        NEW_GRADE: {
+            'heading': 'New grade',
+            'main_content': 'You have received a new grade on a journal. Click the button below to view',
+            'extra_content': None,
+            'button_text': 'View grade',
+        },
+        NEW_ENTRY: {
+            'heading': 'New entry',
+            'main_content': 'Someone posted a new entry in a journal. Click the button below to view.',
+            'extra_content': None,
+            'button_text': 'View entry',
+        },
+        NEW_COURSE: {
+            'heading': 'New course',
+            'main_content': 'You were added to a course. Click the button below to view.',
+            'extra_content': None,
+            'button_text': 'View course',
+        },
+        NEW_ASSIGNMENT: {
+            'heading': 'New assignment',
+            'main_content': 'You were added to an assignment. Click the button below to view.',
+            'extra_content': None,
+            'button_text': 'View assignment',
         }
     }
 
@@ -1390,12 +1414,12 @@ class Entry(models.Model):
             self.creation_date = now
             self.last_edited = now
 
-            # for user in permissions.get_supervisors_of(self.node.journal):
-            #     Notification.objects.create(
-            #         type=Notification.NEW_ENTRY,
-            #         user=user,
-            #         url=gen_url(node=self.node, user=user)
-            #     )
+            for user in permissions.get_supervisors_of(self.node.journal):
+                Notification.objects.create(
+                    type=Notification.NEW_ENTRY,
+                    user=user,
+                    url=gen_url(node=self.node, user=user)
+                )
 
         return super(Entry, self).save(*args, **kwargs)
 
