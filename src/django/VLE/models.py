@@ -39,14 +39,19 @@ class Instance(models.Model):
 
 
 def gen_url(node=None, journal=None, assignment=None, course=None, user=None):
-    if journal is None:
+    if not (node or journal or assignment or course):
+        raise VLEProgrammingError('(gen_url) no object was supplied')
+
+    if journal is None and node is not None:
         journal = node.journal
-    if assignment is None:
+    if assignment is None and journal is not None:
         assignment = journal.assignment
-    if course is None:
+    if course is None and assignment is not None:
         if user is None:
             raise VLEProgrammingError('(gen_url) if course is not supplied, user needs to be supplied')
         course = assignment.get_active_course(user)
+        if course is None:
+            raise VLEParticipationError(assignment, user)
 
     url = '{}/Home/Course/{}'.format(settings.BASELINK, course.pk)
     if assignment:

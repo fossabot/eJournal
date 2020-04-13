@@ -4,9 +4,10 @@ from django.core import mail
 from django.test import TestCase
 
 import VLE.factory
-from VLE.models import Notification
+from VLE.models import Notification, gen_url
 from VLE.permissions import get_supervisors_of
 from VLE.tasks.email import send_notification
+from VLE.utils.error_handling import VLEParticipationError, VLEProgrammingError
 
 
 class NotificationTest(TestCase):
@@ -29,6 +30,39 @@ class NotificationTest(TestCase):
 
         send_notification(notification.pk)
         assert len(mail.outbox) == outbox_len + 1, 'Only 1 mail should be sent'
+
+    def test_gen_url(self):
+        node = factory.Entry().node
+        user = node.journal.authors.first().user
+
+        assert 'nID' in gen_url(node=node, user=user), 'gen_url should give node id when node is supplied'
+        assert str(node.pk) in gen_url(node=node, user=user), 'gen_url should give node id when node is supplied'
+
+        assert 'nID' not in gen_url(journal=node.journal, user=user), \
+            'gen_url should not give node id when not supplied'
+        assert 'Journal' in gen_url(journal=node.journal, user=user), \
+            'gen_url should give journal id when not supplied'
+        assert str(node.journal.pk) in gen_url(journal=node.journal, user=user), \
+            'gen_url should give journal id when not supplied'
+
+        assert 'Journal' not in gen_url(assignment=node.journal.assignment, user=user), \
+            'gen_url should not give journal id when not supplied'
+        assert 'Assignment' in gen_url(assignment=node.journal.assignment, user=user), \
+            'gen_url should give assignment id when not supplied'
+        assert str(node.journal.assignment.pk) in gen_url(assignment=node.journal.assignment, user=user), \
+            'gen_url should give assignment id when not supplied'
+
+        assert 'Assignment' not in gen_url(course=node.journal.assignment.courses.first(), user=user), \
+            'gen_url should not give assignment id when not supplied'
+        assert 'Course' in gen_url(course=node.journal.assignment.courses.first(), user=user), \
+            'gen_url should give course id when not supplied'
+        assert str(node.journal.assignment.courses.first().pk) in gen_url(
+            course=node.journal.assignment.courses.first(), user=user), \
+            'gen_url should give course id when not supplied'
+
+        self.assertRaises(VLEProgrammingError, gen_url, node=node)
+        self.assertRaises(VLEProgrammingError, gen_url, user=factory.Student())
+        self.assertRaises(VLEParticipationError, gen_url, node=node, user=factory.Student())
 
     def test_get_supervisors_of(self):
         unconnected_course = factory.Course()
