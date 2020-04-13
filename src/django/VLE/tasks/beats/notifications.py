@@ -10,7 +10,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.html import strip_tags
 
-from VLE.models import Journal, Node, PresetNode
+import VLE.models
 
 
 def _send_deadline_mail(deadline, journal):
@@ -58,18 +58,18 @@ def _send_deadline_mails(deadline_query):
     """
     emails_sent_to = []
     # Remove all filled entrydeadline
-    no_submissions = Q(type=Node.ENTRYDEADLINE, node__entry__isnull=True) | Q(type=Node.PROGRESS)
+    no_submissions = Q(type=VLE.models.Node.ENTRYDEADLINE, node__entry__isnull=True) | Q(type=VLE.models.Node.PROGRESS)
     deadlines = deadline_query.filter(no_submissions).distinct()\
                               .values('node', 'node__journal', 'due_date', 'type', 'target')
     for deadline in deadlines:
         # Only send to users who have a journal
         try:
-            journal = Journal.objects.get(pk=deadline['node__journal'])
-        except Journal.DoesNotExist:
+            journal = VLE.models.Journal.objects.get(pk=deadline['node__journal'])
+        except VLE.models.Journal.DoesNotExist:
             continue
 
         # Dont send a mail when the target points is reached
-        if deadline['type'] == Node.PROGRESS and journal.get_grade() > deadline['target']:
+        if deadline['type'] == VLE.models.Node.PROGRESS and journal.get_grade() > deadline['target']:
             continue
 
         emails_sent_to += _send_deadline_mail(deadline, journal)
@@ -84,12 +84,12 @@ def send_upcoming_deadlines():
     Sends reminder emails to users who have upcoming deadlines.
     Each user receives one a week before, and a day before a mail about the deadline.
     """
-    upcoming_day_deadlines = PresetNode.objects.filter(
+    upcoming_day_deadlines = VLE.models.PresetNode.objects.filter(
         due_date__range=(
             timezone.now().date() + datetime.timedelta(days=1),
             timezone.now().date() + datetime.timedelta(days=2)))
     emails_sent_to = _send_deadline_mails(upcoming_day_deadlines)
-    upcoming_week_deadlines = PresetNode.objects.filter(
+    upcoming_week_deadlines = VLE.models.PresetNode.objects.filter(
         due_date__range=(
             timezone.now().date() + datetime.timedelta(days=7),
             timezone.now().date() + datetime.timedelta(days=8)))

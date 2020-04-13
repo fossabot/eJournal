@@ -7,16 +7,6 @@
             :class="$root.getBorderClass($route.params.uID)"
             class="no-hover multi-form"
         >
-            <!-- TODO: enable once comment and grade notifications available - <toggle-switch
-                class="float-right"
-                :isActive="$store.getters['preferences/gradeNotifications']"
-                @parentActive="getGradeNotification"/>
-            <h2 class="theme-h2 field-heading multi-form">Grade updates</h2>
-            <toggle-switch
-                class="float-right"
-                :isActive="$store.getters['preferences/commentNotifications']"
-                @parentActive="getCommentNotification"/>
-            <h2 class="theme-h2 field-heading multi-form">Comments</h2> -->
             <toggle-switch
                 :isActive="$store.getters['preferences/upcomingDeadlineNotifications']"
                 class="float-right"
@@ -25,38 +15,58 @@
             <h2 class="theme-h2 field-heading multi-form">
                 Upcoming deadlines
             </h2>
+            <br/>
+            <notify-switch
+                :selected="$store.getters['preferences/commentNotifications']"
+                class="float-right"
+                @changedSelected="setCommentNotification"
+            />
+            <h2 class="theme-h2 field-heading multi-form">
+                New comments
+            </h2>
+            <br/>
+            <notify-switch
+                :selected="$store.getters['preferences/gradeNotifications']"
+                class="float-right"
+                @changedSelected="setGradeNotification"
+            />
+            <h2 class="theme-h2 field-heading multi-form">
+                New grades
+            </h2>
         </b-card>
     </div>
 </template>
 
 <script>
 import toggleSwitch from '@/components/assets/ToggleSwitch.vue'
+import notifySwitch from '@/components/assets/NotifySwitch.vue'
 import preferencesAPI from '@/api/preferences.js'
 
 export default {
     components: {
         toggleSwitch,
+        notifySwitch,
     },
     props: ['userData'],
     methods: {
-        getGradeNotification (isActive) {
+        setGradeNotification (isActive) {
             preferencesAPI.update(
                 this.$store.getters['user/uID'],
-                { grade_notifications: isActive },
+                { new_grade_notifications: isActive },
                 { customSuccessToast: 'Grade notification setting updated successfully.' },
             )
                 .then((preferences) => {
-                    this.$store.commit('preferences/SET_GRADE_NOTIFICATION', preferences.grade_notifications)
+                    this.$store.commit('preferences/SET_GRADE_NOTIFICATION', preferences.new_grade_notifications)
                 })
         },
-        getCommentNotification (isActive) {
+        setCommentNotification (isActive) {
             preferencesAPI.update(
                 this.$store.getters['user/uID'],
-                { comment_notifications: isActive },
+                { new_comment_notifications: isActive },
                 { customSuccessToast: 'Comment notification setting updated successfully.' },
             )
                 .then((preferences) => {
-                    this.$store.commit('preferences/SET_COMMENT_NOTIFICATION', preferences.comment_notifications)
+                    this.$store.commit('preferences/SET_COMMENT_NOTIFICATION', preferences.new_comment_notifications)
                 })
         },
         getUpcomingDeadlineNotification (isActive) {

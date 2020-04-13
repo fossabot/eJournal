@@ -35,8 +35,8 @@ const mutations = {
     [types.HYDRATE_PREFERENCES] (state, data) {
         const preferences = data.preferences
 
-        state.gradeNotifications = preferences.grade_notifications
-        state.commentNotifications = preferences.comment_notifications
+        state.gradeNotifications = preferences.new_grade_notifications
+        state.commentNotifications = preferences.new_comment_notifications
         state.upcomingDeadlineNotifications = preferences.upcoming_deadline_notifications
         state.showFormatTutorial = preferences.show_format_tutorial
         state.hideVersionAlert = preferences.hide_version_alert

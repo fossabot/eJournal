@@ -19,6 +19,7 @@ from django.utils.timezone import now
 
 import VLE.permissions as permissions
 import VLE.utils.file_handling as file_handling
+from VLE.tasks.email import send_notification
 from VLE.utils import sanitization
 from VLE.utils.error_handling import (VLEBadRequest, VLEParticipationError, VLEPermissionError, VLEProgrammingError,
                                       VLEUnverifiedEmailError)
@@ -35,6 +36,27 @@ class Instance(models.Model):
 
     def to_string(self, user=None):
         return self.name
+
+
+def gen_url(node=None, journal=None, assignment=None, course=None, user=None):
+    if journal is None:
+        journal = node.journal
+    if assignment is None:
+        assignment = journal.assignment
+    if course is None:
+        if user is None:
+            raise VLEProgrammingError('(gen_url) if course is not supplied, user needs to be supplied')
+        course = assignment.get_active_course(user)
+
+    url = '{}/Home/Course/{}'.format(settings.BASELINK, course)
+    if assignment:
+        url += '/Assignment/{}'.format(assignment)
+        if journal:
+            url += '/Journal/{}'.format(journal)
+            if node:
+                url += '?nID={}'.format(node)
+
+    return url
 
 
 # https://stackoverflow.com/a/2257449
@@ -350,16 +372,48 @@ class Preferences(models.Model):
     - upcoming_deadline_notifications: whether or not to receive upcoming deadline notifications via email.
     - hide_version_alert: latest version number for which a version alert has been dismissed.
     """
+    DAILY = 'd'
+    WEEKLY = 'w'
+    MONTHLY = 'm'
+    PUSH = 'p'
+    OFF = 'o'
+    FREQUENCIES = (
+        (DAILY, 'd'),
+        (WEEKLY, 'w'),
+        (MONTHLY, 'm'),
+        (PUSH, 'p'),
+        (OFF, 'o'),
+    )
+
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
         primary_key=True
     )
-    grade_notifications = models.BooleanField(
-        default=True
+    new_grade_notifications = models.TextField(
+        max_length=1,
+        choices=FREQUENCIES,
+        default=DAILY,
     )
-    comment_notifications = models.BooleanField(
-        default=True
+    new_comment_notifications = models.TextField(
+        max_length=1,
+        choices=FREQUENCIES,
+        default=DAILY,
+    )
+    new_assignment_notifications = models.TextField(
+        max_length=1,
+        choices=FREQUENCIES,
+        default=PUSH,
+    )
+    new_course_notifications = models.TextField(
+        max_length=1,
+        choices=FREQUENCIES,
+        default=PUSH,
+    )
+    new_entry_notifications = models.TextField(
+        max_length=1,
+        choices=FREQUENCIES,
+        default=DAILY,
     )
     upcoming_deadline_notifications = models.BooleanField(
         default=True
@@ -402,6 +456,55 @@ class Preferences(models.Model):
 
     def to_string(self, user=None):
         return "Preferences"
+
+
+class Notification(models.Model):
+    NEW_COMMENT = 'comm'
+    NEW_ASSIGNMENT = 'assi'
+    NEW_COURSE = 'cour'
+    UPCOMING_DEADLINE = 'up_d'
+    NEW_GRADE = 'grad'
+    NEW_ENTRY = 'entr'
+    TYPES = {
+        NEW_COMMENT: 'new_comment_notifications',
+        NEW_ASSIGNMENT: 'new_assignment_notifications',
+        NEW_COURSE: 'new_course_notifications',
+        UPCOMING_DEADLINE: 'upcoming_deadline_notifications',
+        NEW_GRADE: 'new_grade_notifications',
+        NEW_ENTRY: 'new_entry_notifications',
+    }
+
+    CONTENT = {
+        NEW_COMMENT: {
+            'heading': 'New comment',
+            'main_content': 'You have received a new comment on a journal. Please click the button below to view',
+            'extra_content': None,
+            'button_text': 'View comment',
+        }
+    }
+
+    type = models.TextField(
+        max_length=4,
+        choices=TYPES.items(),
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+    )
+    url = models.TextField()
+    message = models.TextField()
+    sent = models.BooleanField(
+        default=False
+    )
+
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        super(Notification, self).save(*args, **kwargs)
+
+        if is_new:
+            # Send notification on creation if user preference is set to push
+            if getattr(self.user.preferences, Notification.TYPES[self.type]) == Preferences.PUSH:
+                send_notification.delay(self.pk)
 
 
 class Course(models.Model):
@@ -1287,6 +1390,13 @@ class Entry(models.Model):
             self.creation_date = now
             self.last_edited = now
 
+            # for user in permissions.get_supervisors_of(self.node.journal):
+            #     Notification.objects.create(
+            #         type=Notification.NEW_ENTRY,
+            #         user=user,
+            #         url=gen_url(node=self.node, user=user)
+            #     )
+
         return super(Entry, self).save(*args, **kwargs)
 
     def to_string(self, user=None):
@@ -1325,7 +1435,15 @@ class Grade(models.Model):
 
     def save(self, *args, **kwargs):
         self.creation_date = timezone.now()
-        return super(Grade, self).save(*args, **kwargs)
+        super(Grade, self).save(*args, **kwargs)
+
+        if self.published:
+            for author in self.entry.node.journal.authors.all():
+                Notification.objects.create(
+                    type=Notification.NEW_GRADE,
+                    user=author.user,
+                    url=gen_url(node=self.entry.node, user=author.user)
+                )
 
     def to_string(self, user=None):
         return "Grade"
@@ -1506,6 +1624,21 @@ class Comment(models.Model):
     def save(self, *args, **kwargs):
         if not self.pk:
             self.creation_date = timezone.now()
+            if self.published:
+                if self.entry.node.journal.authors.filter(user=self.author).exists():  # student comment
+                    for user in permissions.get_supervisors_of(self.entry.node.journal):
+                        Notification.objects.create(
+                            type=Notification.NEW_COMMENT,
+                            user=user,
+                            url=gen_url(node=self.entry.node, user=user)
+                        )
+                else:  # supervisor comment
+                    for author in self.entry.node.journal.authors.all():
+                        Notification.objects.create(
+                            type=Notification.NEW_COMMENT,
+                            user=author.user,
+                            url=gen_url(node=self.entry.node, user=author.user)
+                        )
         self.last_edited = timezone.now()
         self.text = sanitization.strip_script_tags(self.text)
         return super(Comment, self).save(*args, **kwargs)

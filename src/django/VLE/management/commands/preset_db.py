@@ -433,9 +433,9 @@ class Command(BaseCommand):
             for entry_obj in user_entries['entries']:
                 for _ in range(entry_obj['amount']):
                     entry = factory.make_entry(entry_obj['template'], user)
+                    factory.make_node(Journal.objects.get(authors__user=user, assignment=assignment), entry)
                     if entry_obj['grade'] is not None:
                         factory.make_grade(entry, self.users['Teacher'].pk, entry_obj['grade'], entry_obj['published'])
-                    factory.make_node(Journal.objects.get(authors__user=user, assignment=assignment), entry)
 
     def gen_content(self):
         """Generate content for an entry."""
