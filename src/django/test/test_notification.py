@@ -81,7 +81,7 @@ class NotificationTest(TestCase):
         assert journal.authors.first().user not in supervisors
         assert other_journal.authors.first().user not in supervisors
 
-    def test_comment(self):
+    def test_comment_notification(self):
         comment = factory.TeacherComment(published=True)
         journal = comment.entry.node.journal
 
@@ -116,7 +116,7 @@ class NotificationTest(TestCase):
 
         # TODO: work out how to test with delay
 
-    def test_grade(self):
+    def test_grade_notification(self):
         entry = factory.Entry()
         notifications_before = Notification.objects.count()
         VLE.factory.make_grade(entry, entry.node.journal.assignment.author.pk, 10, published=True)
@@ -127,10 +127,21 @@ class NotificationTest(TestCase):
 
         self.check_send_notification(Notification.objects.last())
 
-    def test_entry(self):
+    def test_entry_notification(self):
         notifications_before = Notification.objects.count()
         factory.Entry()
         assert Notification.objects.count() == notifications_before + 1, '1 new notification is created'
         assert Notification.objects.last().type == Notification.NEW_ENTRY
 
         self.check_send_notification(Notification.objects.last())
+
+    def test_assignment_notification(self):
+        assignment = factory.Assignment(is_published=False)
+        course = assignment.courses.first()
+        participation = factory.Participation(course=course, role=course.role_set.get(name='Student'))
+        notifications_before = Notification.objects.count()
+        assignment.is_published = True
+        assignment.save()
+        assert Notification.objects.count() == notifications_before + 1, '1 only for student notification is created'
+        assert Notification.objects.last().user == participation.user
+        assert Notification.objects.last().type == Notification.NEW_ASSIGNMENT

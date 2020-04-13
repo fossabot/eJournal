@@ -395,10 +395,11 @@ class Preferences(models.Model):
         on_delete=models.CASCADE,
         primary_key=True
     )
+    # QUESTION: are these valid defaults?
     new_grade_notifications = models.TextField(
         max_length=1,
         choices=FREQUENCIES,
-        default=DAILY,
+        default=PUSH,
     )
     new_comment_notifications = models.TextField(
         max_length=1,
@@ -408,12 +409,12 @@ class Preferences(models.Model):
     new_assignment_notifications = models.TextField(
         max_length=1,
         choices=FREQUENCIES,
-        default=PUSH,
+        default=WEEKLY,
     )
     new_course_notifications = models.TextField(
         max_length=1,
         choices=FREQUENCIES,
-        default=PUSH,
+        default=WEEKLY,
     )
     new_entry_notifications = models.TextField(
         max_length=1,
@@ -506,7 +507,7 @@ class Notification(models.Model):
         },
         NEW_ASSIGNMENT: {
             'heading': 'New assignment',
-            'main_content': 'You were added to an assignment. Click the button below to view.',
+            'main_content': 'Your teacher published a new assignment. Click the button below to view.',
             'extra_content': None,
             'button_text': 'View assignment',
         }
@@ -524,6 +525,10 @@ class Notification(models.Model):
     message = models.TextField()
     sent = models.BooleanField(
         default=False
+    )
+    creation_date = models.DateTimeField(
+        editable=False,
+        auto_now_add=True
     )
 
     def save(self, *args, **kwargs):
@@ -944,10 +949,30 @@ class Assignment(models.Model):
                 else:
                     existing = Journal.objects.filter(assignment=self).values('authors__user')
                 for user in users.exclude(pk__in=existing):
-                    ap = AssignmentParticipation.objects.get(assignment=self, user=user['users'])
+                    ap = AssignmentParticipation.objects.get_or_create(
+                        assignment=self, user=User.objects.get(pk=user['users']))[0]
                     if not Journal.objects.filter(assignment=self, authors__in=[ap]).exists():
                         journal = Journal.objects.create(assignment=self)
                         journal.authors.add(ap)
+
+        # Send notifications once an assignment is published
+        if (is_new or not old_publish) and self.is_published:
+            print(AssignmentParticipation.objects.all())
+            for ap in AssignmentParticipation.objects.filter(assignment=self):
+                print(ap.user)
+                print(ap.user.has_permission('can_have_journal', self))
+                if ap.user.has_permission('can_have_journal', self):
+                    Notification.objects.create(
+                        type=Notification.NEW_ASSIGNMENT,
+                        user=ap.user,
+                        url=gen_url(assignment=self, user=ap.user)
+                    )
+        # Delete notifications if a teacher unpublishes an assignment after publishing
+        elif old_publish and not self.is_published:
+            Notification.objects.filter(
+                type=Notification.NEW_ASSIGNMENT,
+                url__contains='Assignment/{}'.format(self.pk)
+            ).delete()
 
     def get_active_lti_course(self):
         """"Query for retrieving the course which matches the active lti id of the assignment."""
