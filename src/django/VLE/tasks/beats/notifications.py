@@ -151,3 +151,7 @@ def send_digest_notiications():
 
         email.attach_alternative(html_content, 'text/html')
         email.send()
+
+    VLE.models.Notification.objects.filter(
+        creation_date__lt=timezone.now() - datetime.timedelta(days=30),
+        sent=True).delete()
