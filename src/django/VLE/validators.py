@@ -22,6 +22,8 @@ def validate_user_file(in_memory_uploaded_file, user):
     """Checks if size does not exceed 10MB. Or the user has reached his maximum storage space."""
     if in_memory_uploaded_file.size > settings.USER_MAX_FILE_SIZE_BYTES:
         raise ValidationError("Max size of file is {} Bytes".format(settings.USER_MAX_FILE_SIZE_BYTES))
+    if len(in_memory_uploaded_file.name) > 128:  # reserving 37 for unique key, and the rest (91) as filepath
+        raise ValidationError("Maximum filename length is 128, please rename the file.")
 
     user_files = user.filecontext_set.all()
     # Fast check for allowed user storage space

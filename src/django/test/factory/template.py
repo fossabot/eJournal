@@ -29,18 +29,8 @@ class TemplateFactory(factory.django.DjangoModelFactory):
             type=VLE.models.Field.TEXT, title='optional', template=self, location=3, required=False)
 
 
-class TemplateAllTypesFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = 'VLE.Template'
-
+class TemplateAllTypesFactory(TemplateFactory):
     name = 'all types'
-
-    @factory.post_generation
-    def add_template(self, create, extracted):
-        if not create:
-            return
-
-        self.format.template_set.add(self)
 
     @factory.post_generation
     def add_fields(self, create, extracted):

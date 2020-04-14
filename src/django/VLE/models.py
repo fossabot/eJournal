@@ -59,7 +59,8 @@ class FileContext(models.Model):
     """
     file = models.FileField(
         null=False,
-        upload_to=file_handling.get_file_path
+        upload_to=file_handling.get_file_path,
+        max_length=255,
     )
     in_rich_text = models.BooleanField(
         default=False
@@ -185,7 +186,8 @@ class User(AbstractUser):
     feedback_file = models.FileField(
         null=True,
         blank=True,
-        upload_to=file_handling.get_feedback_file_path
+        upload_to=file_handling.get_feedback_file_path,
+        max_length=255,
     )
     is_test_student = models.BooleanField(
         default=False

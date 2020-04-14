@@ -6,7 +6,7 @@ from test.utils import api
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
-from VLE.models import Field, FileContext, PresetNode, Template
+from VLE.models import Entry, Field, FileContext, PresetNode, Template
 from VLE.utils import file_handling
 from VLE.utils.error_handling import VLEBadRequest, VLEPermissionError
 
@@ -312,3 +312,37 @@ class FileHandlingTest(TestCase):
             content_type=MULTIPART_CONTENT,
         )
         assert 'No accompanying file found in the request.' in response['description']
+
+    def test_long_file_name(self):
+        entry = factory.PresetEntry()
+        node = entry.node
+        author = entry.author
+        entry.delete()
+        field = node.preset.forced_template.field_set.order_by('pk').first()
+        field.type = Field.FILE
+        field.save()
+        # under 255 should work
+        # NOTE: this is including:
+        #  - the whole filepath,
+        #  - extension
+        #  - and the possible 36 extra hash to make it a unique filename
+        long_name = SimpleUploadedFile('f' * 120 + '.png', b'image_content', content_type='image/png')
+        resp = api.post(
+            self, 'files', params={'file': long_name, 'in_rich_text': False},
+            user=author, content_type=MULTIPART_CONTENT, status=201)
+        entry = api.create(
+            self, 'entries', params={
+                'journal_id': node.journal.pk, 'node_id': node.pk, 'template_id': node.preset.forced_template.pk,
+                'content': [{
+                    'id': field.pk,
+                    'data': resp.copy()
+                }] + [{'id': f.pk, 'data': 'asdf'} for f in node.preset.forced_template.field_set.exclude(pk=field.pk)]
+            },
+            user=author)['entry']
+        Entry.objects.get(pk=entry['id']).delete()
+        # over 255 should give a proper response
+        long_name = SimpleUploadedFile('f' * 256 + '.png', b'image_content', content_type='image/png')
+        resp = api.post(
+            self, 'files', params={'file': long_name, 'in_rich_text': False},
+            user=author, content_type=MULTIPART_CONTENT, status=400)
+        assert 'filename' in resp['description']

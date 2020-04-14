@@ -17,11 +17,11 @@ test () {
     pytest src/django/test $totest && flake8 --max-line-length=120 src/django --exclude="src/django/VLE/migrations/*","src/django/VLE/settings/*","src/django/VLE/settings.py","src/django/VLE/tasks/__init__.py" && isort -rc src/django/
     echo
     echo ">>> Press Enter to force update."
-    previous_sha=`ls -lR src | sha1sum`
+    previous_sha=`ls -lR src/django -I "media" | sha1sum`
 }
 
 while true; do
-    sha=`ls -lR src | sha1sum`
+    sha=`ls -lR src/django -I "media" | sha1sum`
     if [[ $sha != $previous_sha ]] ; then
         test
     fi
