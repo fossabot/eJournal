@@ -74,9 +74,10 @@ class CommentAPITest(TestCase):
         api.get(self, 'comments', params={'entry_id': self.comment.entry.pk}, user=factory.Admin())
 
     def test_create(self):
-        api.create(self, 'comments',
-                   params={'entry_id': self.comment.entry.pk, 'text': 'test-create-comment'},
-                   user=self.student)
+        api.create(
+            self, 'comments',
+            params={'entry_id': self.comment.entry.pk, 'text': 'test-create-comment'},
+            user=self.student)
 
         comment = api.create(
             self, 'comments',
@@ -112,6 +113,13 @@ class CommentAPITest(TestCase):
         self.check_comment_update(self.TA_comment, self.admin, True)
 
     def test_update_as_teacher(self):
+        # empty comment cannot be created
+        api.update(
+            self,
+            'comments',
+            params={'pk': self.comment.pk, 'text': ''},
+            user=self.student,
+            status=400)
         # Teacher should be allowed to edit his own comment
         self.check_comment_update(self.teacher_comment, self.teacher, True)
         # Teacher should not be allowed to edit students comment
@@ -140,6 +148,13 @@ class CommentAPITest(TestCase):
         TA_role.save()
 
     def test_update_as_student(self):
+        comment = api.update(
+            self,
+            'comments',
+            params={'pk': self.comment.pk, 'text': 'asdf', 'published': False},
+            user=self.student)['comment']
+        assert comment['published'], 'published state for comment by student should always stay published'
+
         # Student should be allowed to edit his own comment
         self.check_comment_update(self.comment, self.student, True)
         # Student should not be allowed to edit a TA's comment

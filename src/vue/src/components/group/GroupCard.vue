@@ -68,7 +68,7 @@
                         :searchable="true"
                         :multiSelectText="`user${participantsToAdd &&
                             participantsToAdd.length === 1 ? '' : 's'} selected`"
-                        placeholder="Select users to add"
+                        placeholder="Select Users To Add"
                         class="multi-form no-right-radius"
                     />
                     <b-button

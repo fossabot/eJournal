@@ -190,13 +190,14 @@ class AssignmentDetailsSerializer(serializers.ModelSerializer):
     can_change_type = serializers.SerializerMethodField()
     assigned_groups = serializers.SerializerMethodField()
     all_groups = serializers.SerializerMethodField()
+    templates = serializers.SerializerMethodField()
 
     class Meta:
         model = Assignment
         fields = ('id', 'name', 'description', 'points_possible', 'unlock_date', 'due_date', 'lock_date',
                   'is_published', 'course_count', 'lti_count', 'active_lti_course', 'is_group_assignment',
                   'can_set_journal_name', 'can_set_journal_image', 'can_lock_journal', 'can_change_type',
-                  'remove_grade_upon_leaving_group', 'assigned_groups', 'all_groups', )
+                  'remove_grade_upon_leaving_group', 'assigned_groups', 'all_groups', 'templates')
         read_only_fields = ('id', )
 
     def get_course_count(self, assignment):
@@ -225,6 +226,9 @@ class AssignmentDetailsSerializer(serializers.ModelSerializer):
 
     def get_can_change_type(self, assignment):
         return not assignment.has_entries()
+
+    def get_templates(self, assignment):
+        return list(assignment.format.template_set.values('id', 'name'))
 
 
 class AssignmentSerializer(serializers.ModelSerializer):
@@ -446,10 +450,10 @@ class CommentSerializer(serializers.ModelSerializer):
         model = Comment
         fields = ('id', 'entry', 'author', 'text', 'published', 'creation_date', 'last_edited', 'last_edited_by',
                   'can_edit')
-        read_only_fields = ('id', 'entry', 'author', 'timestamp')
+        read_only_fields = ('id', 'entry', 'author', 'creation_date', 'last_edited')
 
     def get_author(self, comment):
-        return UserSerializer(comment.author, context={'user': self.context.get('user', None)}).data
+        return UserSerializer(comment.author, context=self.context).data
 
     def get_last_edited_by(self, comment):
         return None if not comment.last_edited_by else comment.last_edited_by.full_name

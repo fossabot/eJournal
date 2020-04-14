@@ -74,6 +74,8 @@ function handleSuccess (resp, connArgs) {
     } else if (connArgs.customSuccessToast) {
         router.app.$toasted.success(sanitization.escapeHtml(connArgs.customSuccessToast))
     }
+
+    return resp
 }
 
 /*
@@ -104,7 +106,8 @@ function handleError (error, connArgs) {
                 description: response.data.description,
             },
         })
-    } else if (!connArgs.redirect) {
+    } else if (router.app.$route.name !== 'ErrorPage' && (!connArgs.redirect || !ERRORS_TO_REDIRECT.has(status))) {
+        // If page is not the error page, nor requires a redirect, display toast
         toastError(error, connArgs)
     }
 
@@ -115,10 +118,8 @@ function initRequest (func, url, data = null, connArgs = DEFAULT_CONN_ARGS) {
     const packedConnArgs = packConnArgs(connArgs)
 
     return func(url, data).then(
-        (resp) => {
-            handleSuccess(resp, packedConnArgs)
-            return resp
-        }, error => handleError(error, packedConnArgs))
+        resp => handleSuccess(resp, packedConnArgs),
+        error => handleError(error, packedConnArgs))
 }
 
 function improveUrl (url, data = null) {

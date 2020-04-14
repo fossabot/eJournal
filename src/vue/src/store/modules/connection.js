@@ -76,7 +76,7 @@ const actions = {
         if (router.app.$route.name !== 'Login') {
             router.push({ name: 'Login' })
         }
-        router.app.$toasted.error('Please login')
+        router.app.$toasted.error('Please login.')
     },
     /* Queues all requests which fail due to an invalid access token.
      * Performs a single access token refresh requests on encountering such a failure.

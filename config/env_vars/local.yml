@@ -53,8 +53,3 @@ broker_url: "amqp://localhost"
 
 run_django_db_migrations: true
 run_django_collectstatic: true
-
-
-# Nginx settings.
-ssl_crt: placeholder
-ssl_key: placeholder

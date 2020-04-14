@@ -20,3 +20,7 @@ class IsOnline(TestCase):
         """Test if server is online."""
         response = self.c.get('/admin', follow=True)
         assert response.status_code == 200, 'The admin panel should be reachable'
+
+    def test_unauthorized(self):
+        response = self.c.get('/assignments/')
+        assert response.status_code == 401, 'Path should return unauthorized'

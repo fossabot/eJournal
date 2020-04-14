@@ -98,7 +98,6 @@
                 placeholder="Add an attachment (optional)"
                 @change="filesHandler"
             />
-            <hr/>
             <b-button
                 class="float-right"
                 @click="$emit(sendFeedback())"

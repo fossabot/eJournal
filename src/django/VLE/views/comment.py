@@ -75,7 +75,7 @@ class CommentView(viewsets.ViewSet):
             success -- with the assignment data
 
         """
-        entry_id, text, = utils.required_params(request.data, 'entry_id', 'text')
+        entry_id, text, = utils.required_typed_params(request.data, (int, 'entry_id'), (str, 'text'))
         published, = utils.optional_typed_params(request.data, (bool, 'published'))
 
         entry = Entry.objects.get(pk=entry_id)
@@ -134,6 +134,8 @@ class CommentView(viewsets.ViewSet):
 
         """
         comment_id, = utils.required_typed_params(kwargs, (int, 'pk'))
+        text, = utils.required_typed_params(request.data, (str, 'text'))
+        published, = utils.optional_typed_params(request.data, (bool, 'published'))
 
         comment = Comment.objects.get(pk=comment_id)
         journal = comment.entry.node.journal
@@ -146,14 +148,15 @@ class CommentView(viewsets.ViewSet):
             return response.forbidden('You are not allowed to edit this comment.')
 
         comment.last_edited_by = request.user
+
+        if not text:
+            return response.bad_request('Comment cannot be empty.')
+
+        comment.text = text
+        comment.published = published or not request.user.has_permission('can_grade', assignment)
         comment.save()
-        text, = utils.required_params(request.data, 'text')
-        serializer = CommentSerializer(
-            comment, data={'text': text}, context={'user': request.user}, partial=True)
-        if not serializer.is_valid():
-            return response.bad_request()
-        serializer.save()
-        return response.success({'comment': serializer.data})
+
+        return response.success({'comment': CommentSerializer(comment, context={'user': request.user}).data})
 
     def destroy(self, request, *args, **kwargs):
         """Delete an existing comment from an entry.

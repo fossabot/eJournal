@@ -80,6 +80,9 @@ import 'vue-awesome/icons/bug'
 import 'vue-awesome/icons/book'
 import 'vue-awesome/icons/desktop'
 import 'vue-awesome/icons/play'
+import 'vue-awesome/icons/file-export'
+import 'vue-awesome/icons/filter'
+
 /* eslint-enable import/extensions */
 
 import Icon from 'vue-awesome/components/Icon.vue'

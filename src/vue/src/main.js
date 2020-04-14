@@ -14,6 +14,8 @@ import flatPickr from 'vue-flatpickr-component'
 import VueIntro from 'vue-introjs'
 import Icon from 'vue-awesome/components/Icon.vue'
 import VueMoment from 'vue-moment'
+import ExcelJS from 'exceljs'
+import FileSaver from 'file-saver'
 
 import connection from '@/api/connection.js'
 
@@ -164,6 +166,33 @@ new Vue({
             }
 
             return route
+        },
+        exportExcel (name, data) {
+            // Create a new workbook.
+            const workbook = new ExcelJS.Workbook()
+
+            // Specify metadata / source.
+            workbook.creator = 'eJournal'
+            workbook.created = new Date()
+            workbook.properties.date1904 = true
+
+            // Create a new worksheet with the first row frozen (for headers).
+            const sheet = workbook.addWorksheet(name, { views: [{ state: 'frozen', ySplit: 1 }] })
+
+            // Fill the sheet columns with each property of the data object as a column.
+            // The header of the column is the property name. Column indices start at 1.
+            Object.keys(data).forEach((header, key) => {
+                const beautifiedHeader = header.charAt(0).toUpperCase() + header.substring(1).replace('_', ' ')
+                sheet.getColumn(key + 1).values = [beautifiedHeader].concat(data[header])
+            })
+
+            // Write the spreadsheet to a buffer, then
+            return workbook.xlsx.writeBuffer(name)
+                .then((spreadsheetBuffer) => {
+                    FileSaver.saveAs(new Blob([spreadsheetBuffer],
+                        { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+                    `${name}.xlsx`)
+                })
         },
     },
     render: h => h(App),
