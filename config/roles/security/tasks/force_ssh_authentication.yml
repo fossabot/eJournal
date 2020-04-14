@@ -1,7 +1,10 @@
 ---
 
 - name: Add authorized_keys for the user
-  authorized_key: user={{ server_user }} key="{{ lookup('file', item) }}"
+  authorized_key:
+    user: "{{ server_user }}"
+    state: present
+    key: '{{ item }}'
   with_items:
     - "{{ user_public_keys }}"
 
@@ -9,6 +12,21 @@
   lineinfile: dest=/etc/ssh/sshd_config
               regexp="^PasswordAuthentication"
               line="PasswordAuthentication no"
+              state=present
+  notify: restart ssh
+
+# https://blog.tankywoo.com/linux/2013/09/14/ssh-passwordauthentication-vs-challengeresponseauthentication.html
+- name: Disallow password authentication (ChallengeResponseAuthentication)
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^ChallengeResponseAuthentication"
+              line="ChallengeResponseAuthentication no"
+              state=present
+  notify: restart ssh
+
+- name: Disallow PAM (Pluggable Authentication Module) interface
+  lineinfile: dest=/etc/ssh/sshd_config
+              regexp="^UsePAM"
+              line="UsePAM no"
               state=present
   notify: restart ssh
 
