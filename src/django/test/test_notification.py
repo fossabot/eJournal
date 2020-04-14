@@ -1,10 +1,11 @@
+import datetime
 import test.factory as factory
 
 from django.core import mail
 from django.test import TestCase
 
 import VLE.factory
-from VLE.models import Notification, gen_url
+from VLE.models import Notification, Preferences, gen_url
 from VLE.permissions import get_supervisors_of
 from VLE.tasks.beats.notifications import send_digest_notiications
 from VLE.tasks.email import send_push_notification
@@ -172,7 +173,81 @@ class NotificationTest(TestCase):
         self.check_send_push_notification(Notification.objects.last())
 
     def test_digest(self):
-        factory.Grade()
+        plural = {
+            Notification.NEW_COURSE: 'You were added to {} new courses.',
+            Notification.NEW_ASSIGNMENT: 'You were added to {} new assignments.',
+            Notification.NEW_ENTRY: '{} new entries were posted.',
+            Notification.NEW_GRADE: 'You received {} new grades.',
+            Notification.NEW_COMMENT: '{} new comments were posted.',
+        }
+        singular = {
+            Notification.NEW_COURSE: 'You were added to a new course.',
+            Notification.NEW_ASSIGNMENT: 'You were added to a new assignment.',
+            Notification.NEW_ENTRY: 'A new entriy was posted.',
+            Notification.NEW_GRADE: 'You received a new grade.',
+            Notification.NEW_COMMENT: 'A new comment was posted.',
+        }
+
+        journal = factory.Journal()  # added to course
+        student = journal.authors.first().user
+        teacher = journal.assignment.author
+
+        # Check if everything is off, that nothing is send
+        before_mail_count = len(mail.outbox)
+        before_sent_count = Notification.objects.filter(sent=True).count()
+        for type, preference in Notification.TYPES.items():
+            if type == Notification.UPCOMING_DEADLINE:
+                continue
+            student.preferences.__dict__[preference] = Preferences.PUSH
+            teacher.preferences.__dict__[preference] = Preferences.OFF
+        student.preferences.save()
+        teacher.preferences.save()
+
         send_digest_notiications()
 
-        # TODO: improve testing here
+        assert before_mail_count == len(mail.outbox)
+        assert before_sent_count == Notification.objects.filter(sent=True).count()
+
+        # Check if everything is asked to sent, that also stuff is sending
+        pref_type = Preferences.WEEKLY if datetime.datetime.today().weekday() == 0 else Preferences.DAILY
+        for type, preference in Notification.TYPES.items():
+            if type == Notification.UPCOMING_DEADLINE:
+                continue
+            student.preferences.__dict__[preference] = pref_type
+            if type != Notification.NEW_COMMENT:
+                teacher.preferences.__dict__[preference] = pref_type
+            else:
+                teacher.preferences.__dict__[preference] = Preferences.OFF
+        student.preferences.save()
+        teacher.preferences.save()
+
+        entry = factory.Grade(entry__node__journal=journal).entry  # "2" new grades
+
+        factory.StudentComment(entry=entry, author=student)
+        factory.StudentComment(entry=entry, author=student)  # 2 new comments for teacher
+        factory.TeacherComment(entry=entry, author=teacher, published=True)  # 1 new comment for student
+
+        # 1 new assignment for student
+        assignment = factory.Assignment(courses=journal.assignment.courses.all(), author=teacher, is_published=False)
+        assignment.is_published = True
+        assignment.save()
+
+        send_digest_notiications()
+
+        assert not Notification.objects.filter(user=student, sent=False).exists()
+        assert Notification.objects.filter(user=teacher, sent=False).count() == 2, \
+            'Teacher should not receive the two comment notifications as that is set on OFF'
+
+        teacher_mail = mail.outbox[-2].body
+        student_mail = mail.outbox[-1].body
+
+        assert singular[Notification.NEW_COURSE] in teacher_mail
+        assert singular[Notification.NEW_COURSE] in student_mail
+        assert 'new assignment' not in teacher_mail
+        assert singular[Notification.NEW_ASSIGNMENT] in student_mail
+        assert singular[Notification.NEW_ENTRY] in teacher_mail
+        assert 'new entr' not in student_mail
+        assert 'new grade' not in teacher_mail
+        assert plural[Notification.NEW_GRADE].format(2) in student_mail
+        assert 'new comment' not in teacher_mail
+        assert singular[Notification.NEW_COMMENT] in student_mail
