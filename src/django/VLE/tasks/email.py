@@ -20,7 +20,7 @@ def send_push_notification(notification_pk):
         return
     email_data = {
         # Contains: heading, main_content, extra_content, button_text
-        **VLE.models.Notification.CONTENT[notification.type],
+        **VLE.models.Notification.TYPES[notification.type]['content'],
         'full_name': notification.user.full_name,
         'button_url': notification.url,
         'profile_url': '{}/Profile'.format(settings.BASELINK)
@@ -31,7 +31,7 @@ def send_push_notification(notification_pk):
 
     email = EmailMultiAlternatives(
         # QUESTION: Canvas includes the course name here, copy that or the heading we supply (e.g. 'New comment')?
-        subject='{} - eJournal'.format(VLE.models.Notification.CONTENT[notification.type]['heading']),
+        subject='{} - eJournal'.format(VLE.models.Notification.TYPES[notification.type]['content']['heading']),
         body=text_content,
         from_email='eJournal | Noreply<noreply@{}>'.format(settings.EMAIL_SENDER_DOMAIN),
         headers={'Content-Type': 'text/plain'},

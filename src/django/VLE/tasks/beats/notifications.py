@@ -108,21 +108,7 @@ def send_digest_notiications():
         'pref': [VLE.models.Preferences.DAILY],
         'past': 'In the past 24 hours',
     }
-    types = VLE.models.Notification
-    plural = {
-        types.NEW_COURSE: 'You were added to {} new courses.',
-        types.NEW_ASSIGNMENT: 'You were added to {} new assignments.',
-        types.NEW_ENTRY: '{} new entries were posted.',
-        types.NEW_GRADE: 'You received {} new grades.',
-        types.NEW_COMMENT: '{} new comments were posted.',
-    }
-    singular = {
-        types.NEW_COURSE: 'You were added to a new course.',
-        types.NEW_ASSIGNMENT: 'You were added to a new assignment.',
-        types.NEW_ENTRY: 'A new entriy was posted.',
-        types.NEW_GRADE: 'You received a new grade.',
-        types.NEW_COMMENT: 'A new comment was posted.',
-    }
+    types = VLE.models.Notification.TYPES
 
     for user in VLE.models.Notification.objects.filter(
        sent=False).order_by('user__pk').values_list('user', flat=True).distinct():
@@ -131,14 +117,14 @@ def send_digest_notiications():
         content = ['{}, you received the following notifications:'.format(period['past'])]
         # For each type, check if user has that preference as this digest type, if so, count them per type
         # And add a proper message together with the count to the content list
-        for type in plural.keys():
+        for type in types.keys():
             filtered = notifications.filter(type=type)
-            if getattr(user.preferences, types.TYPES[type]) in period['pref'] and filtered.exists():
+            if getattr(user.preferences, types[type]['name']) in period['pref'] and filtered.exists():
                 filtered.update(sent=True)
                 if filtered.count() == 1:
-                    content.append(singular[type].format(filtered.count()))
+                    content.append(types[type]['singular'])
                 else:
-                    content.append(plural[type].format(filtered.count()))
+                    content.append(types[type]['plural'].format(filtered.count()))
 
         if len(content) == 1:
             continue

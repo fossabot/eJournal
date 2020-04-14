@@ -419,6 +419,11 @@ class Preferences(models.Model):
         choices=FREQUENCIES,
         default=DAILY,
     )
+    new_preset_node_notifications = models.TextField(
+        max_length=1,
+        choices=FREQUENCIES,
+        default=DAILY,
+    )
     upcoming_deadline_notifications = models.BooleanField(
         default=True
     )
@@ -466,54 +471,85 @@ class Notification(models.Model):
     NEW_COMMENT = 'comm'
     NEW_ASSIGNMENT = 'assi'
     NEW_COURSE = 'cour'
-    UPCOMING_DEADLINE = 'up_d'
     NEW_GRADE = 'grad'
     NEW_ENTRY = 'entr'
+    NEW_PRESET_NODE = 'prst'
+    # UPCOMING_DEADLINE = 'up_d'
     TYPES = {
-        NEW_COMMENT: 'new_comment_notifications',
-        NEW_ASSIGNMENT: 'new_assignment_notifications',
-        NEW_COURSE: 'new_course_notifications',
-        UPCOMING_DEADLINE: 'upcoming_deadline_notifications',
-        NEW_GRADE: 'new_grade_notifications',
-        NEW_ENTRY: 'new_entry_notifications',
-    }
-
-    CONTENT = {
-        NEW_COMMENT: {
-            'heading': 'New comment',
-            'main_content': 'You have received a new comment on a journal.',
-            'extra_content': None,
-            'button_text': 'View comment',
-        },
-        NEW_GRADE: {
-            'heading': 'New grade',
-            'main_content': 'You have received a new grade on a journal.',
-            'extra_content': None,
-            'button_text': 'View grade',
-        },
-        NEW_ENTRY: {
-            'heading': 'New entry',
-            'main_content': 'Someone posted a new entry in a journal.',
-            'extra_content': None,
-            'button_text': 'View entry',
-        },
         NEW_COURSE: {
-            'heading': 'New course',
-            'main_content': 'You were added to a course.',
-            'extra_content': None,
-            'button_text': 'View course',
+            'name': 'new_course_notifications',
+            'content': {
+                'heading': 'New course',
+                'main_content': 'You were added to a course.',
+                'extra_content': None,
+                'button_text': 'View Course',
+            },
+            'plural': 'You were added to {} new courses.',
+            'singular': 'You were added to a new course.',
         },
         NEW_ASSIGNMENT: {
-            'heading': 'New assignment',
-            'main_content': 'Your teacher published a new assignment.',
-            'extra_content': None,
-            'button_text': 'View assignment',
-        }
+            'name': 'new_assignment_notifications',
+            'content': {
+                'heading': 'New assignment',
+                'main_content': 'Your teacher published a new assignment.',
+                'extra_content': None,
+                'button_text': 'View Assignment',
+            },
+            'plural': 'You were added to {} new assignments.',
+            'singular': 'You were added to a new assignment.',
+        },
+        NEW_PRESET_NODE: {
+            'name': 'new_preset_node_notifications',
+            'content': {
+                'heading': 'Your timeline is updated',
+                'main_content': 'A new node was added to your timeline.',
+                'extra_content': None,
+                'button_text': 'View Node',
+            },
+            'plural': '{} new nodes were added to your timeline.',
+            'singular': 'A new node was added to your timeline.',
+        },
+        NEW_ENTRY: {
+            'name': 'new_entry_notifications',
+            'content': {
+                'heading': 'New entry',
+                'main_content': 'Someone posted a new entry in a journal.',
+                'extra_content': None,
+                'button_text': 'View Entry',
+            },
+            'plural': '{} new entries were posted.',
+            'singular': 'A new entry was posted.',
+        },
+        NEW_GRADE: {
+            'name': 'new_grade_notifications',
+            'content': {
+                'heading': 'New grade',
+                'main_content': 'You have received a new grade on a journal.',
+                'extra_content': None,
+                'button_text': 'View Grade',
+            },
+            'plural': 'You received {} new grades.',
+            'singular': 'You received a new grade.',
+        },
+        NEW_COMMENT: {
+            'name': 'new_comment_notifications',
+            'content': {
+                'heading': 'New comment',
+                'main_content': 'You have received a new comment on a journal.',
+                'extra_content': None,
+                'button_text': 'View Comment',
+            },
+            'plural': '{} new comments were posted.',
+            'singular': 'A new comment was posted.',
+        },
+        # UPCOMING_DEADLINE: {
+        #     'name': 'upcoming_deadline_notifications',
+        # },
     }
 
     type = models.TextField(
         max_length=4,
-        choices=TYPES.items(),
+        choices=((type, dic['name']) for type, dic in TYPES.items()),
     )
     user = models.ForeignKey(
         User,
@@ -535,7 +571,7 @@ class Notification(models.Model):
 
         if is_new:
             # Send notification on creation if user preference is set to push
-            if getattr(self.user.preferences, Notification.TYPES[self.type]) == Preferences.PUSH:
+            if getattr(self.user.preferences, Notification.TYPES[self.type]['name']) == Preferences.PUSH:
                 send_push_notification.delay(self.pk)
 
 
