@@ -22,9 +22,10 @@
                     Do you already have an existing eJournal account?
                     <a
                         href=""
+                        class="text-blue"
                         @click.prevent.stop="showModal('linkUserModal')"
                     >
-                        Click here
+                        <u>Click here</u>
                     </a> to link it instead.
                 </p>
                 <register-user

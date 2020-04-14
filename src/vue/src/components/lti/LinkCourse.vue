@@ -1,47 +1,64 @@
 <template>
     <b-card class="no-hover">
-        <div
-            v-for="c in courses"
-            :key="c.id"
-        >
-            <div v-if="c.lti_couples">
-                <main-card
-                    :line1="c.name"
-                    :line2="`${c.startdate.substring(0, 4)}-${c.enddate.substring(0, 4)}`"
-                    class="orange-border"
-                    @click.native="linkCourse(c)"
-                />
-            </div>
-            <div v-else>
-                <main-card
-                    :line1="c.name"
-                    :line2="`${c.startdate.substring(0, 4)}-${c.enddate.substring(0, 4)}`"
-                    class="green-border"
-                    @click.native="linkCourse(c)"
-                />
-            </div>
+        <h2 class="theme-h2 field-heading">
+            Select a course to link
+        </h2>
+        <p>
+            Select the eJournal course that you want to link to the current LMS (Canvas) course below. This action will
+            overwrite an existing link between Canvas and this eJournal course, so proceed with caution.
+        </p>
+        <theme-select
+            v-model="selectedCourse"
+            label="name"
+            trackBy="id"
+            :options="coursesWithDates"
+            :multiple="false"
+            :searchable="true"
+            placeholder="Select A Course"
+            class="multi-form"
+        />
+        <div v-if="selectedCourse !== null">
+            <hr/>
+
+            <b-button
+                class="change-button float-right"
+                @click="linkCourse"
+            >
+                <icon name="link"/>
+                Link
+            </b-button>
         </div>
     </b-card>
 </template>
 
 <script>
-import mainCard from '@/components/assets/MainCard.vue'
 import courseAPI from '@/api/course.js'
 
 export default {
     name: 'LinkCourse',
-    components: {
-        mainCard,
-    },
     props: ['lti', 'courses'],
+    data () {
+        return {
+            selectedCourse: null,
+        }
+    },
+    computed: {
+        coursesWithDates () {
+            return this.courses.map((course) => {
+                const courseCopy = { ...course }
+                if (course.startdate || course.enddate) {
+                    courseCopy.name += ` (${course.startdate ? course.startdate.substring(0, 4) : ''} - ${
+                        course.enddate ? course.enddate.substring(0, 4) : ''})`
+                }
+
+                return courseCopy
+            })
+        },
+    },
     methods: {
-        linkCourse (c) {
-            if (!c.lti_couples || window.confirm(
-                `This course is already linked to ${c.lti_couples} other course(s) from the learning-environment,
-                are you sure you also want to link it?`)) {
-                courseAPI.update(c.id, { lti_id: this.lti.ltiCourseID })
-                    .then((course) => { this.$emit('handleAction', course.id) })
-            }
+        linkCourse () {
+            courseAPI.update(this.selectedCourse.id, { lti_id: this.lti.ltiCourseID })
+                .then((course) => { this.$emit('handleAction', course.id) })
         },
     },
 }

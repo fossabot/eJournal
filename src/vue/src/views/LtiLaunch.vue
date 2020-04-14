@@ -20,7 +20,7 @@
                 v-else-if="handleAssignmentChoice"
                 :lti="lti"
                 :page="page"
-                :linkableAssignments="linkableAssignments"
+                :linkableAssignments="linkableAssignments ? linkableAssignments : []"
                 @handleAction="handleActions"
             />
         </b-card>

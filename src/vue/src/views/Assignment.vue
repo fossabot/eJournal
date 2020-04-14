@@ -33,7 +33,7 @@
                     :searchable="true"
                     :multiSelectText="`active group filter${journalGroupFilter &&
                         journalGroupFilter.length === 1 ? '' : 's'}`"
-                    placeholder="Filter by group"
+                    placeholder="Filter By Group"
                     class="multi-form mr-2"
                 />
                 <b-form-select
@@ -205,7 +205,7 @@
                     <b class="text-red">Warning:</b> After changing this option, students will not be
                     able to update their journals for this assignment until they visit the assignment
                     on your LMS at least once.<br/>
-
+                    <hr/>
                     <b-button
                         class="add-button d-block float-right"
                         :class="{'input-disabled': assignment.active_lti_course.cID === newActiveLTICourse}"

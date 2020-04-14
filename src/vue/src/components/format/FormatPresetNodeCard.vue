@@ -123,7 +123,7 @@
                     @click="showTemplatePreview = false"
                 >
                     <icon name="eye-slash"/>
-                    Hide template
+                    Hide Preview
                 </b-button>
                 <b-button
                     v-if="!showTemplatePreview"
@@ -131,7 +131,7 @@
                     @click="showTemplatePreview = true"
                 >
                     <icon name="eye"/>
-                    Preview template
+                    Show Preview
                 </b-button>
             </div>
             <div v-if="showTemplatePreview">

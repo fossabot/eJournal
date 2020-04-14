@@ -7,25 +7,26 @@
         :trackBy="trackBy ? trackBy : label"
         :maxHeight="500"
         :class="{
-            'hide-single': multiple,
-            'force-show-placeholder': multiple && !isOpen && (!value || !value.length),
+            'multiple': multiple,
+            'force-show-placeholder': !isOpen && (!value || !value.length),
             'show-search': isOpen && searchable,
             'show-limit': value && value.length,
         }"
         :options="sortedOptions"
         :multiple="multiple"
-        :limit="multiple ? -1 : 100"
-        :closeOnSelect="false"
+        :limit="multiple ? -1 : 1"
+        :closeOnSelect="!multiple"
         :clearOnSelect="false"
         :preselectFirst="false"
         :searchable="searchable"
         :preserveSearch="false"
         :showLabels="false"
-        :placeholder="placeholder"
+        :placeholder="(!multiple && value) ? value[label] : placeholder"
         open-direction="bottom"
         @input="newValue => $emit('input', newValue)"
         @open="() => { isOpen = true }"
         @close="() => { isOpen = false }"
+        @select="(selectedOption, id) => $emit('select', (selectedOption, id))"
     >
         <span slot="limit">
             {{ (value && value.length) ? value.length : 'No' }} {{ multiSelectText }}
@@ -90,8 +91,8 @@ export default {
 
             const optionsCopy = this.options.slice()
             return optionsCopy.sort((option1, option2) => {
-                const selected1 = this.value && this.value.includes(option1)
-                const selected2 = this.value && this.value.includes(option2)
+                const selected1 = Array.isArray(this.value) && this.value.includes(option1)
+                const selected2 = Array.isArray(this.value) && this.value.includes(option2)
                 if (selected1 && !selected2) return -1
                 if (!selected1 && selected2) return 1
                 if (option1.name < option2.name) return -1
@@ -126,37 +127,47 @@ export default {
         z-index: 20
         white-space: nowrap
         overflow: hidden
+        span
+            display: none
         .multiselect__placeholder, .multiselect__single
+            display: block
             color: inherit
-            text-transform: capitalize
             font-size: inherit
+            line-height: inherit
             margin: 0px
             padding: 0px
         .multiselect__tags-wrap
             display: none
-        span
-            display: none
+        .multiselect__placeholder
+            text-transform: capitalize
+    &:not(.multiple) .multiselect__tags .multiselect__input
+        font-size: inherit
+        line-height: inherit
+        margin: 0px
+        padding: 0px
     &.no-right-radius
         .multiselect__tags
             border-top-right-radius: 0 !important
             border-bottom-right-radius: 0 !important
     &.show-limit .multiselect__tags span
         display: inline-block
-    &.show-search .multiselect__tags
+    &.show-search.multiple .multiselect__tags
         font-size: 1em
         span
             display: inline-block
             position: relative
-            top: 0px
+            top: 4px
             font-size: 0.8em
         input
+            background: rgba(0, 0, 0, 0)
             position: relative
             display: block
             top: -2px
             left: -4px
             font-family: 'Roboto Condensed', sans-serif
-    &.hide-single .multiselect__single
-        display: none
+    &.multiple
+        .multiselect__single
+            display: none
     .multiselect__select::before
         border-color: $theme-dark-blue transparent transparent
     .multiselect__content-wrapper

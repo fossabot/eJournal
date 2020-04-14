@@ -3,44 +3,40 @@
         <h2 class="theme-h2 multi-form">
             Configuring a Course
         </h2>
-        <span class="d-block mb-2">
+        <p>
             You came here from a learning environment through an unconfigured
             course. Do you want to create a new course on eJournal,
             or link it to an existing one?
-        </span>
-        <b-card class="no-hover">
+        </p>
+        <hr/>
+        <div class="clearfix">
+            <p class="mb-1">
+                If you have not yet preconfigured this course on eJournal, click the button below
+                to create a new course. This will be linked to your learning environment, allowing for automatic
+                grade passback.
+            </p>
             <b-button
-                class="add-button big-button-text full-width"
+                class="add-button float-right"
                 @click="showModal('createCourseRef')"
             >
-                <icon
-                    name="plus-square"
-                    class="mr-3"
-                    scale="1.8"
-                />
+                <icon name="plus-square"/>
                 Create new course
             </b-button>
-            <hr/>
-            If you have not yet preconfigured this course on eJournal, click the button above
-            to create a new course. This will be linked to your learning environment, allowing for automatic
-            grade passback.
-        </b-card>
-        <b-card class="no-hover">
+        </div>
+        <hr/>
+        <div class="clearfix">
+            <p class="mb-1">
+                If you have already set up a course on eJournal, you can link it to the course in
+                your learning environment by clicking the button below.
+            </p>
             <b-button
-                class="change-button big-button-text full-width"
+                class="change-button float-right"
                 @click="showModal('linkCourseRef')"
             >
-                <icon
-                    name="link"
-                    class="mr-3"
-                    scale="1.8"
-                />
+                <icon name="link"/>
                 Link to existing course
             </b-button>
-            <hr/>
-            If you have already set up a course on eJournal, you can link it to the course in
-            your learning environment by clicking the button above.
-        </b-card>
+        </div>
 
         <b-modal
             ref="createCourseRef"

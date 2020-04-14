@@ -156,6 +156,12 @@
                         :template="templates[currentTemplate]"
                     />
                 </b-modal>
+
+                <template-import-modal
+                    modalID="import-template-modal"
+                    :aID="aID"
+                    @imported-template="importTemplate"
+                />
             </b-col>
         </b-col>
 
@@ -205,6 +211,13 @@
                         <icon name="plus"/>
                         Create New Template
                     </b-button>
+                    <b-button
+                        v-b-modal="'import-template-modal'"
+                        class="change-button mt-2 full-width"
+                    >
+                        <icon name="file-import"/>
+                        Import Template
+                    </b-button>
                 </b-card>
             </div>
         </b-col>
@@ -230,6 +243,7 @@ import assignmentDetails from '@/components/assignment/AssignmentDetails.vue'
 import formatTemplateLink from '@/components/format/FormatTemplateLink.vue'
 import formatPresetNodeCard from '@/components/format/FormatPresetNodeCard.vue'
 import formatAddPresetNode from '@/components/format/FormatAddPresetNode.vue'
+import templateImportModal from '@/components/template/TemplateImportModal.vue'
 import templateEdit from '@/components/template/TemplateEdit.vue'
 
 import formatAPI from '@/api/format.js'
@@ -245,6 +259,7 @@ export default {
         'preset-node-card': formatPresetNodeCard,
         'add-preset-node': formatAddPresetNode,
         'template-editor': templateEdit,
+        templateImportModal,
         timeline,
     },
     props: ['cID', 'aID'],
@@ -533,6 +548,10 @@ export default {
                 preset_only: false,
             })
             this.showTemplateModal(this.templates.length - 1)
+        },
+        importTemplate (template) {
+            template.id = this.newTemplateId--
+            this.templates.push(template)
         },
         deleteTemplate (index) {
             if (this.templates[index].id > 0) {

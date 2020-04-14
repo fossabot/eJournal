@@ -2,7 +2,7 @@
     <b-modal
         :id="modalID"
         size="lg"
-        title="Import assignment"
+        title="Import existing assignment"
         hideFooter
         noEnforceFocus
     >
@@ -15,40 +15,37 @@
                 Existing journals are not imported and will remain accessible only from the original assignment.
             </p>
 
-            <div
-                v-for="importable in importableFormats"
-                :key="`importable-${importable.course.id}`"
-            >
-                <main-card
-                    :key="`course-${importable.course.id}-import`"
-                    :line1="importable.course.name"
-                    :line2="importable.course.startdate ? (importable.course.startdate.substring(0, 4) +
-                        (importable.course.enddate ? ` - ${importable.course.enddate.substring(0, 4)}` : '')) : ''"
-                    @click.native="selectedCourse = importable.course.id"
-                />
-                <div
-                    v-if="selectedCourse === importable.course.id"
-                    class="pl-5"
-                >
-                    <assignment-card
-                        v-for="assignment in importable.assignments"
-                        :key="`course-${importable.course.id}-assignment-${assignment.id}-import`"
-                        :assignment="assignment"
-                        :class="{
-                            active: selectedAssignment === assignment.id,
-                            'no-hover': selectedAssignment === assignment.id,
-                        }"
-                        @click.native="
-                            selectedAssignment = (selectedAssignment !== assignment.id) ? assignment.id : null"
-                    />
-                </div>
-            </div>
+            <theme-select
+                v-model="selectedCourse"
+                label="name"
+                trackBy="id"
+                :options="courses"
+                :multiple="false"
+                :searchable="true"
+                placeholder="Select A Course"
+                class="multi-form"
+                @select="() => {
+                    selectedAssignment = null
+                }"
+            />
+            <theme-select
+                v-if="selectedCourse"
+                v-model="selectedAssignment"
+                label="name"
+                trackBy="id"
+                :options="assignments"
+                :multiple="false"
+                :searchable="true"
+                placeholder="Select An Assignment"
+                class="multi-form"
+            />
+
             <div v-if="!importableFormats">
                 <h4 class="theme-h4">
                     No existing assignments available
                 </h4>
                 <hr class="m-0 mb-1"/>
-                Only assignments where you have permission to edit are available for import.
+                Only assignments where you have permission to edit are available to import.
             </div>
 
             <div v-if="selectedAssignment !== null">
@@ -93,10 +90,10 @@
                     </div>
 
                     <b-button
-                        class="add-button float-right"
+                        class="change-button float-right"
                         type="submit"
                     >
-                        <icon name="file"/>
+                        <icon name="file-import"/>
                         Import
                     </b-button>
                 </b-form>
@@ -106,16 +103,9 @@
 </template>
 
 <script>
-import assignmentCard from '@/components/assignment/AssignmentCard.vue'
-import mainCard from '@/components/assets/MainCard.vue'
-
 import assignmentAPI from '@/api/assignment.js'
 
 export default {
-    components: {
-        assignmentCard,
-        mainCard,
-    },
     props: {
         modalID: {
             required: true,
@@ -135,8 +125,25 @@ export default {
             importableFormats: [],
             assignmentImportInFlight: false,
             shiftImportDates: true,
-            months: 0,
+            months: 12,
         }
+    },
+    computed: {
+        courses () {
+            return this.importableFormats.map((importable) => {
+                const course = { ...importable.course }
+                if (course.startdate || course.enddate) {
+                    course.name += ` (${course.startdate ? course.startdate.substring(0, 4) : ''} - ${
+                        course.enddate ? course.enddate.substring(0, 4) : ''})`
+                }
+
+                return course
+            })
+        },
+        assignments () {
+            return this.importableFormats.find(importable => importable.course.id === this.selectedCourse.id)
+                .assignments
+        },
     },
     created () {
         assignmentAPI.getImportable()
@@ -150,7 +157,7 @@ export default {
 
             if (!this.assignmentImportInFlight && this.selectedAssignment) {
                 this.assignmentImportInFlight = true
-                assignmentAPI.import(this.selectedAssignment, {
+                assignmentAPI.import(this.selectedAssignment.id, {
                     course_id: this.cID,
                     months_offset: (!this.shiftImportDates || this.months === '') ? 0 : this.months,
                     lti_id: this.lti.ltiAssignID,
@@ -158,7 +165,7 @@ export default {
                     this.assignmentImportInFlight = false
 
                     this.$store.commit('user/IMPORT_ASSIGNMENT_PERMISSIONS', {
-                        sourceAssignmentID: this.selectedAssignment,
+                        sourceAssignmentID: this.selectedAssignment.id,
                         importAssignmentID: response.assignment_id,
                     })
 
