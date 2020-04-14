@@ -95,8 +95,6 @@ def is_user_supervisor_of(supervisor, user):
 def get_supervisors_of(journal):
     return VLE.models.User.objects.filter(pk__in=VLE.models.Participation.objects.filter(
         role__can_view_all_journals=True,
-        # TODO notification: test if when two users from two different courses work together on 1 journal,
-        # supervisors of both journals get notified on new comments / entries
         role__course__in=journal.assignment.courses.all()
     ).values('user')).distinct()
 
