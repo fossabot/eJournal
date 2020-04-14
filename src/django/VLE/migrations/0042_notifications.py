@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('VLE', '0040_group_assignments'),
+        ('VLE', '0041_increase_filename_length'),
     ]
 
     operations = [
