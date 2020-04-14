@@ -3,8 +3,7 @@ import * as preferenceOptions from '../constants/preference-types.js'
 
 const getters = {
     // Stored user preferences.
-    gradeNotifications: state => state.gradeNotifications,
-    commentNotifications: state => state.commentNotifications,
+    databasePreferences: state => state.databasePreferences,
     upcomingDeadlineNotifications: state => state.upcomingDeadlineNotifications,
     showFormatTutorial: state => state.showFormatTutorial,
     hideVersionAlert: state => state.hideVersionAlert,
@@ -33,10 +32,9 @@ const getters = {
 
 const mutations = {
     [types.HYDRATE_PREFERENCES] (state, data) {
-        const preferences = data.preferences
+        const preferences = data
+        state.databasePreferences = preferences
 
-        state.gradeNotifications = preferences.new_grade_notifications
-        state.commentNotifications = preferences.new_comment_notifications
         state.upcomingDeadlineNotifications = preferences.upcoming_deadline_notifications
         state.showFormatTutorial = preferences.show_format_tutorial
         state.hideVersionAlert = preferences.hide_version_alert
@@ -45,11 +43,8 @@ const mutations = {
         state.autoSelectUngradedEntry = preferences.auto_select_ungraded_entry
         state.autoProceedNextJournal = preferences.auto_proceed_next_journal
     },
-    [types.SET_GRADE_NOTIFICATION] (state, val) {
-        state.gradeNotifications = val
-    },
-    [types.SET_COMMENT_NOTIFICATION] (state, val) {
-        state.commentNotifications = val
+    [types.CHANGE_PREFERENCE] (state, name, val) {
+        state.databasePreferences[name] = val
     },
     [types.SET_UPCOMING_DEADLINE_NOTIFICATION] (state, val) {
         state.upcomingDeadlineNotifications = val
@@ -135,8 +130,7 @@ const mutations = {
         state.assignmentOverview.sortBy = sortByOption
     },
     [types.RESET_PREFERENCES] (state) {
-        state.gradeNotifications = null
-        state.commentNotifications = null
+        state.databasePreferences = {}
         state.upcomingDeadlineNotifications = null
         state.showFormatTutorial = null
         state.hideVersionAlert = null
@@ -165,8 +159,7 @@ const mutations = {
 export default {
     namespaced: true,
     state: {
-        gradeNotifications: null,
-        commentNotifications: null,
+        databasePreferences: {},
         upcomingDeadlineNotifications: null,
         showFormatTutorial: null,
         hideVersionAlert: null,
