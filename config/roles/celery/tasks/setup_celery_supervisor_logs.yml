@@ -30,7 +30,6 @@
     group: "{{ celery_group }}"
     state: '{{ "file" if  p.stat.exists else "touch" }}'
 
-
 - name: Check for an existing celery beat stdout logfile
   stat:
     path: "{{ celery_beat_stdout_log_file }}"

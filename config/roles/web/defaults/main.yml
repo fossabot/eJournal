@@ -16,7 +16,7 @@ requirements_file: "{{ project_path }}/requirements/{{ env }}.txt"
 
 
 # Vuejs static settings.
-frontend_web_dir: /var/www/{{ inventory_hostname }}
+frontend_web_dir: /var/www/{{ ejournal_frontend_domain }}
 
 
 # Gunicorn settings.
@@ -25,6 +25,10 @@ gunicorn_group: webapps
 
 
 # Nginx settings.
+nginx_frontend_log_dir: "{{ application_log_dir }}/frontend"
+nginx_frontend_access_log_file: "{{ nginx_frontend_log_dir }}/nginx_access.log"
+nginx_frontend_error_log_file: "{{ nginx_frontend_log_dir }}/nginx_error.log"
+
 nginx_application_access_log_file: "{{ application_log_dir }}/nginx_access.log"
 nginx_application_error_log_file: "{{ application_log_dir }}/nginx_error.log"
 nginx_static_dir: "{{ virtualenv_path }}/static"

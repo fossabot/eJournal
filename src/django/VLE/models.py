@@ -86,7 +86,8 @@ class FileContext(models.Model):
     """
     file = models.FileField(
         null=False,
-        upload_to=file_handling.get_file_path
+        upload_to=file_handling.get_file_path,
+        max_length=255,
     )
     in_rich_text = models.BooleanField(
         default=False
@@ -212,7 +213,8 @@ class User(AbstractUser):
     feedback_file = models.FileField(
         null=True,
         blank=True,
-        upload_to=file_handling.get_feedback_file_path
+        upload_to=file_handling.get_feedback_file_path,
+        max_length=255,
     )
     is_test_student = models.BooleanField(
         default=False
@@ -964,8 +966,7 @@ class Assignment(models.Model):
             other_assignments_with_lti_id_set = Assignment.objects.filter(
                 lti_id_set__contains=[self.active_lti_id]).exclude(pk=self.pk)
             if other_assignments_with_lti_id_set.exists():
-                raise ValidationError(
-                    "An lti_id should be unique, and only part of a single assignment's lti_id_set.")
+                raise ValidationError("An lti_id should be unique, and only part of a single assignment's lti_id_set.")
 
         is_new = self._state.adding
         if not self._state.adding and self.pk:

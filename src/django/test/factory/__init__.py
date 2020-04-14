@@ -1,7 +1,7 @@
 from test.factory.assignment import AssignmentFactory, GroupAssignmentFactory, LtiAssignmentFactory
 from test.factory.comment import StudentCommentFactory, TeacherCommentFactory
 from test.factory.course import CourseFactory, LtiCourseFactory
-from test.factory.entry import EntryFactory
+from test.factory.entry import EntryFactory, PresetEntryFactory
 from test.factory.format import FormatFactory
 from test.factory.grade import GradeFactory
 from test.factory.group import GroupFactory, LtiGroupFactory
@@ -47,6 +47,7 @@ ProgressNode = ProgressNodeFactory
 EntrydeadlineNode = EntrydeadlineNodeFactory
 
 Entry = EntryFactory
+PresetEntry = PresetEntryFactory
 StudentComment = StudentCommentFactory
 TeacherComment = TeacherCommentFactory
 Grade = GradeFactory

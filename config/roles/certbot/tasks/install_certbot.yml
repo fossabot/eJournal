@@ -1,0 +1,8 @@
+---
+
+- name: Install certbot
+  apt:
+    state: present
+    name:
+      - certbot
+  become: yes

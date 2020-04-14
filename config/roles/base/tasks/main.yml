@@ -1,9 +1,5 @@
 ---
 
-- include: create_swap_file.yml
-  when: create_swap_file
-  tags: swap
-
 - name: Ensure aptitude is present for upgrades
   apt:
     update_cache: "{{ update_apt_cache }}"

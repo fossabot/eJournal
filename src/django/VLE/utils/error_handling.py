@@ -71,11 +71,11 @@ class ErrorMiddleware:
         elif isinstance(exception, ObjectDoesNotExist):
             return response.not_found('{0} does not exist.'.format(str(exception).split()[0]), exception=exception)
         elif isinstance(exception, ValidationError):
-            return response.validation_error(exception, exception=exception)
+            return response.validation_error(str(exception), exception=exception)
 
         # Variable exceptions
         elif isinstance(exception, VLEMissingRequiredKey):
-            return response.key_error(*exception.keys, exception=exception)
+            return response.key_error(exception.keys, exception=exception)
         elif isinstance(exception, VLEMissingRequiredField):
             return response.bad_request(str(exception), exception=exception)
         elif isinstance(exception, VLEParamWrongType):

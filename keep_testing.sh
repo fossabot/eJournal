@@ -18,11 +18,11 @@ test () {
     isort -rc src/django/
     echo
     echo ">>> Press Enter to force update."
-    previous_sha=`ls -lR src | sha1sum`
+    previous_sha=`ls -lR src/django -I "media" | sha1sum`
 }
 
 while true; do
-    sha=`ls -lR src | sha1sum`
+    sha=`ls -lR src/django -I "media" | sha1sum`
     if [[ $sha != $previous_sha ]] ; then
         test
     fi

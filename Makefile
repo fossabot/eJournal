@@ -79,7 +79,7 @@ setup-no-input:
 	make setup-venv requirements_file=local.txt
 
 	# Reinstall nodejs dependencies.
-	npm ci --prefix ./src/vue
+	npm install --prefix ./src/vue
 
 	make preset-db-no-input
 	bash -c 'source ./venv/bin/activate && cd ./src/django && python manage.py migrate django_celery_results && deactivate'
@@ -96,7 +96,7 @@ setup-travis:
 	bash -c 'source ./venv/bin/activate && pip install -r requirements/ci.txt && deactivate'
 
 	# Reinstall nodejs dependencies.
-	npm ci --prefix ./src/vue
+	npm install --prefix ./src/vue
 
 	@echo "DONE!"
 
