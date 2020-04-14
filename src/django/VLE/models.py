@@ -1717,20 +1717,18 @@ class Comment(models.Model):
         if not self.pk:
             self.creation_date = timezone.now()
             if self.published:
-                if self.entry.node.journal.authors.filter(user=self.author).exists():  # student comment
-                    for user in permissions.get_supervisors_of(self.entry.node.journal):
-                        Notification.objects.create(
-                            type=Notification.NEW_COMMENT,
-                            user=user,
-                            url=gen_url(node=self.entry.node, user=user)
-                        )
-                else:  # supervisor comment
-                    for author in self.entry.node.journal.authors.all():
-                        Notification.objects.create(
-                            type=Notification.NEW_COMMENT,
-                            user=author.user,
-                            url=gen_url(node=self.entry.node, user=author.user)
-                        )
+                for user in permissions.get_supervisors_of(self.entry.node.journal).exclude(pk=self.author.pk):
+                    Notification.objects.create(
+                        type=Notification.NEW_COMMENT,
+                        user=user,
+                        url=gen_url(node=self.entry.node, user=user)
+                    )
+                for author in self.entry.node.journal.authors.all().exclude(user=self.author):
+                    Notification.objects.create(
+                        type=Notification.NEW_COMMENT,
+                        user=author.user,
+                        url=gen_url(node=self.entry.node, user=author.user)
+                    )
         self.last_edited = timezone.now()
         self.text = sanitization.strip_script_tags(self.text)
         return super(Comment, self).save(*args, **kwargs)

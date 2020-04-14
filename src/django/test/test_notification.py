@@ -120,8 +120,8 @@ class NotificationTest(TestCase):
             role=journal.assignment.courses.first().role_set.filter(name='TA').first())
         # factory.AssignmentParticipation(assignment=journal.assignment, user=second_teacher)
         factory.StudentComment(entry=entry)
-        assert Notification.objects.filter(type=Notification.NEW_COMMENT).count() == notifications_before + 6, \
-            '2 new notifications should be added for both teachers'
+        assert Notification.objects.filter(type=Notification.NEW_COMMENT).count() == notifications_before + 7, \
+            '3 new notifications should be added. One for each teacher, and one for the other student in the journal'
 
         # TODO: work out how to test with delay
 
@@ -220,7 +220,9 @@ class NotificationTest(TestCase):
         assignment.is_published = True
         assignment.save()
 
+        before_count = Notification.objects.count()
         send_digest_notiications()
+        assert Notification.objects.count() == before_count, 'No notifications should be deleted'
 
         assert not Notification.objects.filter(user=student, sent=False).exists()
         assert Notification.objects.filter(user=teacher, sent=False).count() == 1, \
