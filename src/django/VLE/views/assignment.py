@@ -17,7 +17,7 @@ import VLE.utils.generic_utils as utils
 import VLE.utils.responses as response
 import VLE.validators as validators
 from VLE.models import Assignment, Course, Field, Journal, PresetNode, Template, User
-from VLE.serializers import AssignmentDetailsSerializer, AssignmentSerializer, CourseSerializer
+from VLE.serializers import AssignmentDetailsSerializer, AssignmentSerializer, CourseSerializer, TemplateSerializer
 from VLE.utils import file_handling, grading
 from VLE.utils.error_handling import VLEMissingRequiredKey, VLEParamWrongType
 
@@ -433,6 +433,44 @@ class AssignmentView(viewsets.ViewSet):
         return response.success({'data': importable})
 
     @action(methods=['post'], detail=True)
+    def copytemplate(self, request, pk):
+        """Import a template.
+
+        Arguments:
+        request -- request data
+            template_id -- template to import
+        pk -- assignment to import to
+        """
+        assignment = Assignment.objects.get(pk=pk)
+        request.user.check_permission('can_edit_assignment', assignment)
+
+        template_id, = utils.required_typed_params(request.data, (int, 'template_id'))
+        template = Template.objects.get(pk=template_id)
+        request.user.check_permission('can_edit_assignment', template.format.assignment)
+
+        source_template_id = template.pk
+        template.pk = None
+        template.format = assignment.format
+        template.save()
+
+        for field in Field.objects.filter(template=source_template_id):
+            field.pk = None
+            field.template = template
+            field.save()
+
+        template_data = TemplateSerializer(template, context={'user': request.user}).data
+        template_data.pop('id')
+        template_data.pop('archived')
+        template_data.pop('format')
+        template.delete()
+
+        for field in template_data['field_set']:
+            field.pop('id')
+            field.pop('template')
+
+        return response.success({'template': template_data})
+
+    @action(methods=['post'], detail=True)
     def copy(self, request, pk):
         """Import an assignment format.
         Users should have edit rights for the assignment import source.
@@ -475,13 +513,13 @@ class AssignmentView(viewsets.ViewSet):
         template_dict = {}
 
         for template in Template.objects.filter(format=source_format_id, archived=False):
-            from_template_id = template.pk
+            source_template_id = template.pk
             template.pk = None
             template.format = format
             template.save()
-            template_dict[from_template_id] = template.pk
+            template_dict[source_template_id] = template.pk
 
-            for field in Field.objects.filter(template=from_template_id):
+            for field in Field.objects.filter(template=source_template_id):
                 field.pk = None
                 field.template = template
                 field.save()

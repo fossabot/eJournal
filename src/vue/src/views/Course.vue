@@ -51,9 +51,9 @@
             <b-button
                 v-if="$hasPermission('can_add_assignment', 'course', cID)"
                 v-b-modal="'course-assignment-import-modal'"
-                class="add-button mb-2"
+                class="change-button mb-2"
             >
-                <icon name="file"/>
+                <icon name="file-import"/>
                 Import Assignment
             </b-button>
             <assignment-import-modal

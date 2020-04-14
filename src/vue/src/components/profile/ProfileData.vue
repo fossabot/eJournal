@@ -58,16 +58,13 @@
 
             <b-button
                 v-if="!storeLtiID"
-                class="add-button multi-form float-right"
+                class="add-button float-right"
                 @click="saveUserdata"
             >
                 <icon name="save"/>
                 Save
             </b-button>
-            <b-button
-                class="multi-form"
-                @click="downloadUserData"
-            >
+            <b-button @click="downloadUserData">
                 <icon name="download"/>
                 Download Data
             </b-button>

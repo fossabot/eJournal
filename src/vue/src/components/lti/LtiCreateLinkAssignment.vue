@@ -7,64 +7,54 @@
             You came here from a learning management system through an unconfigured
             assignment. Select one of the options below to perform a one-time configuration.
         </span>
-        <b-card class="no-hover">
+        <hr/>
+        <div class="clearfix">
+            <p class="mb-1">
+                If you have not yet preconfigured this assignment on eJournal, click the button below
+                to create a new assignment.
+            </p>
+
             <b-button
-                class="add-button big-button-text full-width"
+                class="add-button float-right"
                 @click="showModal('createAssignmentRef')"
             >
-                <icon
-                    name="plus-square"
-                    class="mr-3"
-                    scale="1.8"
-                />
+                <icon name="plus-square"/>
                 Create new assignment
             </b-button>
-            <hr/>
-            If you have not yet preconfigured this assignment on eJournal, click the button above
-            to create a new assignment.
-        </b-card>
-        <b-card class="no-hover">
+        </div>
+        <hr/>
+        <div class="clearfix">
+            <p class="mb-1">
+                If you want to create a new assignment that is identical to an assignment that you have
+                already configured, click the button below to import it. Existing journals are not imported
+                and will remain accessible only from the original assignment.
+            </p>
             <b-button
                 v-b-modal="'lti-assignment-import-modal'"
-                class="add-button big-button-text full-width"
+                class="change-button float-right"
             >
-                <icon
-                    name="file"
-                    class="mr-3"
-                    scale="1.8"
-                />
-                Import assignment
+                <icon name="file-import"/>
+                Import existing assignment
             </b-button>
-            <assignment-import-modal
-                modalID="lti-assignment-import-modal"
-                :cID="page.cID"
-                :lti="lti"
-            />
-            <hr/>
-            If you want to create a new assignment that is identical to an assignment that you have
-            already configured, click the button above to import it. Existing journals are not imported
-            and will remain accessible only from the original assignment.
-        </b-card>
-        <b-card
+        </div>
+        <div
             v-if="linkableAssignments.some(linkable => linkable.assignments.length > 0)"
             class="no-hover"
         >
+            <hr/>
+            <p class="mb-1">
+                If you have already configured an assignment on eJournal, you can link it to the assignment in
+                your learning management system by clicking the button below. This allows students to continue
+                working on their existing journals related to this assignment.
+            </p>
             <b-button
-                class="change-button big-button-text full-width"
+                class="change-button float-right"
                 @click="showModal('linkAssignmentRef')"
             >
-                <icon
-                    name="link"
-                    class="mr-3"
-                    scale="1.8"
-                />
+                <icon name="link"/>
                 Link to existing assignment
             </b-button>
-            <hr/>
-            If you have already configured an assignment on eJournal, you can link it to the assignment in
-            your learning management system by clicking the button above. This allows students to continue
-            working on their existing journals related to this assignment.
-        </b-card>
+        </div>
         <b-modal
             ref="linkAssignmentRef"
             title="Link to existing assignment"
@@ -79,6 +69,11 @@
                 @handleAction="handleLinked"
             />
         </b-modal>
+        <assignment-import-modal
+            modalID="lti-assignment-import-modal"
+            :cID="page.cID"
+            :lti="lti"
+        />
         <b-modal
             ref="createAssignmentRef"
             title="Create new assignment"

@@ -199,13 +199,14 @@ class AssignmentDetailsSerializer(serializers.ModelSerializer):
     can_change_type = serializers.SerializerMethodField()
     assigned_groups = serializers.SerializerMethodField()
     all_groups = serializers.SerializerMethodField()
+    templates = serializers.SerializerMethodField()
 
     class Meta:
         model = Assignment
         fields = ('id', 'name', 'description', 'points_possible', 'unlock_date', 'due_date', 'lock_date',
                   'is_published', 'course_count', 'lti_count', 'active_lti_course', 'is_group_assignment',
                   'can_set_journal_name', 'can_set_journal_image', 'can_lock_journal', 'can_change_type',
-                  'remove_grade_upon_leaving_group', 'assigned_groups', 'all_groups', )
+                  'remove_grade_upon_leaving_group', 'assigned_groups', 'all_groups', 'templates')
         read_only_fields = ('id', )
 
     def get_course_count(self, assignment):
@@ -234,6 +235,9 @@ class AssignmentDetailsSerializer(serializers.ModelSerializer):
 
     def get_can_change_type(self, assignment):
         return not assignment.has_entries()
+
+    def get_templates(self, assignment):
+        return list(assignment.format.template_set.values('id', 'name'))
 
 
 class AssignmentSerializer(serializers.ModelSerializer):

@@ -4,8 +4,9 @@
             ref="assignmentDetails"
             :assignmentDetails="form"
         />
+        <hr/>
         <b-button
-            class="float-left change-button mt-2"
+            class="float-left change-button"
             type="reset"
             @click.prevent.stop="onReset"
         >
@@ -13,7 +14,7 @@
             Reset
         </b-button>
         <b-button
-            class="float-right add-button mt-2"
+            class="float-right add-button"
             type="submit"
             @click.prevent.stop="onSubmit"
         >

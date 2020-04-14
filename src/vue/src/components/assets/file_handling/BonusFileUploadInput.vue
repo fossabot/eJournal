@@ -8,9 +8,10 @@
             class="fileinput"
             @change="fileHandler"
         />
+        <hr class="mt-2"/>
         <b-button
             v-if="!autoUpload"
-            class="add-button multi-form float-right"
+            class="add-button float-right"
             :class="{ 'input-disabled': !file }"
             @click="uploadFile"
         >

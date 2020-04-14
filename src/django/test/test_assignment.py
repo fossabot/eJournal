@@ -14,7 +14,7 @@ from django.utils import timezone
 
 import VLE.factory
 import VLE.utils.generic_utils as utils
-from VLE.models import (Assignment, AssignmentParticipation, Course, Entry, Format, Journal, Node, Participation,
+from VLE.models import (Assignment, AssignmentParticipation, Course, Entry, Field, Format, Journal, Node, Participation,
                         PresetNode, Role, Template)
 from VLE.serializers import AssignmentSerializer
 from VLE.utils.error_handling import VLEParticipationError
@@ -255,6 +255,37 @@ class AssignmentAPITest(TestCase):
         r.save()
         data = api.get(self, 'assignments/importable', user=teacher)['data']
         assert len(data) == 0, 'A teacher requires can_edit_assignment to see importable assignments.'
+
+    def test_template_import(self):
+        a1 = factory.Assignment()
+        teacher = a1.author
+        a2 = factory.Assignment(courses=[a1.courses.first()])
+
+        api.post(
+            self, 'assignments/{}/copytemplate'.format(a1.pk),
+            params={'template_id': a2.format.template_set.first().pk},
+            user=teacher)
+        assert Assignment.objects.get(pk=a1.pk).format.template_set.count() == \
+            Assignment.objects.get(pk=a2.pk).format.template_set.count(), 'No new templates should be created'
+        assert Field.objects.count() == \
+            Field.objects.count(), 'Nor any fields should be created'
+
+        # Check teacher needs access to both assignments
+        api.post(
+            self, 'assignments/{}/copytemplate'.format(a1.pk),
+            params={'template_id': factory.Assignment().format.template_set.first().pk},
+            user=teacher, status=403)
+        api.post(
+            self, 'assignments/{}/copytemplate'.format(factory.Assignment().pk),
+            params={'template_id': a2.format.template_set.first().pk},
+            user=teacher, status=403)
+
+        # Check student cannot import
+        journal = factory.Journal(assignment=a1)
+        api.post(
+            self, 'assignments/{}/copytemplate'.format(a1.pk),
+            params={'template_id': a2.format.template_set.first().pk},
+            user=journal.authors.first().user, status=403)
 
     def test_assignment_import(self):
         start2018_2019 = datetime.datetime(year=2018, month=9, day=1)
