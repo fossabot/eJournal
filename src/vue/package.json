@@ -19,6 +19,8 @@
     "bootstrap-vue": "2.0.0-rc.19",
     "core-js": "^3.6.4",
     "detect-browser": "^4.8.0",
+    "exceljs": "^3.8.2",
+    "file-saver": "^2.0.2",
     "intro.js": "^2.9.3",
     "jquery": "^3.4.1",
     "js-yaml": "^3.13.1",
