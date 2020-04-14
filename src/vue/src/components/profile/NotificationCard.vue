@@ -92,7 +92,7 @@ export default {
             preferencesAPI.update(
                 this.$store.getters['user/uID'],
                 toUpdate,
-                { customSuccessToast: 'Grade notification setting updated successfully.' },
+                { customSuccessToast: 'Email setting updated successfully.' },
             )
                 .then((preferences) => {
                     this.$store.commit('preferences/HYDRATE_PREFERENCES', preferences, { root: true })

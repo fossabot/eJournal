@@ -44,7 +44,9 @@ const mutations = {
         state.autoProceedNextJournal = preferences.auto_proceed_next_journal
     },
     [types.CHANGE_PREFERENCE] (state, name, val) {
-        state.databasePreferences[name] = val
+        if (name in state.databasePreferences) {
+            state.databasePreferences[name] = val
+        }
     },
     [types.SET_UPCOMING_DEADLINE_NOTIFICATION] (state, val) {
         state.upcomingDeadlineNotifications = val
