@@ -254,8 +254,6 @@ export default {
             this.$set(this.editCommentStatus, index, status)
         },
         editComment (cID, index) {
-            this.$set(this.commentObject[index], 'text', this.editCommentTemp[index])
-            this.$set(this.editCommentStatus, index, false)
             this.saveRequestInFlight = true
             commentAPI.update(cID, {
                 text: this.editCommentTemp[index],
@@ -263,8 +261,11 @@ export default {
                 .then((comment) => {
                     this.saveRequestInFlight = false
                     this.$set(this.commentObject, index, comment)
+                    this.$set(this.editCommentStatus, index, false)
                 })
-                .catch(() => { this.saveRequestInFlight = false })
+                .catch(() => {
+                    this.saveRequestInFlight = false
+                })
         },
         deleteComment (cID) {
             if (window.confirm('Are you sure you want to delete this comment?')) {
