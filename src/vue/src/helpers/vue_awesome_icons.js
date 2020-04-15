@@ -82,6 +82,7 @@ import 'vue-awesome/icons/book'
 import 'vue-awesome/icons/desktop'
 import 'vue-awesome/icons/play'
 import 'vue-awesome/icons/file-export'
+import 'vue-awesome/icons/file-import'
 import 'vue-awesome/icons/filter'
 
 /* eslint-enable import/extensions */
