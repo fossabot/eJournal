@@ -38,7 +38,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='preferences',
             name='new_entry_notifications',
-            field=models.TextField(choices=[('d', 'd'), ('w', 'w'), ('p', 'p'), ('o', 'o')], default='d', max_length=1),
+            field=models.TextField(choices=[('d', 'd'), ('w', 'w'), ('p', 'p'), ('o', 'o')], default='w', max_length=1),
         ),
         migrations.AddField(
             model_name='preferences',
@@ -48,7 +48,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='preferences',
             name='new_preset_node_notifications',
-            field=models.TextField(choices=[('d', 'd'), ('w', 'w'), ('p', 'p'), ('o', 'o')], default='d', max_length=1),
+            field=models.TextField(choices=[('d', 'd'), ('w', 'w'), ('p', 'p'), ('o', 'o')], default='w', max_length=1),
         ),
         migrations.CreateModel(
             name='Notification',

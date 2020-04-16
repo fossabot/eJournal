@@ -419,12 +419,12 @@ class Preferences(models.Model):
     new_entry_notifications = models.TextField(
         max_length=1,
         choices=FREQUENCIES,
-        default=DAILY,
+        default=WEEKLY,
     )
     new_preset_node_notifications = models.TextField(
         max_length=1,
         choices=FREQUENCIES,
-        default=DAILY,
+        default=WEEKLY,
     )
     upcoming_deadline_notifications = models.BooleanField(
         default=True
