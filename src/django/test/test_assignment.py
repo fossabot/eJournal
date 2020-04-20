@@ -10,6 +10,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.utils import IntegrityError
 from django.test import TestCase
+from django.test.utils import override_settings
 from django.utils import timezone
 
 import VLE.factory
@@ -805,8 +806,15 @@ class AssignmentAPITest(TestCase):
         assert t1.user.pk not in ids, 'check if teacher is not in response'
         assert t2.pk not in ids, 'check if author of assignment is not in response'
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
     def test_bonus_helper(self):
-        def test_bonus_helper(content, status=200, user=self.teacher, delimiter=','):
+        lti_teacher = factory.LtiTeacher()
+        lti_course = factory.LtiCourse(author=lti_teacher)
+        lti_assignment = factory.LtiAssignment(courses=[lti_course])
+        lti_journal = factory.LtiJournal(assignment=lti_assignment)
+        lti_bonus_student = lti_journal.authors.first().user
+
+        def test_bonus_helper(content, status=200, user=lti_teacher, delimiter=','):
             if delimiter != ',':
                 content = content.replace(',', delimiter)
             BOUNDARY = 'BoUnDaRyStRiNg'
@@ -814,54 +822,51 @@ class AssignmentAPITest(TestCase):
             bonus_file = SimpleUploadedFile('bonus.csv', str.encode(content), content_type='text/csv')
 
             return api.post(
-                self, 'assignments/{}/add_bonus_points'.format(assignment.pk), params={'file': bonus_file},
+                self, 'assignments/{}/add_bonus_points'.format(lti_assignment.pk), params={'file': bonus_file},
                 user=user, content_type=MULTIPART_CONTENT, status=status)['description']
-
-        journal = factory.Journal(assignment__courses=[self.course])
-        assignment = journal.assignment
-        student_bonus = journal.authors.first().user
 
         for d in [',', ';']:
             resp = test_bonus_helper(
-                '{},2\n{},3'.format(student_bonus.username, assignment.author.username), status=400, delimiter=d)
+                '{},2\n{},3'.format(lti_bonus_student.username, lti_assignment.author.username), status=400, delimiter=d)
             assert 'non_participants' in resp and len(resp['non_participants']) == 1, \
                 'Teacher should not be able to get bonus points'
 
             resp = test_bonus_helper(
-                '{},2\n{},3'.format(student_bonus.username, student_bonus.username), status=400, delimiter=d)
+                '{},2\n{},3'.format(lti_bonus_student.username, lti_bonus_student.username), status=400, delimiter=d)
             assert 'duplicates' in resp and len(resp['duplicates']) == 1, \
                 'Duplicates should not be able to work, even with different numbers'
 
             resp = test_bonus_helper(
-                '{},2\n{},3'.format(student_bonus.username, factory.Student().username), status=400, delimiter=d)
+                '{},2\n{},3'.format(lti_bonus_student.username, factory.Student().username), status=400, delimiter=d)
             assert 'non_participants' in resp and len(resp['non_participants']) == 1, \
                 'Users that are not participating should not be able to get bonus points'
 
             resp = test_bonus_helper(
-                '{},2\n{},3'.format(student_bonus.username, 'non_exiting_student_hgfdswjhgq'), status=400, delimiter=d)
+                '{},2\n{},3'.format(lti_bonus_student.username, 'non_exiting_student_hgfdswjhgq'), status=400, delimiter=d)
             assert 'unknown_users' in resp and len(resp['unknown_users']) == 1, \
                 'Users that are not registerd should not be able to get bonus points'
 
             resp = test_bonus_helper(
                 '{},2\n{},3\n{},4\n{},5\n{},3\nasdf,asdf'.format(
-                    student_bonus.username, 'non_exiting_student_hgfdswjhgq', factory.Student().username,
-                    assignment.author.username, student_bonus.username), status=400, delimiter=d)
+                    lti_bonus_student.username, 'non_exiting_student_hgfdswjhgq', factory.Student().username,
+                    lti_assignment.author.username, lti_bonus_student.username), status=400, delimiter=d)
             assert 'unknown_users' in resp and 'non_participants' in resp and 'duplicates' in resp and \
                 'incorrect_format_lines' in resp, \
                 'Multiple errors should be returned at once'
 
             test_bonus_helper(
-                '{},2'.format(student_bonus.username), status=200, delimiter=d)
-            assert Journal.objects.get(pk=journal.pk).get_grade() == 2 + journal.get_grade(), \
+                '{},2'.format(lti_bonus_student.username), status=200, delimiter=d)
+            # assert False
+            assert Journal.objects.get(pk=lti_journal.pk).get_grade() == 2 + lti_journal.get_grade(), \
                 'Bonus points should be added'
 
         # With ; this would return 2 lines as it cannot find the correct delimiter, therefor this test is only once
         resp = test_bonus_helper(
-            '{},2\n{},,3'.format(student_bonus.username, assignment.author.username), status=400)
+            '{},2\n{},,3'.format(lti_bonus_student.username, lti_assignment.author.username), status=400)
         assert 'incorrect_format_lines' in resp and len(resp['incorrect_format_lines']) == 1, \
             'Incorrect formatted lines should return error'
 
         # Non related teachers should not be able to update the bonus points
-        test_bonus_helper('{},2'.format(student_bonus.username), user=factory.Teacher(), status=403)
+        test_bonus_helper('{},2'.format(lti_bonus_student.username), user=factory.Teacher(), status=403)
         # Nor should students
-        test_bonus_helper('{},2'.format(student_bonus.username), user=student_bonus, status=403)
+        test_bonus_helper('{},2'.format(lti_bonus_student.username), user=lti_bonus_student, status=403)

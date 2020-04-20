@@ -38,7 +38,7 @@ def send_journal_status_to_LMS(journal):
     if not journal.authors.exists():
         return None
 
-    Entry.objects.filter(node__in=journal.published_nodes).exclude(vle_coupling=Entry.LINK_COMPLETE)\
+    Entry.objects.filter(node__in=journal.published_nodes).exclude(vle_coupling=Entry.LINK_COMPLETE) \
         .update(vle_coupling=Entry.NEEDS_GRADE_PASSBACK)
 
     response = {}
@@ -112,6 +112,7 @@ def send_author_status_to_LMS(journal, author, left_journal=False):
             submitted_at = str(timezone.now())
         else:
             submitted_at = str(journal.published_nodes.last().entry.last_edited)
+        # TODO This is reached, now how to show this in a test
         grade_request = GradePassBackRequest(
             author, grade, result_data=result_data, send_score=True, submitted_at=submitted_at)
         response_student = grade_request.send_post_request()
