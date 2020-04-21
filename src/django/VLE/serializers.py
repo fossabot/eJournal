@@ -363,18 +363,12 @@ class AssignmentSerializer(serializers.ModelSerializer):
 
         course = self.context.get('course', None)
         if course is None:
+            # Get the stats from only the course that its linked to, when no courses are supplied.
             course = self._get_course(assignment)
-        # Get the stats from only the course that its linked to, when no courses are supplied.
+
         users = User.objects.filter(
             participation__course=course, participation__role__can_have_journal=True
         )
-
-        # Get grade compared to users in the group
-        participation = Participation.objects.filter(user=self.context['user'], course=course)
-        if participation.exists():
-            participation = participation.first()
-            if participation.groups and users.filter(participation__groups=participation.groups.first()).exists():
-                users = users.filter(participation__groups=participation.groups.first())
 
         stats = {}
         journal_set = Journal.objects.filter(assignment=assignment).filter(authors__user__in=users)
