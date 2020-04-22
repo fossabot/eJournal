@@ -31,7 +31,7 @@
                         <icon name="history"/>
                     </b-button>
                     <dropdown-button
-                        :selectedOption="this.$store.getters['preferences/gradeButtonSetting']"
+                        :selectedOption="this.$store.getters['preferences/saved'].grade_button_setting"
                         :options="{
                             s: {
                                 text: 'Save grade',
@@ -171,7 +171,6 @@ import commentCard from '@/components/entry/CommentCard.vue'
 import dropdownButton from '@/components/assets/DropdownButton.vue'
 import entryFields from '@/components/entry/EntryFields.vue'
 import gradeAPI from '@/api/grade.js'
-import preferencesAPI from '@/api/preferences.js'
 
 export default {
     components: {
@@ -257,11 +256,7 @@ export default {
             }
         },
         changeButtonOption (option) {
-            preferencesAPI.update(this.$store.getters['user/uID'], { grade_button_setting: option })
-                .then((preferences) => {
-                    this.$store.commit('preferences/SET_GRADE_BUTTON_SETTING',
-                        preferences.grade_button_setting)
-                })
+            this.$store.commit('preferences/CHANGE_PREFERENCES', { grade_button_setting: option })
         },
         commitGrade (option) {
             if (this.grade.grade !== '') {

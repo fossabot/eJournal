@@ -9,7 +9,7 @@
             <icon name="bell"/>
         </b-button>
         <b-button
-            v-b-tooltip:hover="'Receive an email in the beginning of each day'"
+            v-b-tooltip:hover="'Receive an email at the beginning of each day'"
             class="multi-form blue-button mr-2"
             :class="{'active': selected == 'd'}"
             @click="$emit('changedSelected', 'd')"
@@ -17,7 +17,7 @@
             <icon name="clock"/>
         </b-button>
         <b-button
-            v-b-tooltip:hover="'Receive an email in the beginning of each week'"
+            v-b-tooltip:hover="'Receive an email at the beginning of each week'"
             class="multi-form blue-button mr-2"
             :class="{'active': selected == 'w'}"
             @click="$emit('changedSelected', 'w')"

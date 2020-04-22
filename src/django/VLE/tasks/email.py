@@ -17,7 +17,10 @@ import VLE.models
 def send_push_notification(notification_pk):
     notification = VLE.models.Notification.objects.get(pk=notification_pk)
     if notification.sent:
-        return
+        return {
+            'description': 'Notification nr {} was already sent'.format(notification_pk),
+            'successful': False,
+        }
     email_data = {
         # Contains: heading, main_content, extra_content, button_text
         **VLE.models.Notification.TYPES[notification.type]['content'],
@@ -43,6 +46,11 @@ def send_push_notification(notification_pk):
     # QUESTION: What action should be taken if sending the email goes wrong?
     notification.sent = True
     notification.save()
+
+    return {
+        'description': 'Sent notification nr {}'.format(notification_pk),
+        'successful': True,
+    }
 
 
 @shared_task

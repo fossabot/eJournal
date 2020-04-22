@@ -1,16 +1,11 @@
+import preferencesAPI from '@/api/preferences.js'
+import store from '@/store'
 import * as types from '../constants/mutation-types.js'
 import * as preferenceOptions from '../constants/preference-types.js'
 
 const getters = {
     // Stored user preferences.
-    databasePreferences: state => state.databasePreferences,
-    upcomingDeadlineNotifications: state => state.upcomingDeadlineNotifications,
-    showFormatTutorial: state => state.showFormatTutorial,
-    hideVersionAlert: state => state.hideVersionAlert,
-    gradeButtonSetting: state => state.gradeButtonSetting,
-    commentButtonSetting: state => state.commentButtonSetting,
-    autoSelectUngradedEntry: state => state.autoSelectUngradedEntry,
-    autoProceedNextJournal: state => state.autoProceedNextJournal,
+    saved: state => state.saved,
 
     // Search filters.
     todoSortBy: state => state.todo.sortBy,
@@ -31,43 +26,26 @@ const getters = {
 }
 
 const mutations = {
-    [types.HYDRATE_PREFERENCES] (state, data) {
-        const preferences = data
-        state.databasePreferences = preferences
-
-        state.upcomingDeadlineNotifications = preferences.upcoming_deadline_notifications
-        state.showFormatTutorial = preferences.show_format_tutorial
-        state.hideVersionAlert = preferences.hide_version_alert
-        state.gradeButtonSetting = preferences.grade_button_setting
-        state.commentButtonSetting = preferences.comment_button_setting
-        state.autoSelectUngradedEntry = preferences.auto_select_ungraded_entry
-        state.autoProceedNextJournal = preferences.auto_proceed_next_journal
+    [types.HYDRATE_PREFERENCES] (state, preferences) {
+        state.saved = preferences
     },
-    [types.CHANGE_PREFERENCE] (state, name, val) {
-        if (name in state.databasePreferences) {
-            state.databasePreferences[name] = val
-        }
-    },
-    [types.SET_UPCOMING_DEADLINE_NOTIFICATION] (state, val) {
-        state.upcomingDeadlineNotifications = val
-    },
-    [types.SET_FORMAT_TUTORIAL] (state, val) {
-        state.showFormatTutorial = val
-    },
-    [types.SET_HIDE_VERSION_ALERT] (state, val) {
-        state.hideVersionAlert = val
-    },
-    [types.SET_GRADE_BUTTON_SETTING] (state, val) {
-        state.gradeButtonSetting = val
-    },
-    [types.SET_COMMENT_BUTTON_SETTING] (state, val) {
-        state.commentButtonSetting = val
-    },
-    [types.SET_AUTO_SELECT_UNGRADED_ENTRY] (state, val) {
-        state.autoSelectUngradedEntry = val
-    },
-    [types.SET_AUTO_PROCEED_NEXT_JOURNAL] (state, val) {
-        state.autoProceedNextJournal = val
+    [types.CHANGE_PREFERENCES] (state, preferences) {
+        const responseSuccessToast = !Object.keys(preferences).some(key => [
+            'hide_version_alert',
+            'grade_button_setting',
+            'comment_button_setting',
+        ].includes(key))
+        preferencesAPI.update(
+            store.getters['user/uID'],
+            preferences,
+            { responseSuccessToast },
+        ).then(
+            Object.keys(preferences).forEach((key) => {
+                if (key in state.saved) {
+                    state.saved[key] = preferences[key]
+                }
+            }),
+        )
     },
     [types.SET_TODO_SORT_BY] (state, sortByOption) {
         if (!preferenceOptions.TODO_SORT_OPTIONS.has(sortByOption)) { throw new Error('Invalid TODO sorting option.') }
@@ -132,14 +110,7 @@ const mutations = {
         state.assignmentOverview.sortBy = sortByOption
     },
     [types.RESET_PREFERENCES] (state) {
-        state.databasePreferences = {}
-        state.upcomingDeadlineNotifications = null
-        state.showFormatTutorial = null
-        state.hideVersionAlert = null
-        state.gradeButtonSetting = 'p'
-        state.commentButtonSetting = 'p'
-        state.autoSelectUngradedEntry = null
-        state.autoProceedNextJournal = null
+        state.saved = {}
         state.todo.sortBy = 'date'
         state.journal.aID = null
         state.journal.sortAscending = true
@@ -161,14 +132,7 @@ const mutations = {
 export default {
     namespaced: true,
     state: {
-        databasePreferences: {},
-        upcomingDeadlineNotifications: null,
-        showFormatTutorial: null,
-        hideVersionAlert: null,
-        autoSelectUngradedEntry: null,
-        autoProceedNextJournal: null,
-        gradeButtonSetting: 'p',
-        commentButtonSetting: 'p',
+        saved: {},
         todo: {
             sortBy: 'date',
         },

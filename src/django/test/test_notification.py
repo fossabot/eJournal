@@ -3,11 +3,12 @@ import test.factory as factory
 
 from django.core import mail
 from django.test import TestCase
+from django.test.utils import override_settings
 
 import VLE.factory
 from VLE.models import Notification, Preferences, gen_url
 from VLE.permissions import get_supervisors_of
-from VLE.tasks.beats.notifications import send_digest_notiications
+from VLE.tasks.beats.notifications import send_digest_notifications
 from VLE.tasks.email import send_push_notification
 from VLE.utils.error_handling import VLEParticipationError, VLEProgrammingError
 
@@ -16,21 +17,17 @@ class NotificationTest(TestCase):
     def check_send_push_notification(self, notification):
         outbox_len = len(mail.outbox)
 
-        if notification.sent:
+        if getattr(notification.user.preferences, Notification.TYPES[notification.type]['name']) == Preferences.PUSH:
             send_push_notification(notification.pk)
-            assert len(mail.outbox) == outbox_len, 'No actual mail should be sent'
-            return
+            assert len(mail.outbox) == outbox_len, 'No actual mail should be sent, as it is already pushed'
+        else:
+            send_push_notification(notification.pk)
+            assert len(mail.outbox) == outbox_len + 1, '1 new mail should be sent as the preference was not on push'
 
-        send_push_notification(notification.pk)
-        assert len(mail.outbox) == outbox_len + 1, 'An actual mail should be sent'
         for content in Notification.TYPES[notification.type]['content'].values():
             if content is not None:
                 assert content in mail.outbox[-1].body, 'all content should be in mail'
-        # assert notification.url in mail.outbox[-1].body, 'url should be in mail'
         assert notification.user.full_name in mail.outbox[-1].body, 'full name should be in mail'
-
-        send_push_notification(notification.pk)
-        assert len(mail.outbox) == outbox_len + 1, 'Only 1 mail should be sent'
 
     def test_gen_url(self):
         node = factory.Entry().node
@@ -82,6 +79,7 @@ class NotificationTest(TestCase):
         assert journal.authors.first().user not in supervisors
         assert other_journal.authors.first().user not in supervisors
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
     def test_comment_notification(self):
         entry = factory.Entry()
 
@@ -125,6 +123,7 @@ class NotificationTest(TestCase):
 
         # TODO: work out how to test with delay
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
     def test_grade_notification(self):
         entry = factory.Entry()
         notifications_before = Notification.objects.count()
@@ -136,6 +135,7 @@ class NotificationTest(TestCase):
 
         self.check_send_push_notification(Notification.objects.last())
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
     def test_entry_notification(self):
         journal = factory.Journal()
         notifications_before = Notification.objects.count()
@@ -145,6 +145,7 @@ class NotificationTest(TestCase):
 
         self.check_send_push_notification(Notification.objects.last())
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
     def test_assignment_notification(self):
         assignment = factory.Assignment(is_published=False)
         course = assignment.courses.first()
@@ -158,6 +159,7 @@ class NotificationTest(TestCase):
 
         self.check_send_push_notification(Notification.objects.last())
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
     def test_course_notification(self):
         course = factory.Course()
 
@@ -172,6 +174,7 @@ class NotificationTest(TestCase):
 
         self.check_send_push_notification(Notification.objects.last())
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
     def test_preset_node_notification(self):
         pass
 
@@ -184,14 +187,12 @@ class NotificationTest(TestCase):
         before_mail_count = len(mail.outbox)
         before_sent_count = Notification.objects.filter(sent=True).count()
         for type, preference in Notification.TYPES.items():
-            # if type == Notification.UPCOMING_DEADLINE:
-            #     continue
             student.preferences.__dict__[preference['name']] = Preferences.PUSH
             teacher.preferences.__dict__[preference['name']] = Preferences.OFF
         student.preferences.save()
         teacher.preferences.save()
 
-        send_digest_notiications()
+        send_digest_notifications()
 
         assert before_mail_count == len(mail.outbox)
         assert before_sent_count == Notification.objects.filter(sent=True).count()
@@ -199,8 +200,6 @@ class NotificationTest(TestCase):
         # Check if everything is asked to sent, that also stuff is sending
         pref_type = Preferences.WEEKLY if datetime.datetime.today().weekday() == 0 else Preferences.DAILY
         for type, preference in Notification.TYPES.items():
-            # if type == Notification.UPCOMING_DEADLINE:
-            #     continue
             student.preferences.__dict__[preference['name']] = pref_type
             if type != Notification.NEW_COURSE:
                 teacher.preferences.__dict__[preference['name']] = pref_type
@@ -221,7 +220,7 @@ class NotificationTest(TestCase):
         assignment.save()
 
         before_count = Notification.objects.count()
-        send_digest_notiications()
+        send_digest_notifications()
         assert Notification.objects.count() == before_count, 'No notifications should be deleted'
 
         assert not Notification.objects.filter(user=student, sent=False).exists()

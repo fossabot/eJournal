@@ -8,9 +8,9 @@
             class="no-hover multi-form"
         >
             <toggle-switch
-                :isActive="$store.getters['preferences/upcomingDeadlineNotifications']"
+                :isActive="$store.getters['preferences/saved'].upcoming_deadline_notifications"
                 class="float-right"
-                @parentActive="getUpcomingDeadlineNotification"
+                @parentActive="e => changePreference('upcoming_deadline_notifications', e)"
             />
             <h2 class="theme-h2 field-heading multi-form">
                 Upcoming deadlines
@@ -21,7 +21,7 @@
             >
                 <br/>
                 <notify-switch
-                    :selected="$store.getters['preferences/databasePreferences'][preference['key']]"
+                    :selected="$store.getters['preferences/saved'][preference['key']]"
                     class="float-right"
                     @changedSelected="e => changePreference(preference['key'], e)"
                 />
@@ -39,7 +39,6 @@
 <script>
 import toggleSwitch from '@/components/assets/ToggleSwitch.vue'
 import notifySwitch from '@/components/assets/NotifySwitch.vue'
-import preferencesAPI from '@/api/preferences.js'
 import tooltip from '@/components/assets/Tooltip.vue'
 
 export default {
@@ -86,28 +85,10 @@ export default {
         }
     },
     methods: {
-        changePreference (name, period) {
+        changePreference (key, value) {
             const toUpdate = {}
-            toUpdate[name] = period
-            preferencesAPI.update(
-                this.$store.getters['user/uID'],
-                toUpdate,
-                { customSuccessToast: 'Email setting updated successfully.' },
-            )
-                .then((preferences) => {
-                    this.$store.commit('preferences/HYDRATE_PREFERENCES', preferences, { root: true })
-                })
-        },
-        getUpcomingDeadlineNotification (isActive) {
-            preferencesAPI.update(
-                this.$store.getters['user/uID'],
-                { upcoming_deadline_notifications: isActive },
-                { customSuccessToast: 'Upcoming deadline notification setting updated successfully.' },
-            )
-                .then((preferences) => {
-                    this.$store.commit(
-                        'preferences/SET_UPCOMING_DEADLINE_NOTIFICATION', preferences.upcoming_deadline_notifications)
-                })
+            toUpdate[key] = value
+            this.$store.commit('preferences/CHANGE_PREFERENCES', toUpdate)
         },
     },
 }

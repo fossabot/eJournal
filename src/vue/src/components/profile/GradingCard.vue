@@ -8,7 +8,7 @@
             class="no-hover multi-form"
         >
             <toggle-switch
-                :isActive="$store.getters['preferences/autoSelectUngradedEntry']"
+                :isActive="$store.getters['preferences/saved'].auto_select_ungraded_entry"
                 class="float-right"
                 @parentActive="getAutoSelectUngradedEntry"
             />
@@ -18,7 +18,7 @@
             Upon viewing a journal or submitting a grade, automatically select the first ungraded entry
             <hr/>
             <toggle-switch
-                :isActive="$store.getters['preferences/autoProceedNextJournal']"
+                :isActive="$store.getters['preferences/saved'].auto_proceed_next_journal"
                 class="float-right"
                 @parentActive="getAutoProceedNextJournal"
             />
@@ -32,7 +32,6 @@
 
 <script>
 import toggleSwitch from '@/components/assets/ToggleSwitch.vue'
-import preferencesAPI from '@/api/preferences.js'
 
 export default {
     components: {
@@ -41,26 +40,10 @@ export default {
     props: ['userData'],
     methods: {
         getAutoSelectUngradedEntry (isActive) {
-            preferencesAPI.update(
-                this.$store.getters['user/uID'],
-                { auto_select_ungraded_entry: isActive },
-                { customSuccessToast: 'Entry grading setting updated successfully.' },
-            )
-                .then((preferences) => {
-                    this.$store.commit(
-                        'preferences/SET_AUTO_SELECT_UNGRADED_ENTRY', preferences.auto_select_ungraded_entry)
-                })
+            this.$store.commit('preferences/CHANGE_PREFERENCES', { auto_select_ungraded_entry: isActive })
         },
         getAutoProceedNextJournal (isActive) {
-            preferencesAPI.update(
-                this.$store.getters['user/uID'],
-                { auto_proceed_next_journal: isActive },
-                { customSuccessToast: 'Journal grading setting updated successfully.' },
-            )
-                .then((preferences) => {
-                    this.$store.commit(
-                        'preferences/SET_AUTO_PROCEED_NEXT_JOURNAL', preferences.auto_proceed_next_journal)
-                })
+            this.$store.commit('preferences/CHANGE_PREFERENCES', { auto_proceed_next_journal: isActive })
         },
     },
 }

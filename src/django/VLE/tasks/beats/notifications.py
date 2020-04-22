@@ -98,7 +98,7 @@ def send_upcoming_deadlines():
 
 
 @shared_task
-def send_digest_notiications():
+def send_digest_notifications():
     period = {
         'name': 'weekly',
         'pref': [VLE.models.Preferences.DAILY, VLE.models.Preferences.WEEKLY],
@@ -109,6 +109,7 @@ def send_digest_notiications():
         'past': 'In the past 24 hours',
     }
     types = VLE.models.Notification.TYPES
+    sending = []
 
     for user in VLE.models.Notification.objects.filter(
        sent=False).order_by('user__pk').values_list('user', flat=True).distinct():
@@ -121,6 +122,7 @@ def send_digest_notiications():
             filtered = notifications.filter(type=type)
             if getattr(user.preferences, types[type]['name']) in period['pref'] and filtered.exists():
                 filtered.update(sent=True)
+                sending += filtered.values_list('pk', flat=True)
                 if filtered.count() == 1:
                     content.append(types[type]['singular'])
                 else:
@@ -153,3 +155,8 @@ def send_digest_notiications():
         email.send()
 
     VLE.models.Notification.objects.filter(creation_date__lt=timezone.now() - datetime.timedelta(days=30)).delete()
+
+    return {
+        'description': 'Sent notification nrs {}'.format(sending),
+        'successful': True,
+    }

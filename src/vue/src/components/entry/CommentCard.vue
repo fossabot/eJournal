@@ -115,7 +115,7 @@
                 <dropdown-button
                     v-if="$hasPermission('can_grade') && !entryGradePublished"
                     :up="true"
-                    :selectedOption="$store.getters['preferences/commentButtonSetting']"
+                    :selectedOption="$store.getters['preferences/saved'].comment_button_setting"
                     :options="{
                         p: {
                             text: 'Send',
@@ -158,7 +158,6 @@ import textEditor from '@/components/assets/TextEditor.vue'
 import sandboxedIframe from '@/components/assets/SandboxedIframe.vue'
 
 import commentAPI from '@/api/comment.js'
-import preferencesAPI from '@/api/preferences.js'
 
 export default {
     components: {
@@ -215,11 +214,7 @@ export default {
                 .then((comments) => { this.commentObject = comments })
         },
         changeButtonOption (option) {
-            preferencesAPI.update(this.$store.getters['user/uID'], { comment_button_setting: option })
-                .then((preferences) => {
-                    this.$store.commit('preferences/SET_COMMENT_BUTTON_SETTING',
-                        preferences.comment_button_setting)
-                })
+            this.$store.commit('preferences/CHANGE_PREFERENCES', { comment_button_setting: option })
         },
         addComment (option) {
             if (this.tempComment !== '') {

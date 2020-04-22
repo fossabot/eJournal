@@ -476,7 +476,6 @@ class Notification(models.Model):
     NEW_GRADE = 'grad'
     NEW_ENTRY = 'entr'
     NEW_PRESET_NODE = 'prst'
-    # UPCOMING_DEADLINE = 'up_d'
     TYPES = {
         NEW_COURSE: {
             'name': 'new_course_notifications',
@@ -526,27 +525,24 @@ class Notification(models.Model):
             'name': 'new_grade_notifications',
             'content': {
                 'heading': 'New grade',
-                'main_content': 'You have received a new grade on a journal.',
+                'main_content': 'You have received a new grade.',
                 'extra_content': None,
                 'button_text': 'View Grade',
             },
-            'plural': 'You received {} new grades.',
-            'singular': 'You received a new grade.',
+            'plural': 'You have received {} new grades.',
+            'singular': 'You have received a new grade.',
         },
         NEW_COMMENT: {
             'name': 'new_comment_notifications',
             'content': {
                 'heading': 'New comment',
-                'main_content': 'You have received a new comment on a journal.',
+                'main_content': 'Someone left a new comment.',
                 'extra_content': None,
                 'button_text': 'View Comment',
             },
-            'plural': '{} new comments were posted.',
-            'singular': 'A new comment was posted.',
+            'plural': 'People left {} new comments.',
+            'singular': 'Someone left a new comment.',
         },
-        # UPCOMING_DEADLINE: {
-        #     'name': 'upcoming_deadline_notifications',
-        # },
     }
 
     type = models.TextField(
