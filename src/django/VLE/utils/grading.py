@@ -51,8 +51,6 @@ def send_journal_status_to_LMS(journal):
     if not failed:
         Entry.objects.filter(node__in=journal.published_nodes).update(vle_coupling=Entry.LINK_COMPLETE)
         Entry.objects.filter(node__in=journal.unpublished_nodes).update(vle_coupling=Entry.SENT_SUBMISSION)
-        journal.LMS_grade = journal.get_grade()
-        journal.save()
 
     return {
         'successful': not failed,
@@ -115,6 +113,11 @@ def send_author_status_to_LMS(journal, author, left_journal=False):
         grade_request = GradePassBackRequest(
             author, grade, result_data=result_data, send_score=True, submitted_at=submitted_at)
         response_student = grade_request.send_post_request()
+        response_student['old_grade'] = journal.LMS_grade
+        response_student['new_grade'] = journal.get_grade()
+        if response_student['code_mayor'] == 'success':
+            journal.LMS_grade = journal.get_grade()
+            journal.save()
 
     response_teacher = None
     if not left_journal:
