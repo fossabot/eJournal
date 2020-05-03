@@ -91,6 +91,26 @@ class AssignmentAPITest(TestCase):
         assert 'remove_grade_upon_leaving_group' in assignment and assignment['remove_grade_upon_leaving_group'], \
             'Assignment should keep settings on creation'
 
+        old_count = Journal.all_objects.count()
+        params['is_published'] = True
+        params['is_group_assignment'] = False
+        api.create(self, 'assignments', params=params, user=self.teacher)
+        assert Journal.all_objects.count() == old_count + 2, '2 new journals should be created (teacher & student)'
+
+        old_count = Journal.all_objects.count()
+        params['is_group_assignment'] = True
+        factory.Participation(course=self.course, user=factory.Student())
+        assert Journal.all_objects.count() == old_count + 1, 'After joining a course, 1 journal needs to be added'
+
+        old_count = Journal.all_objects.count()
+        api.create(self, 'assignments', params=params, user=self.teacher)
+        assert Journal.all_objects.count() == old_count, 'No journals should be created when it is a group journal'
+
+        params['lti_id'] = 'random_lti_id_salkdjfhas'
+        api.create(self, 'assignments', params=params, user=self.teacher)
+        self.course.refresh_from_db()
+        assert 'random_lti_id_salkdjfhas' in self.course.assignment_lti_id_set
+
     def test_get(self):
         student = factory.Student()
         assignment = factory.Assignment(courses=[self.course])
