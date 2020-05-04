@@ -24,6 +24,14 @@
                         />
                     </b-link>
                 </div>
+            </div>
+            <main-card
+                v-else
+                line1="No courses found"
+                line2="You currently do not participate in any courses."
+                class="no-hover border-dark-grey"
+            />
+            <div>
                 <b-button
                     v-if="$hasPermission('can_add_course')"
                     slot="main-content-column"
@@ -34,12 +42,6 @@
                     Create new course
                 </b-button>
             </div>
-            <main-card
-                v-else
-                line1="No courses found"
-                line2="You currently do not participate in any courses."
-                class="no-hover border-dark-grey"
-            />
         </load-wrapper>
 
         <deadline-deck slot="right-content-column"/>
