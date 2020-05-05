@@ -132,8 +132,6 @@ class AssignmentView(viewsets.ViewSet):
         if lti_id is not None:
             request.user.check_permission('can_add_assignment', course)
             assignment.add_lti_id(lti_id, course)
-            for user in course.users.all():
-                factory.make_journal(assignment, user)
             request.data.pop('lti_id')
 
         file_handling.establish_rich_text(request.user, assignment.description, assignment=assignment)
