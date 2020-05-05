@@ -244,7 +244,7 @@ export default {
         },
         addField () {
             const newField = {
-                type: 't',
+                type: 'rt',
                 title: '',
                 description: '',
                 options: null,
