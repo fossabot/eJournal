@@ -7,23 +7,105 @@
             :class="$root.getBorderClass($route.params.uID)"
             class="no-hover multi-form"
         >
-            <toggle-switch
-                :isActive="$store.getters['preferences/saved'].upcoming_deadline_notifications"
-                class="float-right"
-                @parentActive="e => changePreference('upcoming_deadline_notifications', e)"
-            />
-            <h2 class="theme-h2 field-heading multi-form">
-                Upcoming deadlines
-            </h2>
+            <b-row>
+                <b-col
+                    col="3"
+                    class="text-center"
+                >
+                    <icon
+                        name="bell"
+                        class="fill-grey shift-up-3 mr-1"
+                    />
+                    Immediately
+                </b-col>
+                <b-col
+                    col="3"
+                    class="text-center"
+                >
+                    <icon
+                        name="clock"
+                        class="fill-grey shift-up-3 mr-1"
+                    />
+                    Daily summarry
+                </b-col>
+                <b-col
+                    col="3"
+                    class="text-center"
+                >
+                    <icon
+                        name="calendar"
+                        class="fill-grey shift-up-3 mr-1"
+                    />
+                    Weekly summary
+                </b-col>
+                <b-col
+                    col="3"
+                    class="text-center"
+                >
+                    <icon
+                        name="times"
+                        class="fill-grey shift-up-3 mr-1"
+                    />
+                    No notifications
+                </b-col>
+            </b-row>
+            <hr/>
+            <div class="clearfix multi-form">
+                <radio-button
+                    v-model="$store.getters['preferences/saved'].upcoming_deadline_notifications"
+                    :options="[
+                        {
+                            value: true,
+                            icon: 'check',
+                            class: 'add-button',
+                        },
+                        {
+                            value: false,
+                            icon: 'times',
+                            class: 'delete-button',
+                        },
+                    ]"
+                    class="float-right"
+                    @input="e => changePreference('upcoming_deadline_notifications', e)"
+                />
+                <h2 class="theme-h2 field-heading multi-form">
+                    Upcoming deadlines
+                    <tooltip
+                        tip="Receive an email one week and one day in advance of an unfinished deadline"
+                    />
+                </h2>
+            </div>
             <div
                 v-for="preference in preferences"
                 :key="preference['key']"
+                class="clearfix mt-2"
             >
-                <br/>
-                <notify-switch
-                    :selected="$store.getters['preferences/saved'][preference['key']]"
+                <radio-button
+                    v-model="$store.getters['preferences/saved'][preference['key']]"
+                    :options="[
+                        {
+                            value: 'p',
+                            icon: 'bell',
+                            class: 'add-button',
+                        },
+                        {
+                            value: 'd',
+                            icon: 'clock',
+                            class: 'add-button',
+                        },
+                        {
+                            value: 'w',
+                            icon: 'calendar',
+                            class: 'add-button',
+                        },
+                        {
+                            value: 'o',
+                            icon: 'times',
+                            class: 'delete-button',
+                        },
+                    ]"
                     class="float-right"
-                    @changedSelected="e => changePreference(preference['key'], e)"
+                    @input="e => changePreference(preference['key'], e)"
                 />
                 <h2 class="theme-h2 field-heading multi-form">
                     {{ preference['name'] }}
@@ -37,14 +119,12 @@
 </template>
 
 <script>
-import toggleSwitch from '@/components/assets/ToggleSwitch.vue'
-import notifySwitch from '@/components/assets/NotifySwitch.vue'
+import RadioButton from '@/components/assets/RadioButton.vue'
 import tooltip from '@/components/assets/Tooltip.vue'
 
 export default {
     components: {
-        toggleSwitch,
-        notifySwitch,
+        RadioButton,
         tooltip,
     },
     props: ['userData'],
