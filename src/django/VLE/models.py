@@ -1126,10 +1126,10 @@ class AssignmentParticipation(models.Model):
                 journal.authors.add(self)
 
     def to_string(self, user=None):
-        if user is None or not user.can_view(self.assignment):
+        if user is None or not (user == self.user or user.is_supervisor_of(self.user)):
             return "Participant"
 
-        return "{0} in {1}".format(self.user.username, self.assignment.name)
+        return "{} in {}".format(self.user.username, self.assignment.name)
 
     class Meta:
         """A class for meta data.

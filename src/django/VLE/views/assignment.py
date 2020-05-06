@@ -407,7 +407,7 @@ class AssignmentView(viewsets.ViewSet):
         for j, b in bonuses.items():
             j.bonus_points = b
             j.save()
-            grading.task_journal_status_to_LMS.delay(journal.pk)
+            grading.task_journal_status_to_LMS.delay(j.pk)
 
         return response.success()
 
