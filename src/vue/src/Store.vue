@@ -16,10 +16,10 @@ export default {
         }
 
         const sortOptions = {
-            name: (a, b) => compare(a.name, b.name),
+            name: (a, b) => -compare(a.full_names, b.full_names),
             username: (a, b) => {
                 if (a.author_count > 0 && b.author_count > 0) {
-                    return compare(a.usernames, b.usernames)
+                    return -compare(a.usernames, b.usernames)
                 } else if (a.author_count > 0) {
                     return -1
                 } else if (b.author_count > 0) {
@@ -27,7 +27,13 @@ export default {
                 }
                 return 0
             },
-            markingNeeded: (a, b) => compare(a.stats.marking_needed, b.stats.marking_needed),
+            markingNeeded: (a, b) => {
+                if (a.stats.marking_needed !== b.stats.marking_needed) {
+                    return compare(a.stats.marking_needed, b.stats.marking_needed)
+                } else {
+                    return compare(a.stats.unpublished, b.stats.unpublished)
+                }
+            },
             points: (a, b) => compare(a.grade, b.grade),
         }
 
