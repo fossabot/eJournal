@@ -59,6 +59,22 @@
                 </b-link>
             </div>
         </div>
+        <b-card
+            v-else
+            class="border-dark-grey no-hover"
+        >
+            <div class="text-center multi-form">
+                <icon
+                    name="check"
+                    scale="4"
+                    class="fill-green mb-2 text-shadow"
+                /><br/>
+                <b class="field-heading">
+                    All done!
+                </b>
+            </div>
+            You do not have any {{ isTeacher ? 'entries to grade' : 'upcoming deadlines' }} at this moment.
+        </b-card>
     </div>
 </template>
 
