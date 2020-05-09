@@ -376,6 +376,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
             # Get all users that are in any of the request user's groups.
             own_participation = own_participation.first()
             own_group_users = all_users.filter(participation__groups__in=own_participation.groups.all())
+            print('\n\n\n', own_group_users.values(), own_participation.groups.all())
 
         stats = {}
         journal_set = Journal.objects.filter(assignment=assignment, authors__user__in=all_users)

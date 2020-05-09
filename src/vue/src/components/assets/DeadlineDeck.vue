@@ -1,39 +1,63 @@
 <template>
-    <div v-if="computedDeadlines.length > 0">
+    <div>
         <h3
             slot="right-content-column"
             class="theme-h3"
         >
             To Do
         </h3>
-        <!-- TODO: This seems like an inappropriate permission check. Will have to be reconsidered in the rework. -->
-        <b-form-select
-            v-if="showSortBy && computedDeadlines.length > 1"
-            v-model="selectedSortOption"
-            :selectSize="1"
-            class="theme-select multi-form"
-        >
-            <option value="date">
-                Sort by date
-            </option>
-            <option value="markingNeeded">
-                Sort by marking needed
-            </option>
-        </b-form-select>
-
         <div
-            v-for="(d, i) in computedDeadlines"
-            :key="i"
+            v-if="isTeacher"
+            class="text-grey float-right unselectable cursor-pointer"
         >
-            <b-link
-                :to="$root.assignmentRoute(d)"
-                tag="b-button"
+            <span
+                v-if="selectedFilterOwnGroups"
+                v-b-tooltip.hover
+                title="Showing to do items only for groups which you are a member of"
+                @click="selectedFilterOwnGroups = false"
             >
-                <todo-card
-                    :deadline="d"
-                    :course="d.course"
-                />
-            </b-link>
+                Showing:
+                <b>own groups</b>
+            </span>
+            <span
+                v-else
+                v-b-tooltip.hover
+                title="Showing to do items for all groups"
+                @click="selectedFilterOwnGroups = true"
+            >
+                Showing:
+                <b>all</b>
+            </span>
+        </div>
+        <div v-if="computedDeadlines.length > 0">
+            <b-form-select
+                v-if="isTeacher && computedDeadlines.length > 1"
+                v-model="selectedSortOption"
+                :selectSize="1"
+                class="theme-select multi-form"
+            >
+                <option value="date">
+                    Sort by date
+                </option>
+                <option value="markingNeeded">
+                    Sort by marking needed
+                </option>
+            </b-form-select>
+            <div
+                v-for="(d, i) in computedDeadlines"
+                :key="i"
+            >
+                <b-link
+                    :to="$root.assignmentRoute(d)"
+                    tag="b-button"
+                >
+                    <todo-card
+                        :deadline="d"
+                        :course="d.course"
+                        :filterOwnGroups="filterOwnGroups"
+                    />
+                </b-link>
+            </div>
         </div>
     </div>
 </template>
@@ -56,6 +80,7 @@ export default {
     computed: {
         ...mapGetters({
             sortBy: 'preferences/todoSortBy',
+            filterOwnGroups: 'preferences/todoFilterOwnGroups',
         }),
         selectedSortOption: {
             get () {
@@ -65,6 +90,14 @@ export default {
                 this.setSortBy(value)
             },
         },
+        selectedFilterOwnGroups: {
+            get () {
+                return this.filterOwnGroups
+            },
+            set (value) {
+                this.setFilterOwnGroups(value)
+            },
+        },
         computedDeadlines () {
             function compareDate (a, b) {
                 if (!a.deadline.date) { return 1 }
@@ -72,14 +105,28 @@ export default {
                 return new Date(a.deadline.date) - new Date(b.deadline.date)
             }
 
+            const filterOwnGroupsCopy = this.filterOwnGroups
             function compareMarkingNeeded (a, b) {
-                return (b.stats.needs_marking + b.stats.unpublished) - (a.stats.needs_marking + a.stats.unpublished)
+                if (filterOwnGroupsCopy) {
+                    return (b.stats.needs_marking_own_groups + b.stats.unpublished_own_groups)
+                    - (a.stats.needs_marking_own_groups + a.stats.unpublished_own_groups)
+                } else {
+                    return (b.stats.needs_marking + b.stats.unpublished) - (a.stats.needs_marking + a.stats.unpublished)
+                }
             }
 
             let deadlines = this.deadlines
-            if (this.$hasPermission('can_add_course')) {
-                deadlines = deadlines.filter(
-                    d => d.stats.needs_marking + d.stats.unpublished > 0 || !d.is_published)
+            if (this.$hasPermission('can_add_course') && deadlines.length > 0) {
+                if (this.filterOwnGroups) {
+                    deadlines = deadlines.filter(
+                        dd => (dd.stats.needs_marking_own_groups + dd.stats.unpublished_own_groups) > 0
+                        || !dd.is_published,
+                    )
+                } else {
+                    deadlines = deadlines.filter(
+                        d => d.stats.needs_marking + d.stats.unpublished > 0 || !d.is_published,
+                    )
+                }
             } else {
                 deadlines = deadlines.filter(
                     d => d.deadline.date !== null)
@@ -93,7 +140,7 @@ export default {
 
             return deadlines
         },
-        showSortBy () {
+        isTeacher () {
             return Object.entries(this.$store.getters['user/permissions']).some(
                 ([key, value]) => ((key.indexOf('assignment') >= 0) && value.can_grade))
         },
@@ -105,6 +152,7 @@ export default {
     methods: {
         ...mapMutations({
             setSortBy: 'preferences/SET_TODO_SORT_BY',
+            setFilterOwnGroups: 'preferences/SET_TODO_FILTER_OWN_GROUPS',
         }),
     },
 }
