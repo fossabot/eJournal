@@ -23,6 +23,24 @@ class JournalFactory(factory.django.DjangoModelFactory):
             self.authors.add(author)
 
 
+class LtiJournalFactory(JournalFactory):
+    assignment = factory.SubFactory('test.factory.assignment.LtiAssignmentFactory')
+
+    @factory.post_generation
+    def add_user_to_assignment(self, create, extracted):
+        if not create:
+            return
+
+        if not VLE.models.AssignmentParticipation.objects.filter(journal=self).exists():
+            ap = test.factory.participation.AssignmentParticipationFactory(
+                journal=self, assignment=self.assignment)
+            # TODO configure working env as test LMS
+            ap.grade_url = 'https://www.ejournal.app/'
+            ap.sourcedid = 'Not None'
+            ap.save()
+            self.authors.add(ap)
+
+
 class GroupJournalFactory(JournalFactory):
     assignment = factory.SubFactory('test.factory.assignment.GroupAssignmentFactory')
     author_limit = 3

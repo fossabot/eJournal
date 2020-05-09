@@ -72,17 +72,26 @@ class LtiAssignmentFactory(AssignmentFactory):
             return
 
         if extracted:
+            if self.author is None:
+                self.author = extracted[0].author
+                self.save()
             for course in extracted:
-                self.courses.add(course)
+                self.add_course(course)
                 p = factory.SubFactory('test.factory.participation.ParticipationFactory')
                 p.user = self.author
                 p.course = course
+                course.assignment_lti_id_set.append(self.active_lti_id)
+                course.save()
                 p.role = factory.SubFactory('test.factory.role.TeacherRoleFactory')
         else:
             course = test.factory.course.LtiCourseFactory()
             course.assignment_lti_id_set.append(self.active_lti_id)
             course.save()
             self.courses.add(course)
+
+            if self.author is None:
+                self.author = self.courses.first().author
+                self.save()
 
 
 class GroupAssignmentFactory(AssignmentFactory):

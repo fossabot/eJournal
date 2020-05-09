@@ -137,7 +137,7 @@ def establish_rich_text(author, rich_text, course=None, assignment=None, journal
 
 def remove_unused_user_files(user):
     """Deletes floating user files."""
-    # Remove temp images
+    # Remove temp files
     VLE.models.FileContext.objects.filter(author=user, is_temp=True).delete()
 
     # Remove overwritten files
