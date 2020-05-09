@@ -201,6 +201,38 @@ class LtiLaunchTest(TestCase):
             delete_field='custom_username',
         )
 
+    def test_lti_launch_account_exists(self):
+        resp = lti_launch(
+            request_body={
+                'user_id': get_new_lti_id(),
+                'custom_username': 'TestUser',
+            },
+            response_value=lti_view.LTI_STATES.NO_USER.value,
+            assert_msg='With a user_id the user should login',
+        )
+        assert 'username_already_exists=True' not in resp.url, \
+            'When user does not exists, it should not specify it in response'
+        resp = lti_launch(
+            request_body={
+                'user_id': self.student.lti_id,
+                'custom_username': self.student.username,
+            },
+            response_value=lti_view.LTI_STATES.LOGGED_IN.value,
+            assert_msg='With a user_id the user should login',
+        )
+        assert 'username_already_exists=True' not in resp.url, \
+            'When user already exists but user_id is correct, it should not specify it in response'
+        resp = lti_launch(
+            request_body={
+                'user_id': get_new_lti_id(),
+                'custom_username': self.student.username,
+            },
+            response_value=lti_view.LTI_STATES.NO_USER.value,
+            assert_msg='With a new user_id, user should not login',
+        )
+        assert 'username_already_exists=True' in resp.url, \
+            'When user already exists, but user_id is not correct, it should specify it in response'
+
     def test_lti_flow_test_user(self):
         course = factory.LtiCourse()
         assignment = factory.LtiAssignment(courses=[course])
