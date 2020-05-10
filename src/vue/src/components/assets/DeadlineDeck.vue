@@ -73,7 +73,8 @@
                     All done!
                 </b>
             </div>
-            You do not have any {{ isTeacher ? 'entries to grade' : 'upcoming deadlines' }} at this moment.
+            You do not have any {{ isTeacher ? `entries to grade${filterOwnGroups ? ' (in you own groups)' : ''}`
+                : 'upcoming deadlines' }} at this moment.
         </b-card>
     </div>
 </template>
