@@ -7,7 +7,7 @@
             To Do
         </h3>
         <div
-            v-if="isTeacher"
+            v-if="$root.canGradeForSomeCourse"
             class="text-grey float-right unselectable cursor-pointer"
         >
             <span
@@ -31,7 +31,7 @@
         </div>
         <div v-if="computedDeadlines.length > 0">
             <b-form-select
-                v-if="isTeacher && computedDeadlines.length > 1"
+                v-if="$root.canGradeForSomeCourse && computedDeadlines.length > 1"
                 v-model="sortBy"
                 :selectSize="1"
                 class="theme-select multi-form"
@@ -73,8 +73,10 @@
                     All done!
                 </b>
             </div>
-            You do not have any {{ isTeacher ? `entries to grade${filterOwnGroups ? ' (in you own groups)' : ''}`
-                : 'upcoming deadlines' }} at this moment.
+            You do not have any {{ $root.canGradeForSomeCourse
+                ? `entries to grade${filterOwnGroups ? ' (in you own groups)' : ''}`
+                : 'upcoming deadlines' }}
+            at this moment.
         </b-card>
     </div>
 </template>
@@ -133,7 +135,7 @@ export default {
             }
 
             let deadlines = this.deadlines
-            if (this.$hasPermission('can_add_course') && deadlines.length > 0) {
+            if (this.$root.canGradeForSomeCourse && deadlines.length > 0) {
                 if (this.filterOwnGroups) {
                     deadlines = deadlines.filter(
                         dd => (dd.stats.needs_marking_own_groups + dd.stats.unpublished_own_groups) > 0
@@ -156,10 +158,6 @@ export default {
             }
 
             return deadlines
-        },
-        isTeacher () {
-            return Object.entries(this.$store.getters['user/permissions']).some(
-                ([key, value]) => ((key.indexOf('assignment') >= 0) && value.can_grade))
         },
     },
     created () {

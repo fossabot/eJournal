@@ -1,7 +1,7 @@
 <template>
     <content-single-column>
         <div
-            v-if="isTeacher"
+            v-if="$root.canGradeForSomeCourse"
             class="text-grey float-right unselectable cursor-pointer"
         >
             <span
@@ -43,7 +43,7 @@
                     Sort by name
                 </option>
                 <option
-                    v-if="$hasPermission('can_add_course')"
+                    v-if="$root.canGradeForSomeCourse"
                     value="markingNeeded"
                 >
                     Sort by marking needed
@@ -195,10 +195,6 @@ export default {
             }
 
             return this.order ? deadlines.reverse() : deadlines
-        },
-        isTeacher () {
-            return Object.entries(this.$store.getters['user/permissions']).some(
-                ([key, value]) => ((key.indexOf('assignment') >= 0) && value.can_grade))
         },
     },
     created () {
