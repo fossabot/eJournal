@@ -11,10 +11,10 @@
             class="text-grey float-right unselectable cursor-pointer"
         >
             <span
-                v-if="selectedFilterOwnGroups"
+                v-if="filterOwnGroups"
                 v-b-tooltip.hover
                 title="Showing to do items only for groups which you are a member of"
-                @click="selectedFilterOwnGroups = false"
+                @click="filterOwnGroups = false"
             >
                 Showing:
                 <b>own groups</b>
@@ -23,7 +23,7 @@
                 v-else
                 v-b-tooltip.hover
                 title="Showing to do items for all groups"
-                @click="selectedFilterOwnGroups = true"
+                @click="filterOwnGroups = true"
             >
                 Showing:
                 <b>all</b>
@@ -32,7 +32,7 @@
         <div v-if="computedDeadlines.length > 0">
             <b-form-select
                 v-if="isTeacher && computedDeadlines.length > 1"
-                v-model="selectedSortOption"
+                v-model="sortBy"
                 :selectSize="1"
                 class="theme-select multi-form"
             >
@@ -95,20 +95,20 @@ export default {
     },
     computed: {
         ...mapGetters({
-            sortBy: 'preferences/todoSortBy',
-            filterOwnGroups: 'preferences/todoFilterOwnGroups',
+            getSortBy: 'preferences/todoSortBy',
+            getFilterOwnGroups: 'preferences/todoFilterOwnGroups',
         }),
-        selectedSortOption: {
+        sortBy: {
             get () {
-                return this.sortBy
+                return this.getSortBy
             },
             set (value) {
                 this.setSortBy(value)
             },
         },
-        selectedFilterOwnGroups: {
+        filterOwnGroups: {
             get () {
-                return this.filterOwnGroups
+                return this.getFilterOwnGroups
             },
             set (value) {
                 this.setFilterOwnGroups(value)
@@ -148,9 +148,9 @@ export default {
                     d => d.deadline.date !== null)
             }
 
-            if (this.selectedSortOption === 'date') {
+            if (this.sortBy === 'date') {
                 deadlines.sort(compareDate)
-            } else if (this.selectedSortOption === 'markingNeeded') {
+            } else if (this.sortBy === 'markingNeeded') {
                 deadlines.sort(compareMarkingNeeded)
             }
 
