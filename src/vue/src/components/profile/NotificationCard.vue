@@ -143,7 +143,7 @@ export default {
                 },
                 {
                     name: 'Journal updates',
-                    key: 'new_preset_node_notifications',
+                    key: 'new_node_notifications',
                     tooltip: 'Receive an email when a new deadline is added to your journal.',
                 },
                 {

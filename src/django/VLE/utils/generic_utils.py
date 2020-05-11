@@ -11,7 +11,7 @@ from django.core.files.base import ContentFile
 from django.db.models import Case, When
 
 import VLE.factory as factory
-from VLE.models import Entry, Journal, Node, Notification, PresetNode, Template, gen_url
+from VLE.models import Entry, Journal, Node, Notification, PresetNode, Template
 from VLE.utils.error_handling import VLEBadRequest, VLEMissingRequiredKey, VLEParamWrongType
 
 
@@ -190,9 +190,9 @@ def update_journals(journals, preset):
         for author in journal.authors.all():
             if author.user.can_view(journal):
                 Notification.objects.create(
-                    type=Notification.NEW_PRESET_NODE,
+                    type=Notification.NEW_NODE,
                     user=author.user,
-                    url=gen_url(node=node, user=author.user)
+                    node=node,
                 )
 
 

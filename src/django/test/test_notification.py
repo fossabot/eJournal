@@ -176,7 +176,7 @@ class NotificationTest(TestCase):
         self.check_send_push_notification(Notification.objects.last())
 
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
-    def test_preset_node_notification(self):
+    def test_node_notification(self):
         pass
 
     def test_digest(self):
@@ -230,14 +230,28 @@ class NotificationTest(TestCase):
 
         teacher_mail = mail.outbox[-2].body
         student_mail = mail.outbox[-1].body
+        for n in Notification.objects.filter(user=student, sent=True):
+            assert n.content in student_mail
+            assert n.title in student_mail
+            assert n.content not in teacher_mail
+        for n in Notification.objects.filter(user=teacher, sent=True):
+            assert n.content in teacher_mail
+            assert n.title in teacher_mail
+            assert n.content not in student_mail
+        assert 1 == 2
 
-        assert 'new course' not in teacher_mail
-        assert Notification.TYPES[Notification.NEW_COURSE]['singular'] in student_mail
-        assert 'new assignment' not in teacher_mail
-        assert Notification.TYPES[Notification.NEW_ASSIGNMENT]['singular'] in student_mail
-        assert Notification.TYPES[Notification.NEW_ENTRY]['singular'] in teacher_mail
-        assert 'new entr' not in student_mail
-        assert 'new grade' not in teacher_mail
-        assert Notification.TYPES[Notification.NEW_GRADE]['plural'].format(2) in student_mail
-        assert Notification.TYPES[Notification.NEW_COMMENT]['plural'].format(2) in teacher_mail
-        assert Notification.TYPES[Notification.NEW_COMMENT]['singular'] in student_mail
+    def test_save_notification(self):
+        entry = factory.Entry()
+        n = Notification.objects.last()
+        assert n.assignment == entry.node.journal.assignment
+        assert n.course == entry.node.journal.assignment.courses.first()
+
+        grade = factory.Grade()
+        n = Notification.objects.last()
+        assert n.assignment == grade.entry.node.journal.assignment
+        assert n.course == grade.entry.node.journal.assignment.courses.first()
+
+        course = factory.Course()
+        n = Notification.objects.last()
+        assert n.assignment is None
+        assert n.course == course

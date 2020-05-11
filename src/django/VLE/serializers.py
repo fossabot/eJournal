@@ -124,7 +124,7 @@ class PreferencesSerializer(serializers.ModelSerializer):
             'auto_select_ungraded_entry', 'auto_proceed_next_journal',
             # Push / daily / weekly / monthly notification preferences
             'new_grade_notifications', 'new_comment_notifications', 'new_entry_notifications',
-            'new_course_notifications', 'new_assignment_notifications', 'new_preset_node_notifications',
+            'new_course_notifications', 'new_assignment_notifications', 'new_node_notifications',
             # other notification preferences
             'upcoming_deadline_notifications',
             # Hidden preferences
