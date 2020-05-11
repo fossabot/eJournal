@@ -887,7 +887,7 @@ class Participation(models.Model):
             existing = AssignmentParticipation.objects.filter(user=self.user).values('assignment')
             for assignment in Assignment.objects.filter(courses__in=[self.course]).exclude(pk__in=existing):
                 AssignmentParticipation.objects.create(assignment=assignment, user=self.user)
-            if notify_user:
+            if notify_user and self.user != self.course.author:
                 Notification.objects.create(
                     type=Notification.NEW_COURSE,
                     user=self.user,
