@@ -15,6 +15,10 @@ import VLE.models
 
 @shared_task
 def send_push_notification(notification_pk):
+    """Send a notification with corresponding pk to the user.
+
+    Note: does not send the notification if it is not already sent.
+    """
     notification = VLE.models.Notification.objects.get(pk=notification_pk)
     if notification.sent:
         return {

@@ -1029,9 +1029,9 @@ class Assignment(models.Model):
 
         is_new = self._state.adding
         if not self._state.adding and self.pk:
-            old_publish = Assignment.objects.get(pk=self.pk).is_published
+            was_published = Assignment.objects.get(pk=self.pk).is_published
         else:
-            old_publish = self.is_published
+            was_published = self.is_published
 
         super(Assignment, self).save(*args, **kwargs)
 
@@ -1039,7 +1039,7 @@ class Assignment(models.Model):
             # Delete all journals if assignment type changes
             Journal.objects.filter(assignment=self).delete()
 
-        if type_changed or not old_publish and self.is_published:
+        if type_changed or not was_published and self.is_published:
             # Create journals if it is changed to (or published as) a non group assignment
             if not self.is_group_assignment:
                 users = self.courses.values('users').distinct()
@@ -1057,7 +1057,7 @@ class Assignment(models.Model):
                         journal.authors.add(ap)
 
         # Send notifications once an assignment is published
-        if (is_new or not old_publish) and self.is_published:
+        if (is_new or not was_published) and self.is_published:
             for ap in AssignmentParticipation.objects.filter(assignment=self):
                 if ap.user.has_permission('can_have_journal', self):
                     Notification.objects.create(
@@ -1066,7 +1066,7 @@ class Assignment(models.Model):
                         assignment=self,
                     )
         # Delete notifications if a teacher unpublishes an assignment after publishing
-        elif old_publish and not self.is_published:
+    elif was_published and not self.is_published:
             Notification.objects.filter(
                 type=Notification.NEW_ASSIGNMENT,
                 assignment=self,

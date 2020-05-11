@@ -99,6 +99,11 @@ def send_upcoming_deadlines():
 
 @shared_task
 def send_digest_notifications():
+    """Send a digest email to all users with notifications turned on.
+
+    For users with daily notifications, it will send all non send notifications that the user would like to receive
+    For users with weekly notifications, it will only send all notifications on mondays
+    """
     period = {
         'name': 'weekly',
         'pref': [VLE.models.Preferences.DAILY, VLE.models.Preferences.WEEKLY],
