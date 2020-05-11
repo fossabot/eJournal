@@ -115,25 +115,25 @@ def send_digest_notifications():
        sent=False).order_by('user__pk').values_list('user', flat=True).distinct():
         user = VLE.models.User.objects.get(pk=user)
         notifications = VLE.models.Notification.objects.filter(user=user)
-        content = ['{}, you received the following notifications:'.format(period['past'])]
-        # For each type, check if user has that preference as this digest type, if so, count them per type
-        # And add a proper message together with the count to the content list
-        for type in types.keys():
-            filtered = notifications.filter(type=type)
-            if getattr(user.preferences, types[type]['name']) in period['pref'] and filtered.exists():
-                filtered.update(sent=True)
-                sending += filtered.values_list('pk', flat=True)
-                if filtered.count() == 1:
-                    content.append(types[type]['singular'])
-                else:
-                    content.append(types[type]['plural'].format(filtered.count()))
+        content = []
+        for notification in notifications:
+            if getattr(user.preferences, types[notification.type]['name']) in period['pref']:
+                notification.sent = True
+                notification.save()
+                sending.append(notification.pk)
+                content.append({
+                    'title': notification.title,
+                    'content': notification.content,
+                    'url': notification.url,
+                })
 
-        if len(content) == 1:
+        if len(content) == 0:
             continue
 
         email_data = {
-            'heading': 'Your {} digest'.format(period),
-            'main_content': content,
+            'heading': 'Your {} digest'.format(period['name']),
+            'main_content': ['{}, you received the following notifications:'.format(period['past'])],
+            'notifications': content,
             'full_name': user.full_name,
             'button_url': '{}/Home/'.format(settings.BASELINK),
             'button_text': 'Go to eJournal',

@@ -229,14 +229,14 @@ class NotificationTest(TestCase):
 
         teacher_mail = mail.outbox[-2].body
         student_mail = mail.outbox[-1].body
-
-        assert 'new course' not in teacher_mail
-        assert Notification.TYPES[Notification.NEW_COURSE]['singular'] in student_mail
-        assert 'new assignment' not in teacher_mail
-        assert Notification.TYPES[Notification.NEW_ASSIGNMENT]['singular'] in student_mail
-        assert Notification.TYPES[Notification.NEW_ENTRY]['singular'] in teacher_mail
-        assert 'new entr' not in student_mail
-        assert 'new grade' not in teacher_mail
-        assert Notification.TYPES[Notification.NEW_GRADE]['plural'].format(2) in student_mail
-        assert Notification.TYPES[Notification.NEW_COMMENT]['plural'].format(2) in teacher_mail
-        assert Notification.TYPES[Notification.NEW_COMMENT]['singular'] in student_mail
+        print(student_mail)
+        print(teacher_mail)
+        for n in Notification.objects.filter(user=student, sent=True):
+            assert n.content in student_mail
+            assert n.content not in teacher_mail
+            assert n.title in student_mail
+        for n in Notification.objects.filter(user=teacher, sent=True):
+            assert n.content not in student_mail
+            assert n.content in teacher_mail
+            assert n.title in teacher_mail
+        assert 1 == 2

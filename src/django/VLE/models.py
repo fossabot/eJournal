@@ -480,68 +480,56 @@ class Notification(models.Model):
         NEW_COURSE: {
             'name': 'new_course_notifications',
             'content': {
-                'heading': 'New course',
-                'main_content': 'You were added to a course.',
+                'title': 'New course membership',
+                'content': 'You are now a member of {course}',
                 'extra_content': None,
                 'button_text': 'View Course',
             },
-            'plural': 'You were added to {} new courses.',
-            'singular': 'You were added to a new course.',
         },
         NEW_ASSIGNMENT: {
             'name': 'new_assignment_notifications',
             'content': {
-                'heading': 'New assignment',
-                'main_content': 'Your teacher published a new assignment.',
+                'title': 'New assignment',
+                'content': 'Your teacher added you to {assignment}.',
                 'extra_content': None,
                 'button_text': 'View Assignment',
             },
-            'plural': 'You were added to {} new assignments.',
-            'singular': 'You were added to a new assignment.',
         },
         NEW_PRESET_NODE: {
             'name': 'new_preset_node_notifications',
             'content': {
-                'heading': 'Your timeline is updated',
-                'main_content': 'A new node was added to your timeline.',
+                'title': 'New deadline',
+                'content': 'A new deadline has been added to your journal in {assignment}',
                 'extra_content': None,
                 'button_text': 'View Node',
             },
-            'plural': '{} new nodes were added to your timeline.',
-            'singular': 'A new node was added to your timeline.',
         },
         NEW_ENTRY: {
             'name': 'new_entry_notifications',
             'content': {
-                'heading': 'New entry',
-                'main_content': 'Someone posted a new entry in a journal.',
+                'title': 'New entry',
+                'content': '{journal} posted a new entry in {assignment}.',
                 'extra_content': None,
                 'button_text': 'View Entry',
             },
-            'plural': '{} new entries were posted.',
-            'singular': 'A new entry was posted.',
         },
         NEW_GRADE: {
             'name': 'new_grade_notifications',
             'content': {
-                'heading': 'New grade',
-                'main_content': 'You have received a new grade.',
+                'title': 'New grade',
+                'content': '{entry} in {assignment} has been graded.',
                 'extra_content': None,
                 'button_text': 'View Grade',
             },
-            'plural': 'You have received {} new grades.',
-            'singular': 'You have received a new grade.',
         },
         NEW_COMMENT: {
             'name': 'new_comment_notifications',
             'content': {
-                'heading': 'New comment',
-                'main_content': 'Someone left a new comment.',
+                'title': 'New comment',
+                'content': '{comment} commented on {entry} in {assignment}.',
                 'extra_content': None,
                 'button_text': 'View Comment',
             },
-            'plural': 'People left {} new comments.',
-            'singular': 'Someone left a new comment.',
         },
     }
 
@@ -553,7 +541,6 @@ class Notification(models.Model):
         User,
         on_delete=models.CASCADE,
     )
-    url = models.TextField()
     message = models.TextField()
     sent = models.BooleanField(
         default=False
@@ -563,8 +550,90 @@ class Notification(models.Model):
         auto_now_add=True
     )
 
+    course = models.ForeignKey(
+        'course',
+        on_delete=models.CASCADE,
+        null=True,
+    )
+    assignment = models.ForeignKey(
+        'assignment',
+        on_delete=models.CASCADE,
+        null=True,
+    )
+    preset_node = models.ForeignKey(
+        'presetnode',
+        on_delete=models.CASCADE,
+        null=True,
+    )
+    entry = models.ForeignKey(
+        'entry',
+        on_delete=models.CASCADE,
+        null=True,
+    )
+    grade = models.ForeignKey(
+        'grade',
+        on_delete=models.CASCADE,
+        null=True,
+    )
+    comment = models.ForeignKey(
+        'comment',
+        on_delete=models.CASCADE,
+        null=True,
+    )
+
+    @property
+    def node(self):
+        node = None
+        if self.comment:
+            node = self.comment.entry.node
+        elif self.grade:
+            node = self.grade.entry.node
+        elif self.entry:
+            node = self.entry.node
+        return node
+
+    @property
+    def journal(self):
+        return self.preset_node.journal if self.preset_node else None
+
+    @property
+    def title(self):
+        return self.TYPES[self.type]['content']['title'].format(
+            comment=self.comment.author.full_name if self.comment else None,
+            entry=self.entry.template.name if self.entry else None,
+            journal=self.journal,
+            assignment=self.assignment.name if self.assignment else None,
+            course=self.course.name if self.course else None)
+
+    @property
+    def content(self):
+        return self.TYPES[self.type]['content']['content'].format(
+            comment=self.comment.author.full_name if self.comment else None,
+            entry=self.entry.template.name if self.entry else None,
+            journal=self.journal,
+            assignment=self.assignment.name if self.assignment else None,
+            course=self.course.name if self.course else None)
+
+    @property
+    def url(self):
+        return gen_url(
+            node=self.node, journal=self.journal, assignment=self.assignment, course=self.course, user=self.user)
+
     def save(self, *args, **kwargs):
         is_new = self._state.adding
+        if is_new:
+            if self.comment:
+                self.entry = self.comment.entry
+            elif self.grade:
+                self.entry = self.grade.entry
+            print(self.entry)
+            if self.entry:
+                self.preset_node = self.entry.node.preset
+            if self.preset_node:
+                self.assignment = self.preset_node.journal.assignment
+            if self.assignment:
+                self.course = self.assignment.get_active_course(self.user)
+
         super(Notification, self).save(*args, **kwargs)
 
         if is_new:
@@ -828,7 +897,7 @@ class Participation(models.Model):
                 Notification.objects.create(
                     type=Notification.NEW_COURSE,
                     user=self.user,
-                    url=gen_url(course=self.course, user=self.user)
+                    course=self.course
                 )
 
     class Meta:
@@ -1000,7 +1069,7 @@ class Assignment(models.Model):
                     Notification.objects.create(
                         type=Notification.NEW_ASSIGNMENT,
                         user=ap.user,
-                        url=gen_url(assignment=self, user=ap.user)
+                        assignment=self,
                     )
         # Delete notifications if a teacher unpublishes an assignment after publishing
         elif old_publish and not self.is_published:
@@ -1474,20 +1543,21 @@ class Entry(models.Model):
         return not (self.grade is None or self.grade.grade is None)
 
     def save(self, *args, **kwargs):
-        if not self.pk:
+        is_new = not self.pk
+        if is_new:
             now = timezone.now()
             self.creation_date = now
             self.last_edited = now
 
+        super(Entry, self).save(*args, **kwargs)
+
+        if is_new:
             for user in permissions.get_supervisors_of(self.node.journal):
                 Notification.objects.create(
                     type=Notification.NEW_ENTRY,
                     user=user,
-                    url=gen_url(node=self.node, user=user)
+                    entry=self,
                 )
-
-        return super(Entry, self).save(*args, **kwargs)
-
     def to_string(self, user=None):
         return "Entry"
 
@@ -1531,7 +1601,7 @@ class Grade(models.Model):
                 Notification.objects.create(
                     type=Notification.NEW_GRADE,
                     user=author.user,
-                    url=gen_url(node=self.entry.node, user=author.user)
+                    grade=self
                 )
 
     def to_string(self, user=None):
@@ -1711,24 +1781,27 @@ class Comment(models.Model):
             not self.entry.node.journal.authors.filter(user=self.author).exists()
 
     def save(self, *args, **kwargs):
-        if not self.pk:
+        is_new = not self.pk
+        if is_new:
             self.creation_date = timezone.now()
+        self.last_edited = timezone.now()
+        self.text = sanitization.strip_script_tags(self.text)
+        super(Comment, self).save(*args, **kwargs)
+
+        if is_new:
             if self.published:
                 for user in permissions.get_supervisors_of(self.entry.node.journal).exclude(pk=self.author.pk):
                     Notification.objects.create(
                         type=Notification.NEW_COMMENT,
                         user=user,
-                        url=gen_url(node=self.entry.node, user=user)
+                        comment=self,
                     )
                 for author in self.entry.node.journal.authors.all().exclude(user=self.author):
                     Notification.objects.create(
                         type=Notification.NEW_COMMENT,
                         user=author.user,
-                        url=gen_url(node=self.entry.node, user=author.user)
+                        comment=self,
                     )
-        self.last_edited = timezone.now()
-        self.text = sanitization.strip_script_tags(self.text)
-        return super(Comment, self).save(*args, **kwargs)
 
     def to_string(self, user=None):
         return "Comment"
