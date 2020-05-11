@@ -24,9 +24,8 @@ class NotificationTest(TestCase):
             send_push_notification(notification.pk)
             assert len(mail.outbox) == outbox_len + 1, '1 new mail should be sent as the preference was not on push'
 
-        for content in Notification.TYPES[notification.type]['content'].values():
-            if content is not None:
-                assert content in mail.outbox[-1].body, 'all content should be in mail'
+        assert notification.content in mail.outbox[-1].body, 'all content should be in mail'
+        assert notification.title in mail.outbox[-1].body, 'all content should be in mail'
         assert notification.user.full_name in mail.outbox[-1].body, 'full name should be in mail'
 
     def test_gen_url(self):
@@ -226,7 +225,7 @@ class NotificationTest(TestCase):
         assert Notification.objects.count() == before_count, 'No notifications should be deleted'
 
         assert not Notification.objects.filter(user=student, sent=False).exists()
-        assert Notification.objects.filter(user=teacher, sent=False).count() == 1, \
+        assert Notification.objects.filter(user=teacher, sent=False).count() == 0, \
             'Teacher should not receive the two comment notifications as that is set on OFF'
 
         teacher_mail = mail.outbox[-2].body
@@ -251,7 +250,7 @@ class NotificationTest(TestCase):
         assert n.assignment == grade.entry.node.journal.assignment
         assert n.course == grade.entry.node.journal.assignment.courses.first()
 
-        course = factory.Course()
-        n = Notification.objects.last()
+        course = factory.Participation().course
+        n = Notification.objects.filter(type=Notification.NEW_COURSE).last()
         assert n.assignment is None
         assert n.course == course

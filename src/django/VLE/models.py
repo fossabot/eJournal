@@ -1066,7 +1066,7 @@ class Assignment(models.Model):
                         assignment=self,
                     )
         # Delete notifications if a teacher unpublishes an assignment after publishing
-    elif was_published and not self.is_published:
+        elif was_published and not self.is_published:
             Notification.objects.filter(
                 type=Notification.NEW_ASSIGNMENT,
                 assignment=self,
