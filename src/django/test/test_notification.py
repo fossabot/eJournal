@@ -164,12 +164,13 @@ class NotificationTest(TestCase):
         course = factory.Course()
 
         notifications_before = Notification.objects.count()
-        factory.Participation(course=course)
+        VLE.factory.make_participation(course=course, user=factory.Student(), role=course.role_set.get(name='Student'))
         assert Notification.objects.count() == notifications_before + 1, 'participant should get notified by default'
         assert Notification.objects.last().type == Notification.NEW_COURSE
+        notifications_before = Notification.objects.count()
         VLE.factory.make_participation(
             course=course, user=factory.Student(), role=course.role_set.get(name='Student'), notify_user=False)
-        assert Notification.objects.count() == notifications_before + 1, \
+        assert Notification.objects.count() == notifications_before, \
             'participant should not get notified if specified not to'
 
         self.check_send_push_notification(Notification.objects.last())

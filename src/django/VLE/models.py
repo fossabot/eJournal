@@ -39,6 +39,11 @@ class Instance(models.Model):
 
 
 def gen_url(node=None, journal=None, assignment=None, course=None, user=None):
+    """Generate the corresponding frontend url to the supplied object.
+
+    Works for: node, journal, assignment, and course
+    User needs to be added if no course is supplied, this is to get the correct course.
+    """
     if not (node or journal or assignment or course):
         raise VLEProgrammingError('(gen_url) no object was supplied')
 
@@ -524,7 +529,7 @@ class Notification(models.Model):
         NEW_GRADE: {
             'name': 'new_grade_notifications',
             'content': {
-                'heading': 'New grade',
+                'heading': 'Grade updated',
                 'main_content': 'You have received a new grade.',
                 'extra_content': None,
                 'button_text': 'View Grade',

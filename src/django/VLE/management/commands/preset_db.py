@@ -174,11 +174,12 @@ class Command(BaseCommand):
             role_teacher = factory.make_role_teacher('Teacher', course)
 
             for student in c["students"]:
-                factory.make_participation(student, course, role_student, [random.choice(student_groups)])
+                factory.make_participation(
+                    student, course, role_student, [random.choice(student_groups)], notify_user=False)
             for ta in c["tas"]:
-                factory.make_participation(ta, course, role_ta, [random.choice(student_groups)])
+                factory.make_participation(ta, course, role_ta, [random.choice(student_groups)], notify_user=False)
             for teacher in c["teachers"]:
-                factory.make_participation(teacher, course, role_teacher, [staff_group])
+                factory.make_participation(teacher, course, role_teacher, [staff_group], notify_user=False)
 
             self.courses[c["name"]] = course
 

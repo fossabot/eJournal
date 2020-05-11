@@ -142,9 +142,9 @@ export default {
                     tooltip: 'Receive an email when a new assignment is published.',
                 },
                 {
-                    name: 'Timeline updates',
+                    name: 'Journal updates',
                     key: 'new_preset_node_notifications',
-                    tooltip: 'Receive an email when a new node gets added to your timeline.',
+                    tooltip: 'Receive an email when a new deadline is added to your journal.',
                 },
                 {
                     name: 'New entry',
@@ -152,7 +152,7 @@ export default {
                     tooltip: 'Receive an email when a new entry is posted.',
                 },
                 {
-                    name: 'New grade',
+                    name: 'Grade updates',
                     key: 'new_grade_notifications',
                     tooltip: 'Receive an email when you receive a grade.',
                 },

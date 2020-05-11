@@ -54,7 +54,7 @@ def make_user(username, password=None, email=None, lti_id=None, profile_picture=
     return user
 
 
-def make_participation(user=None, course=None, role=None, groups=None, notify_user=False):
+def make_participation(user=None, course=None, role=None, groups=None, notify_user=True):
     """Create a participation.
 
     Arguments:
