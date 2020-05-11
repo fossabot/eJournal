@@ -1069,7 +1069,7 @@ class Assignment(models.Model):
         elif old_publish and not self.is_published:
             Notification.objects.filter(
                 type=Notification.NEW_ASSIGNMENT,
-                url__contains='Assignment/{}'.format(self.pk)
+                assignment=self,
             ).delete()
 
     def get_active_lti_course(self):

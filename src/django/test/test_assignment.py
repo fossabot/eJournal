@@ -355,7 +355,8 @@ class AssignmentAPITest(TestCase):
         source_entries = []
         number_of_source_student_journal_entries = 4
         for _ in range(number_of_source_student_journal_entries):
-            source_entries.append(factory.Entry(template=source_template, node__journal=source_student_journal))
+            source_entries.append(factory.Entry(
+                template=source_template, node__journal=source_student_journal, node__preset=None))
 
         assert Node.objects.count() == 10, \
             '2 nodes for the presets for teacher and student each, 4 for the student entries'

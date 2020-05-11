@@ -182,16 +182,19 @@ class EmailAPITest(TestCase):
 
         factory.Entry(
             node__journal=journal_filled,
+            node__preset=None,
             node=Node.objects.filter(journal=journal_filled).first(),
             author=journal_filled.authors.first().user)
         e_100 = factory.Entry(
             node__journal=journal_filled_and_graded_100,
+            node__preset=None,
             template=Template.objects.filter(format__assignment=assignment).first(),
             author=journal_filled_and_graded_100.authors.first().user)
         e_100.grade = Grade.objects.create(grade=100, published=True, entry=e_100)
         e_100.save()
         e_2 = factory.Entry(
             node__journal=journal_filled_and_graded_2,
+            node__preset=None,
             template=Template.objects.filter(format__assignment=assignment).first(),
             author=journal_filled_and_graded_2.authors.first().user)
         e_2.grade = Grade.objects.create(grade=2, published=True, entry=e_2)

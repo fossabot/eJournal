@@ -140,7 +140,8 @@ class NotificationTest(TestCase):
         journal = factory.Journal()
         notifications_before = Notification.objects.count()
         factory.Entry(node__journal=journal)
-        assert Notification.objects.count() == notifications_before + 1, '1 new notification is created'
+        assert Notification.objects.count() == notifications_before + 2, \
+            '1 new notification is created for entry, and 1 for new deadline'
         assert Notification.objects.last().type == Notification.NEW_ENTRY
 
         self.check_send_push_notification(Notification.objects.last())
@@ -238,7 +239,6 @@ class NotificationTest(TestCase):
             assert n.content in teacher_mail
             assert n.title in teacher_mail
             assert n.content not in student_mail
-        assert 1 == 2
 
     def test_save_notification(self):
         entry = factory.Entry()
