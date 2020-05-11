@@ -114,7 +114,7 @@ def send_digest_notifications():
     for user in VLE.models.Notification.objects.filter(
        sent=False).order_by('user__pk').values_list('user', flat=True).distinct():
         user = VLE.models.User.objects.get(pk=user)
-        notifications = VLE.models.Notification.objects.filter(user=user)
+        notifications = VLE.models.Notification.objects.filter(user=user, sent=False)
         content = []
         for notification in notifications:
             if getattr(user.preferences, types[notification.type]['name']) in period['pref']:

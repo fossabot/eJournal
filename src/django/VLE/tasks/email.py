@@ -22,8 +22,8 @@ def send_push_notification(notification_pk):
             'successful': False,
         }
     email_data = {
-        'heading': VLE.models.Notification.TYPES[notification.type]['content']['title'],
-        'main_content': VLE.models.Notification.TYPES[notification.type]['content']['content'],
+        'heading': notification.title,
+        'main_content': notification.content,
         'button_text': VLE.models.Notification.TYPES[notification.type]['content']['button_text'],
         'full_name': notification.user.full_name,
         'button_url': notification.url,
