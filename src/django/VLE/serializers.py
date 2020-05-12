@@ -363,7 +363,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
 
         course = self.context.get('course', None)
         if course is None:
-            # Get the stats from only the course that its linked to, when no courses are supplied.
+            # Get the stats from only the course that it's linked to, when no courses are supplied.
             course = self._get_course(assignment)
 
         all_users = User.objects.filter(

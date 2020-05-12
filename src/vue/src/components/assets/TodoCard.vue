@@ -22,9 +22,7 @@
         <br/>
         <span v-if="deadline.deadline.date">
             <!-- Teacher deadline shows last submitted entry date  -->
-            <span
-                v-if="unpublishedOrNeedsMarking"
-            >
+            <span v-if="unpublishedOrNeedsMarking">
                 <icon
                     name="eye"
                     class="fill-grey shift-up-3"

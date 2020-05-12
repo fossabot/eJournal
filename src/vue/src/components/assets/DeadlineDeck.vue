@@ -13,7 +13,7 @@
             <span
                 v-if="filterOwnGroups"
                 v-b-tooltip.hover
-                title="Showing to do items only for groups which you are a member of"
+                title="Only showing to do items for groups which you are a member of"
                 @click="filterOwnGroups = false"
             >
                 Showing:
