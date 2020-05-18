@@ -97,7 +97,7 @@ class EntryView(viewsets.ViewSet):
             if not node_id:
                 node.delete()
 
-            # If it is a file issue, raise with propper response, else respond with the exception that was raised
+            # If it is a file issue, raise with proper response, else respond with the exception that was raised
             if type(e) == FileContext.DoesNotExist:
                 return response.bad_request('One of your files was not correctly uploaded, please try again.')
             else:
