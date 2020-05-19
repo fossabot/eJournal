@@ -137,15 +137,15 @@ export default {
             basicConfig: {
                 toolbar1: 'bold italic underline alignleft aligncenter alignright alignjustify '
                     + '| forecolor backcolor | formatselect | bullist numlist | image table '
-                    + '| removeformat fullscreentoggle fullscreen',
+                    + '| link removeformat fullscreentoggle fullscreen',
                 plugins: [
-                    'placeholder autoresize paste image lists wordcount autolink',
+                    'placeholder link autoresize paste image lists wordcount autolink',
                     'table fullscreen',
                 ],
             },
             extensiveConfig: {
                 toolbar1: 'bold italic underline alignleft aligncenter alignright alignjustify | forecolor backcolor '
-                    + '| formatselect | bullist numlist | image table | removeformat fullscreentoggle fullscreen',
+                    + '| formatselect | bullist numlist | image table | link removeformat fullscreentoggle fullscreen',
                 plugins: [
                     'placeholder link preview paste print hr lists advlist wordcount autolink',
                     'autoresize code fullscreen image imagetools',
