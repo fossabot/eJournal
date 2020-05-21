@@ -1443,6 +1443,7 @@ class Content(models.Model):
         on_delete=models.SET_NULL,
         null=True
     )
+    # TODO FILE-BUGFIX: Decide to add field validator. Problem: validator is not called on model save
     data = models.TextField(
         null=True
     )

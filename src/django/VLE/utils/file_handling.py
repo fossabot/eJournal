@@ -127,6 +127,7 @@ def get_files_from_rich_text(rich_text):
     if rich_text is None or len(rich_text) < 128:
         return []
     re_access_ids = re.compile(r'\/files\/[0-9]+\?access_id=([a-zA-Z0-9]+)')
+    # TODO FILE-BUGFIX: filter should be incremental, any access ids which do not exist as file context should be raised, this silently fails
     return VLE.models.FileContext.objects.filter(access_id__in=re.findall(re_access_ids, rich_text), is_temp=True)
 
 

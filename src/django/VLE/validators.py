@@ -82,3 +82,25 @@ def validate_entry_content(data, field):
             datetime.strptime(data, '%Y-%m-%dT%H:%M:%S')
         except ValueError as e:
             raise ValidationError(str(e))
+
+    # TODO FILE-BUGFIX: Write tests for block
+    # TODO FILE-BUGFIX: Test posting from two tabs, in browser setup post for entry, second tab do some (inc new image
+    # in RT) now post first (older) tab entry. Do the same but now post a different entry in between, triggering temp
+    # file cleanup
+    if field.type == Field.RICH_TEXT:
+        re_access_ids = re.compile(r'\/files\/[0-9]+\?access_id=([a-zA-Z0-9]+)')
+        rt_access_ids = re.findall(re_access_ids, rich_text)
+        n_rt_access_ids = len(rt_access_ids)
+
+        # TODO FILE-BUGFIX: Check if unique ids are not enforced anyway at db layer
+        if n_rt_access_ids > len(set(rt_access_ids)):
+            raise ValidationError("RichText data field is holds duplicate file access ids.")
+
+        files = FileContext.objects.filter(access_id__in=rt_access_ids)
+
+        # TODO FILE-BUGFIX: evaluate if this should not be a value matching checking (all ids matching)
+        if files.count() != n_rt_access_ids:
+            raise ValidationError("RichText data field holds access ids without matching FileContext.")
+
+        if not all(os.path.exists(f.file.path) for f in files):
+            raise ValidationError("RichText data field holds files which do not exist.")
