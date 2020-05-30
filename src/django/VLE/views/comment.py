@@ -3,6 +3,7 @@ comment.py.
 
 In this file are all the comment api requests.
 """
+from django.utils import timezone
 from rest_framework import viewsets
 
 import VLE.factory as factory
@@ -148,6 +149,7 @@ class CommentView(viewsets.ViewSet):
             return response.forbidden('You are not allowed to edit this comment.')
 
         comment.last_edited_by = request.user
+        comment.last_edited = timezone.now()
 
         if not text:
             return response.bad_request('Comment cannot be empty.')

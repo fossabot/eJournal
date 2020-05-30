@@ -24,7 +24,15 @@ from VLE.utils.error_handling import (VLEBadRequest, VLEParticipationError, VLEP
                                       VLEUnverifiedEmailError)
 
 
-class Instance(models.Model):
+class CreateUpdateModel(models.Model):
+    creation_date = models.DateTimeField(auto_now_add=True, editable=False)
+    update_date = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+
+class Instance(CreateUpdateModel):
     """Global settings for the running instance."""
     allow_standalone_registration = models.BooleanField(
         default=True
@@ -42,7 +50,7 @@ def access_gen(size=128, chars=string.ascii_lowercase + string.ascii_uppercase +
     return ''.join(random.SystemRandom().choice(chars) for _ in range(size))
 
 
-class FileContext(models.Model):
+class FileContext(CreateUpdateModel):
     """FileContext.
 
     FileContext is a file uploaded by the user stored in MEDIA_ROOT/uID/<category>/?[id/]<filename>
@@ -55,7 +63,6 @@ class FileContext(models.Model):
     - content: The content that the File is linked to. Can be rich text or a dedicated file field.
     - course: The course that the File is linked to (e.g. course description).
     - journal: The journal that the File is linked to (e.g. comment).
-    - creation_date: The time and date the file was uploaded.
     """
     file = models.FileField(
         null=False,
@@ -108,9 +115,6 @@ class FileContext(models.Model):
         default=True
     )
 
-    creation_date = models.DateTimeField(editable=False)
-    last_edited = models.DateTimeField()
-
     def download_url(self, access_id=False):
         if access_id:
             return '{}/files/{}?access_id={}'.format(settings.API_URL, self.pk, self.access_id)
@@ -121,11 +125,8 @@ class FileContext(models.Model):
 
     def save(self, *args, **kwargs):
         if self._state.adding:
-            if not self.creation_date:
-                self.creation_date = timezone.now()
             if not self.author:
                 raise VLEProgrammingError('FileContext author should be set on creation')
-        self.last_edited = timezone.now()
 
         return super(FileContext, self).save(*args, **kwargs)
 
@@ -342,7 +343,7 @@ def delete_dangling_files(sender, instance, **kwargs):
             f.delete()
 
 
-class Preferences(models.Model):
+class Preferences(CreateUpdateModel):
     """Preferences.
 
     Describes the preferences of a user:
@@ -406,7 +407,7 @@ class Preferences(models.Model):
         return "Preferences"
 
 
-class Course(models.Model):
+class Course(CreateUpdateModel):
     """Course.
 
     A Course entity has the following features:
@@ -472,7 +473,7 @@ class Course(models.Model):
         return self.name + " (" + str(self.pk) + ")"
 
 
-class Group(models.Model):
+class Group(CreateUpdateModel):
     """Group.
 
     A Group entity has the following features:
@@ -502,7 +503,7 @@ class Group(models.Model):
         return "{} ({})".format(self.name, self.pk)
 
 
-class Role(models.Model):
+class Role(CreateUpdateModel):
     """Role.
 
     A complete overview of the role requirements can be found here:
@@ -627,7 +628,7 @@ class Role(models.Model):
         unique_together = ('name', 'course',)
 
 
-class Participation(models.Model):
+class Participation(CreateUpdateModel):
     """Participation.
 
     A participation defines the way a user interacts within a certain course.
@@ -672,7 +673,7 @@ class Participation(models.Model):
             self.user.to_string(user=user), self.course.to_string(user=user), self.role.to_string(user=user))
 
 
-class Assignment(models.Model):
+class Assignment(CreateUpdateModel):
     """Assignment.
 
     An Assignment entity has the following features:
@@ -894,7 +895,7 @@ class Assignment(models.Model):
         return "{} ({})".format(self.name, self.pk)
 
 
-class AssignmentParticipation(models.Model):
+class AssignmentParticipation(CreateUpdateModel):
     """AssignmentParticipation
 
     A user that is connected to an assignment
@@ -969,7 +970,7 @@ class JournalManager(models.Manager):
         ).distinct().order_by('pk')
 
 
-class Journal(models.Model):
+class Journal(CreateUpdateModel):
     """Journal.
 
     A journal is a collection of Nodes that holds the student's
@@ -1080,7 +1081,7 @@ class Journal(models.Model):
         return "the {0} journal of {1}".format(self.assignment.name, self.get_full_names())
 
 
-class Node(models.Model):
+class Node(CreateUpdateModel):
     """Node.
 
     The Node is an Timeline component.
@@ -1149,7 +1150,7 @@ class Node(models.Model):
         return "Node"
 
 
-class Format(models.Model):
+class Format(CreateUpdateModel):
     """Format.
 
     Format of a journal.
@@ -1161,7 +1162,7 @@ class Format(models.Model):
         return "Format"
 
 
-class PresetNode(models.Model):
+class PresetNode(CreateUpdateModel):
     """PresetNode.
 
     A preset node is a node that has been pre-defined by the teacher.
@@ -1221,12 +1222,11 @@ class PresetNode(models.Model):
         return "PresetNode"
 
 
-class Entry(models.Model):
+class Entry(CreateUpdateModel):
     """Entry.
 
     An Entry has the following features:
-    - creation_date: the date and time when the entry was posted.
-    - last_edited: the date and time when the etry was last edited
+    - last_edited: the date and time when the etry was last edited by an author. This also changes the last_edited_by
     """
     NEEDS_SUBMISSION = 'Submission needs to be sent to VLE'
     SENT_SUBMISSION = 'Submission is successfully received by VLE'
@@ -1252,7 +1252,6 @@ class Entry(models.Model):
         null=True,
     )
 
-    creation_date = models.DateTimeField(editable=False)
     author = models.ForeignKey(
         'User',
         on_delete=models.SET_NULL,
@@ -1284,9 +1283,7 @@ class Entry(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            now = timezone.now()
-            self.creation_date = now
-            self.last_edited = now
+            self.last_edited = timezone.now()
 
         return super(Entry, self).save(*args, **kwargs)
 
@@ -1294,7 +1291,7 @@ class Entry(models.Model):
         return "Entry"
 
 
-class Grade(models.Model):
+class Grade(CreateUpdateModel):
     """Grade.
 
     Used to keep a history of grades.
@@ -1313,10 +1310,6 @@ class Grade(models.Model):
         default=False,
         editable=False
     )
-    creation_date = models.DateTimeField(
-        editable=False,
-        auto_now_add=True
-    )
     author = models.ForeignKey(
         'User',
         null=True,
@@ -1325,14 +1318,13 @@ class Grade(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        self.creation_date = timezone.now()
         return super(Grade, self).save(*args, **kwargs)
 
     def to_string(self, user=None):
         return "Grade"
 
 
-class Counter(models.Model):
+class Counter(CreateUpdateModel):
     """Counter.
 
     A single counter class which can be used to keep track of incremental values
@@ -1350,7 +1342,7 @@ class Counter(models.Model):
         return self.name + " is on " + self.count
 
 
-class Template(models.Model):
+class Template(CreateUpdateModel):
     """Template.
 
     A template for an Entry.
@@ -1375,7 +1367,7 @@ class Template(models.Model):
         return "Template"
 
 
-class Field(models.Model):
+class Field(CreateUpdateModel):
     """Field.
 
     Defines the fields of an Template
@@ -1427,7 +1419,7 @@ class Field(models.Model):
         return "{} ({})".format(self.title, self.id)
 
 
-class Content(models.Model):
+class Content(CreateUpdateModel):
     """Content.
 
     Defines the content of an Entry
@@ -1456,7 +1448,7 @@ class Content(models.Model):
         return "Content"
 
 
-class Comment(models.Model):
+class Comment(CreateUpdateModel):
     """Comment.
 
     Comments contain the comments given to the entries.
@@ -1476,8 +1468,7 @@ class Comment(models.Model):
     published = models.BooleanField(
         default=True
     )
-    creation_date = models.DateTimeField(editable=False)
-    last_edited = models.DateTimeField()
+    last_edited = models.DateTimeField(auto_now_add=True)
     last_edited_by = models.ForeignKey(
         'User',
         related_name='last_edited_by',
@@ -1505,9 +1496,6 @@ class Comment(models.Model):
             not self.entry.node.journal.authors.filter(user=self.author).exists()
 
     def save(self, *args, **kwargs):
-        if not self.pk:
-            self.creation_date = timezone.now()
-        self.last_edited = timezone.now()
         self.text = sanitization.strip_script_tags(self.text)
         return super(Comment, self).save(*args, **kwargs)
 
