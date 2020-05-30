@@ -4,12 +4,6 @@ else
 TOTEST=
 endif
 
-ifeq (,$(wildcard ./pass.txt))
-ansible_use = --ask-vault-pass
-else
-ansible_use = --vault-password-file pass.txt
-endif
-
 ifdef no_become
 become =
 else
@@ -22,6 +16,8 @@ endif
 ifndef host
 host=staging
 endif
+
+ansible_play_default_flags = --ask-pass --ask-vault-pass
 
 vars = --extra-vars "git_branch=${branch} deploy_host=${host}"
 
@@ -74,7 +70,7 @@ setup-no-input:
 
 	sudo apt install npm -y
 	sudo npm install npm@latest -g
-	sudo apt install nodejs python3 python3-pip pep8 libpq-dev python3-dev postgresql postgresql-contrib rabbitmq-server python3-setuptools -y
+	sudo apt install nodejs python3 python3-pip pep8 libpq-dev python3-dev postgresql postgresql-contrib rabbitmq-server python3-setuptools sshpass -y
 
 	make setup-venv requirements_file=local.txt
 
@@ -118,31 +114,31 @@ ansible-test-connection:
 
 run-ansible-provision:
 	bash -c 'source ./venv/bin/activate && \
-	ansible-playbook config/provision-servers.yml ${become} ${ansible_use} ${vars}'
+	ansible-playbook config/provision-servers.yml ${ansible_play_default_flags} ${become} ${vars}'
 
 run-ansible-deploy:
 	bash -c 'source ./venv/bin/activate && \
-	ansible-playbook config/provision-servers.yml ${become} ${ansible_use} ${vars} --tags "deploy_front,deploy_back"'
+	ansible-playbook config/provision-servers.yml ${ansible_play_default_flags} ${become} ${vars} --tags "deploy_front,deploy_back"'
 
 run-ansible-deploy-front:
 	bash -c 'source ./venv/bin/activate && \
-	ansible-playbook config/provision-servers.yml ${become}  ${ansible_use} ${vars} --tags "deploy_front"'
+	ansible-playbook config/provision-servers.yml ${ansible_play_default_flags} ${become} ${vars} --tags "deploy_front"'
 
 run-ansible-deploy-back:
 	bash -c 'source ./venv/bin/activate && \
-	ansible-playbook config/provision-servers.yml ${become}  ${ansible_use} ${vars} --tags "deploy_back"'
+	ansible-playbook config/provision-servers.yml ${ansible_play_default_flags} ${become} ${vars} --tags "deploy_back"'
 
 run-ansible-backup:
 	bash -c 'source ./venv/bin/activate && \
-	ansible-playbook config/provision-servers.yml ${become}  ${ansible_use} ${vars} --tags "backup"'
+	ansible-playbook config/provision-servers.yml ${ansible_play_default_flags} ${become} ${vars} --tags "backup"'
 
 run-ansible-preset_db:
 	bash -c 'source ./venv/bin/activate && \
-	ansible-playbook config/provision-servers.yml ${become} ${ansible_use} ${vars} --tags "run_preset_db"'
+	ansible-playbook config/provision-servers.yml ${ansible_play_default_flags} ${become} ${vars} --tags "run_preset_db"'
 
 run-ansible-restore-latest:
 	bash -c 'source ./venv/bin/activate && \
-	ansible-playbook config/provision-servers.yml ${become} ${ansible_use} ${vars} --tags "restore_latest"'
+	ansible-playbook config/provision-servers.yml ${ansible_play_default_flags} ${become} ${vars} --tags "restore_latest"'
 
 ##### MAKEFILE COMMANDS #####
 
