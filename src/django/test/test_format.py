@@ -4,7 +4,7 @@ from test.utils import api
 from django.test import TestCase
 
 import VLE.serializers as serialize
-from VLE.models import Entry, Journal
+from VLE.models import Entry, Group, Journal
 
 
 class FormatAPITest(TestCase):
@@ -26,6 +26,53 @@ class FormatAPITest(TestCase):
             'removed_templates': [],
             'presets': []
         }
+
+    def test_update_assign_to(self):
+        def check_groups(groups, status=200):
+            api.update(
+                self, 'formats', params={'pk': self.assignment.pk, **self.update_dict},
+                user=self.teacher, status=status)
+            if status == 200:
+                self.assignment.refresh_from_db()
+                assert self.assignment.assigned_groups.count() == len(groups), \
+                    'Assigned group amount should be correct'
+                for group in Group.objects.all():
+                    if group in groups:
+                        assert self.assignment.assigned_groups.filter(pk=group.pk).exists(), \
+                            'Group should be in assigned groups'
+                    else:
+                        assert not self.assignment.assigned_groups.filter(pk=group.pk).exists(), \
+                            'Group should not be in assigned groups'
+
+        group = factory.Group(course=self.course)
+        self.update_dict['assignment_details']['assigned_groups'] = [
+            {'id': group.pk},
+        ]
+        self.update_dict['course_id'] = self.course.pk
+        check_groups([group])
+
+        # Test groups from other courses are not added when course_id is wrong
+        course2 = factory.Course()
+        self.assignment.add_course(course2)
+        group2 = factory.Group(course=course2)
+        self.update_dict['assignment_details']['assigned_groups'] = [
+            {'id': group.pk},
+            {'id': group2.pk},
+        ]
+        self.update_dict['course_id'] = self.course.pk
+        check_groups([group])
+
+        # Test group gets added when other course is supplied, also check if other group does not get removed
+        self.update_dict['assignment_details']['assigned_groups'] = [
+            {'id': group2.pk},
+        ]
+        self.update_dict['course_id'] = course2.pk
+        check_groups([group, group2])
+
+        # Test if only groups from supplied course get removed
+        self.update_dict['assignment_details']['assigned_groups'] = []
+        self.update_dict['course_id'] = course2.pk
+        check_groups([group])
 
     def test_update_format(self):
         # TODO: Improve template testing

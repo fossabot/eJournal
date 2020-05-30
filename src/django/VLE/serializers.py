@@ -204,9 +204,13 @@ class AssignmentDetailsSerializer(serializers.ModelSerializer):
         return assignment.courses.count()
 
     def get_assigned_groups(self, assignment):
+        if self.context.get('course', None):
+            return GroupSerializer(assignment.assigned_groups.filter(course=self.context['course']), many=True).data
         return GroupSerializer(assignment.assigned_groups, many=True).data
 
     def get_all_groups(self, assignment):
+        if self.context.get('course', None):
+            return GroupSerializer(Group.objects.filter(course=self.context['course']), many=True).data
         return GroupSerializer(Group.objects.filter(course__in=assignment.courses.all()), many=True).data
 
     def get_lti_count(self, assignment):
