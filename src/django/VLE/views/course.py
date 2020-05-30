@@ -137,6 +137,21 @@ class CourseView(viewsets.ViewSet):
 
         request.user.check_permission('can_delete_course', course)
 
+        for assignment in course.assignment_set.all():
+            if assignment.courses.count() == 1:
+                request.user.check_permission('can_delete_assignment', course)
+                assignment.delete()
+            else:
+                if assignment.active_lti_id:
+                    new_lti_connected_course = assignment.courses.exclude(
+                        pk=course.pk).exclude(active_lti_id=None).order_by('-startdate').first()
+                    assignment.lti_id_set.remove(assignment.active_lti_id)
+                    if new_lti_connected_course:
+                        assignment.active_lti_id = assignment.get_lti_id_from_course(new_lti_connected_course)
+                    else:
+                        assignment.active_lti_id = None
+                    assignment.save()
+
         course.delete()
         return response.success(description='Successfully deleted course.')
 
