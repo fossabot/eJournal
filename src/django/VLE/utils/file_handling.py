@@ -151,7 +151,8 @@ def remove_unused_user_files(user):
                 file.delete()
     for file in VLE.models.FileContext.objects.filter(author=user, comment__isnull=False):
         # Check if url is not in comment anymore
-        if not file.comment.text or str(file.access_id) not in file.comment.text:
+        if not file.comment_files.filter(pk=file.comment.pk).exists() and \
+           (not file.comment.text or str(file.access_id) not in file.comment.text):
             file.delete()
     for file in VLE.models.FileContext.objects.filter(
        author=user, journal__isnull=False, comment__isnull=True, content__isnull=True):

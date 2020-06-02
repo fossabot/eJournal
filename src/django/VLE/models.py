@@ -1468,6 +1468,10 @@ class Comment(CreateUpdateModel):
     published = models.BooleanField(
         default=True
     )
+    files = models.ManyToManyField(
+        'FileContext',
+        related_name='comment_files',
+    )
     last_edited = models.DateTimeField(auto_now_add=True)
     last_edited_by = models.ForeignKey(
         'User',

@@ -3,6 +3,8 @@ Serializers.
 
 Functions to convert certain data to other formats.
 """
+import datetime
+
 from django.conf import settings
 from django.db.models import Min, Q
 from django.utils import timezone
@@ -30,9 +32,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('username', 'full_name', 'profile_picture', 'is_teacher', 'id',
+        fields = ('username', 'full_name', 'profile_picture', 'id',
                   'role', 'groups', 'is_test_student')
-        read_only_fields = ('id', 'is_teacher', 'is_test_student')
+        read_only_fields = ('id', 'is_test_student')
 
     def get_role(self, user):
         if 'course' not in self.context or not self.context['course']:
@@ -448,19 +450,29 @@ class NodeSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
     last_edited_by = serializers.SerializerMethodField()
+    last_edited = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
+    files = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
         fields = ('id', 'entry', 'author', 'text', 'published', 'creation_date', 'last_edited', 'last_edited_by',
-                  'can_edit')
+                  'can_edit', 'files')
         read_only_fields = ('id', 'entry', 'author', 'creation_date', 'last_edited')
 
     def get_author(self, comment):
         return UserSerializer(comment.author, context=self.context).data
 
     def get_last_edited_by(self, comment):
-        return None if not comment.last_edited_by else comment.last_edited_by.full_name
+        if comment.last_edited > comment.creation_date + datetime.timedelta(minutes=3):
+            return comment.last_edited_by.full_name
+
+    def get_last_edited(self, comment):
+        if comment.last_edited > comment.creation_date + datetime.timedelta(minutes=3):
+            return comment.last_edited
+
+    def get_files(self, comment):
+        return FileSerializer(comment.files, many=True).data
 
     def get_can_edit(self, comment):
         user = self.context.get('user', None)
