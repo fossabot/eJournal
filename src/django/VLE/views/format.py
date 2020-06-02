@@ -8,7 +8,7 @@ from rest_framework import viewsets
 import VLE.utils.generic_utils as utils
 import VLE.utils.responses as response
 from VLE.models import Assignment, Course, Field, Group, PresetNode
-from VLE.serializers import AssignmentDetailsSerializer, FormatSerializer
+from VLE.serializers import AssignmentFormatSerializer, FormatSerializer
 from VLE.utils import file_handling
 
 
@@ -40,7 +40,7 @@ class FormatView(viewsets.ViewSet):
         request.user.check_permission('can_edit_assignment', assignment)
 
         serializer = FormatSerializer(assignment.format)
-        assignment_details = AssignmentDetailsSerializer(assignment, context={'user': request.user, 'course': course})
+        assignment_details = AssignmentFormatSerializer(assignment, context={'user': request.user, 'course': course})
 
         return response.success({'format': serializer.data, 'assignment_details': assignment_details.data})
 
@@ -100,8 +100,8 @@ class FormatView(viewsets.ViewSet):
                 if group.course == course:
                     assignment.assigned_groups.add(group)
 
-        serializer = AssignmentDetailsSerializer(assignment, data=req_data, context={'user': request.user},
-                                                 partial=True)
+        serializer = AssignmentFormatSerializer(
+            assignment, data=req_data, context={'user': request.user, 'course': course}, partial=True)
         if not serializer.is_valid():
             return response.bad_request('Invalid assignment data.')
         serializer.save()
@@ -120,6 +120,6 @@ class FormatView(viewsets.ViewSet):
 
         file_handling.remove_unused_user_files(request.user)
         serializer = FormatSerializer(format)
-        assignment_details = AssignmentDetailsSerializer(assignment, context={'user': request.user, 'course': course})
+        assignment_details = AssignmentFormatSerializer(assignment, context={'user': request.user, 'course': course})
 
         return response.success({'format': serializer.data, 'assignment_details': assignment_details.data})
