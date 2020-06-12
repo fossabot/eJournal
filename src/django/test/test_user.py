@@ -12,7 +12,7 @@ from rest_framework.settings import api_settings
 import VLE.factory as creation_factory
 import VLE.permissions as permissions
 import VLE.validators as validators
-from VLE.models import User
+from VLE.models import Instance, User
 
 
 class UserAPITest(TestCase):
@@ -120,10 +120,22 @@ class UserAPITest(TestCase):
 
         # Standard LTI user creation
         jwt_params = factory.JWTParams()
+        jwt_params['custom_user_image'] = Instance.objects.get_or_create(pk=1)[0].default_lms_profile_picture
         api.create(self, 'users', params={**user_params, **gen_jwt_params(jwt_params)})
         user = User.objects.get(username=user_params['username'])
         assert not user.is_test_student, 'A default user created via LTI parameters should not be flagged ' \
             'as a test student.'
+        assert user.profile_picture == settings.DEFAULT_PROFILE_PICTURE
+        # Standard LTI user creation
+        jwt_params = factory.JWTParams()
+        jwt_params['user_id'] = 'second_user'
+        user_params['username'] = 'second_user'
+        jwt_params['custom_user_image'] = 'https://www.ejournal.app/img/ejournal-logo-white.83c3aad1.svg'
+        api.create(self, 'users', params={**user_params, **gen_jwt_params(jwt_params)})
+        user = User.objects.get(username=user_params['username'])
+        assert not user.is_test_student, 'A default user created via LTI parameters should not be flagged ' \
+            'as a test student.'
+        assert user.profile_picture == 'https://www.ejournal.app/img/ejournal-logo-white.83c3aad1.svg'
 
         # Can't create two users with the same lti ID
         resp = api.create(self, 'users', params={

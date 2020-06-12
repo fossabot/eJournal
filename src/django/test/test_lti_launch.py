@@ -16,7 +16,7 @@ from django.test import RequestFactory, TestCase
 
 import VLE.lti_launch as lti
 import VLE.views.lti as lti_view
-from VLE.models import Group, Journal, User
+from VLE.models import Group, Instance, Journal, User
 
 REQUEST = {
     'oauth_consumer_key': str(settings.LTI_KEY),
@@ -613,6 +613,28 @@ class LtiLaunchTest(TestCase):
             delete_field='custom_course_id',
             response_msg='missing',
             assert_msg='When missing keys, it should return a keyerror')
+
+    def test_get_lti_params_update_prifile_picture(self):
+        lti_launch(
+            request_body={
+                'user_id': self.teacher.lti_id,
+                'custom_username': self.teacher.username,
+                'custom_user_image': Instance.objects.get_or_create(pk=1)[0].default_lms_profile_picture,
+            },
+            response_value=lti_view.LTI_STATES.LOGGED_IN.value,
+        )
+        self.teacher.refresh_from_db()
+        assert self.teacher.profile_picture == settings.DEFAULT_PROFILE_PICTURE
+        lti_launch(
+            request_body={
+                'user_id': self.teacher.lti_id,
+                'custom_username': self.teacher.username,
+                'custom_user_image': 'https://www.ejournal.app/img/ejournal-logo-white.83c3aad1.svg',
+            },
+            response_value=lti_view.LTI_STATES.LOGGED_IN.value,
+        )
+        self.teacher.refresh_from_db()
+        assert self.teacher.profile_picture == 'https://www.ejournal.app/img/ejournal-logo-white.83c3aad1.svg'
 
     def test_select_course_with_participation(self):
         """Hopefully select a course."""

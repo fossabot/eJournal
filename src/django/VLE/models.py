@@ -40,6 +40,9 @@ class Instance(CreateUpdateModel):
     name = models.TextField(
         default='eJournal'
     )
+    default_lms_profile_picture = models.TextField(
+        default=settings.DEFAULT_LMS_PROFILE_PICTURE
+    )
 
     def to_string(self, user=None):
         return self.name
