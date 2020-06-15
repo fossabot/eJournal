@@ -314,7 +314,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
                 journals.filter(Q(authors__user__in=users) | Q(authors__isnull=True)).distinct(), many=True,
                 context={
                     **self.context,
-                    'can_view_usernames': self.context['user'].has_permission('can_view_all_journals', assignment)
+                    'can_view_usernames': self.context['user'].has_permission('can_grade', assignment)
                 }).data
         else:
             return None
@@ -528,7 +528,7 @@ class JournalSerializer(serializers.ModelSerializer):
 
     def get_usernames(self, journal):
         if self.context.get('can_view_usernames', False) or \
-           'user' in self.context and self.context['user'].has_permission('can_view_all_journals', journal.assignment):
+           'user' in self.context and self.context['user'].has_permission('can_grade', journal.assignment):
             return ', '.join(journal.authors.values_list('user__username', flat=True))
 
         return None

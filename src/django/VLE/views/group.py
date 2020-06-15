@@ -88,7 +88,7 @@ class GroupView(viewsets.ViewSet):
 
         course = Course.objects.get(pk=course_id)
 
-        request.user.check_permission('can_add_course_user_group', course)
+        check_can_view_groups(request.user, course)
 
         if lti_id and Group.objects.filter(lti_id=lti_id, course=course).exists():
             return response.bad_request('Course group with the desired lti id already exists.')

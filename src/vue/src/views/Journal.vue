@@ -1,23 +1,26 @@
 <template>
-    <journal-non-student
-        v-if="$hasPermission('can_grade')"
-        ref="journal-non-student-ref"
-        :cID="cID"
-        :aID="aID"
-        :jID="jID"
-    />
-    <journal-student
-        v-else-if="$hasPermission('can_have_journal')"
-        ref="journal-student-ref"
-        :cID="cID"
-        :aID="aID"
-        :jID="jID"
-    />
+    <div v-if="isOwn !== null">
+        <journal-student
+            v-if="isOwn"
+            ref="journal-student-ref"
+            :cID="cID"
+            :aID="aID"
+            :jID="jID"
+        />
+        <journal-non-student
+            v-else
+            ref="journal-non-student-ref"
+            :cID="cID"
+            :aID="aID"
+            :jID="jID"
+        />
+    </div>
 </template>
 
 <script>
 import journalStudent from '@/components/journal/JournalStudent.vue'
 import journalNonStudent from '@/components/journal/JournalNonStudent.vue'
+import journalAPI from '@/api/journal.js'
 
 export default {
     name: 'Journal',
@@ -26,18 +29,25 @@ export default {
         journalNonStudent,
     },
     props: ['cID', 'aID', 'jID'],
+    data () {
+        return {
+            isOwn: null,
+        }
+    },
+    created () {
+        journalAPI.isOwnJournal(this.jID).then((isOwn) => {
+            this.isOwn = isOwn
+        })
+    },
     beforeRouteLeave (to, from, next) {
-        if (this.$hasPermission('can_have_journal') && !this.$refs['journal-student-ref'].discardChanges()) {
+        // TODO: change to authon in journal
+        if (this.isOwn && !this.$refs['journal-student-ref'].discardChanges()) {
             next(false)
-            return
-        }
-
-        if (this.$hasPermission('can_grade') && !this.$refs['journal-non-student-ref'].discardChanges()) {
+        } else if (this.isOwn === false && !this.$refs['journal-non-student-ref'].discardChanges()) {
             next(false)
-            return
+        } else {
+            next()
         }
-
-        next()
     },
 }
 </script>

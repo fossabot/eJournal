@@ -65,4 +65,9 @@ export default {
         return auth.get('journals', { course_id: cID, assignment_id: aID }, connArgs)
             .then(response => response.data.journals)
     },
+
+    isOwnJournal (id, connArgs = auth.DEFAULT_CONN_ARGS) {
+        return auth.get(`journals/${id}/is_own`, null, connArgs)
+            .then(response => response.data.is_own)
+    },
 }

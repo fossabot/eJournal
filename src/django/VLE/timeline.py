@@ -10,15 +10,14 @@ from VLE.serializers import EntrySerializer, TemplateSerializer
 from VLE.utils import generic_utils as utils
 
 
-def get_nodes(journal, author=None):
+def get_nodes(journal, user=None):
     """Convert a journal to a list of node dictionaries.
 
     First sorts the nodes on date, then attempts to add an
     add-node if the user can add to the journal, the subsequent
     progress node is in the future and maximally one.
     """
-    can_add = author and author not in journal.authors.all() and \
-        author.has_permission('can_have_journal', journal.assignment) and not journal.needs_lti_link()
+    can_add = user and journal.authors.filter(user=user).exists() and not journal.needs_lti_link()
 
     node_list = []
     for node in utils.get_sorted_nodes(journal):
@@ -33,9 +32,9 @@ def get_nodes(journal, author=None):
                 can_add = False
 
         if node.type == Node.ENTRY:
-            node_list.append(get_entry_node(node, author))
+            node_list.append(get_entry_node(node, user))
         elif node.type == Node.ENTRYDEADLINE:
-            node_list.append(get_deadline(node, author))
+            node_list.append(get_deadline(node, user))
         elif node.type == Node.PROGRESS:
             node_list.append(get_progress(node))
 

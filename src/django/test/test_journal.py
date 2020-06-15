@@ -402,3 +402,9 @@ class JournalAPITest(TestCase):
             }, user=self.g_teacher)
         assert Journal.objects.get(pk=self.group_journal.pk).locked, \
             'Teacher should sitll be able to lock journal'
+
+    def test_is_own(self):
+        api.get(self, 'journals/is_own', params={'pk': self.journal.pk + 100}, user=self.teacher, status=404)
+        api.get(self, 'journals/is_own', params={'pk': self.journal.pk}, user=factory.Student(), status=403)
+        assert not api.get(self, 'journals/is_own', params={'pk': self.journal.pk}, user=self.teacher)['is_own']
+        assert api.get(self, 'journals/is_own', params={'pk': self.journal.pk}, user=self.student)['is_own']

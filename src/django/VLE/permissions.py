@@ -73,7 +73,7 @@ def has_assignment_permission(user, permission, assignment):
             return False
         return True
 
-    if permission == 'can_have_journal' and VLE.models.Role.objects.filter(can_view_all_journals=True,
+    if permission == 'can_have_journal' and VLE.models.Role.objects.filter(can_grade=True,
        role__user=user, course__in=assignment.courses.all()).exists():
         return False
 
@@ -87,7 +87,7 @@ def is_user_supervisor_of(supervisor, user):
     can_view_course_users or where the supervisor is linked to the user through an assignment where the supervisor
     has the permission can_view_all_journals."""
     return VLE.models.Role.objects.filter(
-        Q(can_view_all_journals=True) | Q(can_view_course_users=True),
+        Q(can_grade=True),
         role__user=supervisor,
         course__in=VLE.models.Participation.objects.filter(user=user).values('course')).exists()
 

@@ -61,6 +61,7 @@ import versionAlert from '@/components/assets/VersionAlert.vue'
 import store from '@/Store.vue'
 
 import commonAPI from '@/api/common.js'
+import journalAPI from '@/api/journal.js'
 
 export default {
     components: {
@@ -112,10 +113,6 @@ export default {
                     this.crumbs.push({ route: fullpath, routeName: route.name, displayName: null })
                 }
             })
-            // Remove the name of the journal author if the user can have a journal themself
-            if (this.$route.name === 'Journal' && this.$hasPermission('can_have_journal')) {
-                this.crumbs.pop()
-            }
         },
         // Load the displayname map from cache, complete crumbs from cache where possible, do aliasing
         addDisplayNames () {
@@ -147,6 +144,16 @@ export default {
                             crumb.displayName = names[this.settings.namedViews[crumb.routeName].apiReturnValue]
                             this.cachedMap[crumb.route] = crumb.displayName
                         })
+
+                        // Remove the name of breadcrumb if it is your own journal
+                        if (this.$route.name === 'Journal') {
+                            journalAPI.isOwnJournal(this.$route.params.jID).then((isOwn) => {
+                                if (isOwn) {
+                                    this.crumbs.pop()
+                                }
+                            })
+                                .then(() => { store.setCachedMap(this.cachedMap) })
+                        }
                     })
                     .then(() => { store.setCachedMap(this.cachedMap) })
             }

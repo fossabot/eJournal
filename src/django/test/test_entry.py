@@ -45,6 +45,10 @@ class EntryAPITest(TestCase):
         assert resp['id'] != resp2['id'], 'Multiple creations should lead to different ids'
         assert resp['author'] == self.student.full_name
 
+        # Check other students in assignment cannot add entries
+        other_student = factory.Journal(assignment=self.journal.assignment).authors.first().user
+        api.create(self, 'entries', params=self.valid_create_params, user=other_student, status=404)
+
         # Check if students cannot update journals without required parts filled in
         create_params = self.valid_create_params.copy()
         create_params['content'] = [{

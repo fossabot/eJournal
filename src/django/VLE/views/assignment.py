@@ -178,7 +178,7 @@ class AssignmentView(viewsets.ViewSet):
         serializer = AssignmentSerializer(
             assignment,
             context={'user': request.user, 'course': course,
-                     'journals': request.user.has_permission('can_grade', assignment)}
+                     'journals': request.user.has_permission('can_view_all_journals', assignment)}
         )
         return response.success({'assignment': serializer.data})
 

@@ -593,7 +593,10 @@ class Role(CreateUpdateModel):
         if self.can_edit_course_user_group and not self.can_view_course_users:
             raise ValidationError('A user needs to be able to view course users in order to manage user groups.')
 
-        if self.can_view_all_journals and self.can_have_journal:
+        if self.can_view_all_journals and not self.can_view_course_users:
+            raise ValidationError('A user needs to be able to view course users in order to view journals.')
+
+        if self.can_grade and self.can_have_journal:
             raise ValidationError('Teaching staff is not allowed to have a journal in their own course.')
 
         if self.can_grade and not self.can_view_all_journals:

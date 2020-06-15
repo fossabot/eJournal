@@ -255,6 +255,17 @@ class JournalView(viewsets.ViewSet):
         journal.delete()
         return response.success(description='Successfully deleted the journal.')
 
+    @action(['get'], detail=True)
+    def is_own(self, request, pk):
+        """Check if the journal is your own."""
+        journal = Journal.objects.get(pk=pk)
+
+        request.user.check_can_view(journal)
+
+        return response.success({
+            'is_own': journal.authors.filter(user=request.user).exists()
+        })
+
     @action(['patch'], detail=True)
     def join(self, request, pk):
         """Become a member of a journal"""
