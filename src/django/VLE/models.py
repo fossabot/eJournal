@@ -504,7 +504,7 @@ class Notification(models.Model):
             'name': 'new_node_notifications',
             'content': {
                 'title': 'New deadline',
-                'content': 'A new deadline has been added to your journal in {assignment}',
+                'content': 'A new deadline has been added to your journal',
                 'extra_content': None,
                 'button_text': 'View Deadline',
             },
@@ -513,7 +513,8 @@ class Notification(models.Model):
             'name': 'new_entry_notifications',
             'content': {
                 'title': 'New entry',
-                'content': '{journal} posted a new entry in {assignment}.',
+                'content': '{journal} posted {entry}.',
+                'batch_content': '{n} new entries were posted in {journal}',
                 'extra_content': None,
                 'button_text': 'View Entry',
             },
@@ -522,7 +523,8 @@ class Notification(models.Model):
             'name': 'new_grade_notifications',
             'content': {
                 'title': 'New grade',
-                'content': '{entry} in {assignment} has been graded.',
+                'content': '{entry} has been graded.',
+                'batch_content': '{n} new entries were graded',
                 'extra_content': None,
                 'button_text': 'View Grade',
             },
@@ -531,7 +533,8 @@ class Notification(models.Model):
             'name': 'new_comment_notifications',
             'content': {
                 'title': 'New comment',
-                'content': '{comment} commented on {entry} in {assignment}.',
+                'content': '{comment} commented on {entry}.',
+                'batch_content': '{n} new comments on {entry} in the journal of {journal}',
                 'extra_content': None,
                 'button_text': 'View Comment',
             },
@@ -591,23 +594,24 @@ class Notification(models.Model):
     def journal(self):
         return self.node.journal if self.node else None
 
-    @property
-    def title(self):
-        return self.TYPES[self.type]['content']['title'].format(
+
+    def __fill_text(self, text, n=None):
+        return text.format(
             comment=self.comment.author.full_name if self.comment else None,
-            entry=self.entry.template.name if self.entry else None,
-            journal=self.journal,
+            entry=self.entry.template.name if self.entry and self.entry.template else None,
+            journal=self.journal.get_name() if self.journal else None,
             assignment=self.assignment.name if self.assignment else None,
-            course=self.course.name if self.course else None)
+            course=self.course.name if self.course else None,
+            n=n
+        )
 
     @property
-    def content(self):
-        return self.TYPES[self.type]['content']['content'].format(
-            comment=self.comment.author.full_name if self.comment else None,
-            entry=self.entry.template.name if self.entry else None,
-            journal=self.journal,
-            assignment=self.assignment.name if self.assignment else None,
-            course=self.course.name if self.course else None)
+    def title(self, n=None):
+        return self.__fill_text(self.TYPES[self.type]['content']['title'], n=n)
+
+    @property
+    def content(self, n=None):
+        return self.__fill_text(self.TYPES[self.type]['content']['content'], n=n)
 
     @property
     def url(self):
@@ -1326,12 +1330,10 @@ class Journal(models.Model):
             entry__isnull=False).order_by('entry__last_edited')
 
     def to_string(self, user=None):
-        if user is None:
-            return "Journal"
-        if not user.can_view(self):
-            return "Journal"
+        if user is None or not user.can_view(self):
+            return 'Journal'
 
-        return "the {0} journal of {1}".format(self.assignment.name, self.get_full_names())
+        return self.get_name()
 
 
 class Node(models.Model):
