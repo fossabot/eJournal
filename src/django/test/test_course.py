@@ -4,6 +4,8 @@ from test.utils.response import is_response
 
 from django.test import TestCase
 
+from VLE.models import Assignment, Role
+
 
 class CourseAPITest(TestCase):
     def setUp(self):
@@ -86,11 +88,43 @@ class CourseAPITest(TestCase):
                                  user=self.admin)['course']
         assert update_resp['abbreviation'] == 'TC3', 'Superuser could not update the course'
 
-    def test_delete(self):
+    def test_delete_course(self):
         # Test if only authors and superusers can delete courses
         api.delete(self, 'courses', params={'pk': self.course1.pk}, user=self.teacher2, status=403)
         api.delete(self, 'courses', params={'pk': self.course1.pk}, user=self.teacher1)
         api.delete(self, 'courses', params={'pk': self.course2.pk}, user=self.admin)
+
+        # Test if (lti) assignment functions corrently when courses get deleted
+        c0 = factory.Course()
+        c1 = factory.LtiCourse()
+        c2 = factory.LtiCourse()
+        assignment = factory.Assignment(courses=[c0])
+        assignment.add_course(c1)
+        assignment.add_course(c2)
+        assignment.add_lti_id('lti_id_c1', c1)
+        assignment.add_lti_id('lti_id_c2', c2)
+        assignment.refresh_from_db()
+        c2.refresh_from_db()
+        assert assignment.active_lti_id in c2.assignment_lti_id_set
+
+        api.delete(self, 'courses', params={'pk': c2.pk}, user=self.admin)
+        assignment.refresh_from_db()
+        c1.refresh_from_db()
+        assert assignment.active_lti_id in c1.assignment_lti_id_set
+
+        api.delete(self, 'courses', params={'pk': c1.pk}, user=self.admin)
+        assignment.refresh_from_db()
+        assert assignment.active_lti_id is None
+
+        # Test if you cannot delete course when you dont also have delete assignment permission
+        r = Role.objects.get(course=c0, name='Teacher')
+        r.can_delete_assignment = False
+        r.save()
+        api.delete(self, 'courses', params={'pk': c0.pk}, user=c0.author, status=403)
+        r.can_delete_assignment = True
+        r.save()
+        api.delete(self, 'courses', params={'pk': c0.pk}, user=c0.author)
+        assert not Assignment.objects.filter(pk=assignment.pk).exists()
 
     def test_functions(self):
         course = factory.Course()

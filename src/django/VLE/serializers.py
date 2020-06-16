@@ -3,6 +3,8 @@ Serializers.
 
 Functions to convert certain data to other formats.
 """
+import datetime
+
 from django.conf import settings
 from django.db.models import Min, Q
 from django.utils import timezone
@@ -30,9 +32,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('username', 'full_name', 'profile_picture', 'is_teacher', 'id',
+        fields = ('username', 'full_name', 'profile_picture', 'id',
                   'role', 'groups', 'is_test_student')
-        read_only_fields = ('id', 'is_teacher', 'is_test_student')
+        read_only_fields = ('id', 'is_test_student')
 
     def get_role(self, user):
         if 'course' not in self.context or not self.context['course']:
@@ -129,8 +131,8 @@ class CourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        exclude = ('author', 'users', )
-        read_only_fields = ('id', 'assignment_lti_id_set')
+        fields = ('id', 'name', 'abbreviation', 'startdate', 'enddate', 'lti_linked')
+        read_only_fields = ('id', )
 
     def get_lti_linked(self, course):
         return course.has_lti_link()
@@ -183,54 +185,6 @@ class ParticipationSerializer(serializers.ModelSerializer):
         return GroupSerializer(participation.groups, many=True, context=self.context).data
 
 
-class AssignmentDetailsSerializer(serializers.ModelSerializer):
-    course_count = serializers.SerializerMethodField()
-    lti_count = serializers.SerializerMethodField()
-    active_lti_course = serializers.SerializerMethodField()
-    can_change_type = serializers.SerializerMethodField()
-    assigned_groups = serializers.SerializerMethodField()
-    all_groups = serializers.SerializerMethodField()
-    templates = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Assignment
-        fields = ('id', 'name', 'description', 'points_possible', 'unlock_date', 'due_date', 'lock_date',
-                  'is_published', 'course_count', 'lti_count', 'active_lti_course', 'is_group_assignment',
-                  'can_set_journal_name', 'can_set_journal_image', 'can_lock_journal', 'can_change_type',
-                  'remove_grade_upon_leaving_group', 'assigned_groups', 'all_groups', 'templates')
-        read_only_fields = ('id', )
-
-    def get_course_count(self, assignment):
-        return assignment.courses.count()
-
-    def get_assigned_groups(self, assignment):
-        return GroupSerializer(assignment.assigned_groups, many=True).data
-
-    def get_all_groups(self, assignment):
-        return GroupSerializer(Group.objects.filter(course__in=assignment.courses.all()), many=True).data
-
-    def get_lti_count(self, assignment):
-        if 'user' in self.context and self.context['user'] and \
-           self.context['user'].has_permission('can_edit_assignment', assignment):
-            return len(assignment.lti_id_set)
-        return None
-
-    def get_active_lti_course(self, assignment):
-        if 'user' in self.context and self.context['user'] and \
-           self.context['user'].can_view(assignment):
-            c = assignment.get_active_lti_course()
-            if c:
-                return {'cID': c.pk, 'name': c.name}
-            return None
-        return None
-
-    def get_can_change_type(self, assignment):
-        return not assignment.has_entries()
-
-    def get_templates(self, assignment):
-        return list(assignment.format.template_set.values('id', 'name'))
-
-
 class AssignmentSerializer(serializers.ModelSerializer):
     deadline = serializers.SerializerMethodField()
     journal = serializers.SerializerMethodField()
@@ -239,13 +193,21 @@ class AssignmentSerializer(serializers.ModelSerializer):
     courses = serializers.SerializerMethodField()
     course_count = serializers.SerializerMethodField()
     journals = serializers.SerializerMethodField()
-    is_group_assignment = serializers.SerializerMethodField()
     active_lti_course = serializers.SerializerMethodField()
     lti_courses = serializers.SerializerMethodField()
 
     class Meta:
         model = Assignment
-        fields = '__all__'
+        fields = (
+            # Method fields
+            'deadline', 'journal', 'stats', 'course', 'courses', 'course_count', 'journals', 'active_lti_course',
+            'lti_courses',
+            # Model fields
+            'id', 'name', 'description', 'is_published', 'points_possible', 'unlock_date', 'due_date', 'lock_date',
+            'is_group_assignment', 'remove_grade_upon_leaving_group', 'can_set_journal_name', 'can_set_journal_image',
+            'can_lock_journal',
+            # Not used / missing: active_lti_id, lti_id_set, assigned_groups, format
+        )
         read_only_fields = ('id', )
 
     def get_is_group_assignment(self, assignment):
@@ -441,6 +403,53 @@ class AssignmentSerializer(serializers.ModelSerializer):
         return assignment.courses.count()
 
 
+class AssignmentFormatSerializer(AssignmentSerializer):
+    lti_count = serializers.SerializerMethodField()
+    can_change_type = serializers.SerializerMethodField()
+    assigned_groups = serializers.SerializerMethodField()
+    all_groups = serializers.SerializerMethodField()
+    templates = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Assignment
+        fields = ('id', 'name', 'description', 'points_possible', 'unlock_date', 'due_date', 'lock_date',
+                  'is_published', 'course_count', 'lti_count', 'active_lti_course', 'is_group_assignment',
+                  'can_set_journal_name', 'can_set_journal_image', 'can_lock_journal', 'can_change_type',
+                  'remove_grade_upon_leaving_group', 'assigned_groups', 'all_groups', 'templates')
+        read_only_fields = ('id', )
+
+    def get_assigned_groups(self, assignment):
+        if self.context.get('course', None):
+            return GroupSerializer(assignment.assigned_groups.filter(course=self.context['course']), many=True).data
+        return GroupSerializer(assignment.assigned_groups, many=True).data
+
+    def get_all_groups(self, assignment):
+        if self.context.get('course', None):
+            return GroupSerializer(Group.objects.filter(course=self.context['course']), many=True).data
+        return GroupSerializer(Group.objects.filter(course__in=assignment.courses.all()), many=True).data
+
+    def get_lti_count(self, assignment):
+        if 'user' in self.context and self.context['user'] and \
+           self.context['user'].has_permission('can_edit_assignment', assignment):
+            return len(assignment.lti_id_set)
+        return None
+
+    def get_can_change_type(self, assignment):
+        return not assignment.has_entries()
+
+    def get_templates(self, assignment):
+        return list(assignment.format.template_set.values('id', 'name'))
+
+
+class SmallAssignmentSerializer(AssignmentSerializer):
+    class Meta:
+        model = Assignment
+        fields = (
+            'id', 'name', 'is_group_assignment', 'is_published', 'points_possible', 'unlock_date', 'due_date',
+            'lock_date', 'deadline', 'journal', 'stats', 'course')
+        read_only_fields = ('id', )
+
+
 class NodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Node
@@ -451,19 +460,29 @@ class NodeSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
     last_edited_by = serializers.SerializerMethodField()
+    last_edited = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
+    files = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
         fields = ('id', 'entry', 'author', 'text', 'published', 'creation_date', 'last_edited', 'last_edited_by',
-                  'can_edit')
+                  'can_edit', 'files')
         read_only_fields = ('id', 'entry', 'author', 'creation_date', 'last_edited')
 
     def get_author(self, comment):
         return UserSerializer(comment.author, context=self.context).data
 
     def get_last_edited_by(self, comment):
-        return None if not comment.last_edited_by else comment.last_edited_by.full_name
+        if comment.last_edited > comment.creation_date + datetime.timedelta(minutes=3):
+            return comment.last_edited_by.full_name
+
+    def get_last_edited(self, comment):
+        if comment.last_edited > comment.creation_date + datetime.timedelta(minutes=3):
+            return comment.last_edited
+
+    def get_files(self, comment):
+        return FileSerializer(comment.files, many=True).data
 
     def get_can_edit(self, comment):
         user = self.context.get('user', None)
