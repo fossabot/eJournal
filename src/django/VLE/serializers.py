@@ -370,13 +370,12 @@ class AssignmentSerializer(serializers.ModelSerializer):
                 return assignment.get_active_course(self.context['user'])
             else:
                 return None
-        else:
-            if not self.context['course'] in assignment.courses.all():
-                raise VLEProgrammingError('Wrong course is supplied')
-            elif not self.context['user'].can_view(self.context['course']):
-                raise VLEParticipationError(self.context['course'], self.context['user'])
+        elif not self.context['course'] in assignment.courses.all():
+            raise VLEProgrammingError('Wrong course is supplied')
+        elif not self.context['user'].can_view(self.context['course']):
+            raise VLEParticipationError(self.context['course'], self.context['user'])
 
-            return self.context['course']
+        return self.context['course']
 
     def get_courses(self, assignment):
         if 'course' in self.context and self.context['course']:
