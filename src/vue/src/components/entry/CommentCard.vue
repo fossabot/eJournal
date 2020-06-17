@@ -19,7 +19,15 @@
                     class="no-hover comment-card"
                 >
                     <div v-if="!editCommentStatus[index]">
-                        <sandboxed-iframe :content="comment.text"/>
+                        <sandboxed-iframe
+                            v-if="comment.text"
+                            :content="comment.text"
+                        />
+                        <file-download-button
+                            v-for="file in comment.files"
+                            :key="file.id"
+                            :file="file"
+                        />
                         <hr class="full-width"/>
                         <b>{{ comment.author.full_name }}</b>
                         <icon
@@ -33,12 +41,10 @@
                             name="edit"
                             scale="1.07"
                             class="float-right ml-2 edit-icon"
-                            @click.native="editCommentView(index, true, comment.text)"
+                            @click.native="editCommentView(index, true, comment)"
                         />
                         <span
-                            v-if="comment.published
-                                && $root.beautifyDate(comment.last_edited)
-                                    === $root.beautifyDate(comment.creation_date)"
+                            v-if="comment.published && !comment.last_edited"
                             class="timestamp"
                         >
                             {{ $root.beautifyDate(comment.creation_date) }}<br/>
@@ -65,15 +71,52 @@
                         <text-editor
                             :id="'comment-text-editor-' + index"
                             :key="'comment-text-editor-' + index"
-                            v-model="editCommentTemp[index]"
+                            v-model="editCommentTemp[index].text"
                             :basic="true"
                             :footer="false"
                             class="multi-form"
                         />
+                        <div
+                            v-if="editCommentTemp[index].files.length > 0"
+                            class="comment-file-list multi-form round-border p-2"
+                        >
+                            <div
+                                v-for="(file, i) in editCommentTemp[index].files"
+                                :key="i"
+                            >
+                                <u>{{ file.file_name }}</u>
+                                <icon
+                                    name="trash"
+                                    class="ml-2 float-right mt-1 trash-icon"
+                                    @click.native="editCommentTemp[index].files.splice(i, 1)"
+                                />
+                                <icon
+                                    name="download"
+                                    class="ml-2 float-right mt-1 edit-icon"
+                                    @click.native="fileDownload(file)"
+                                />
+                            </div>
+                        </div>
+                        <b-button
+                            class="btn change-button multi-form mr-2"
+                            @click="$refs[`comment-${index}-file-upload`][0].$el.click()"
+                        >
+                            <icon name="paperclip"/>
+                            Attach file
+                            <file-upload-input
+                                :ref="`comment-${index}-file-upload`"
+                                :acceptedFiletype="'*/*'"
+                                :maxSizeBytes="$root.maxFileSizeBytes"
+                                :autoUpload="true"
+                                :plain="true"
+                                hidden
+                                @fileUploadSuccess="editCommentTemp[index].files.push($event)"
+                            />
+                        </b-button>
                         <b-button
                             v-if="comment.can_edit"
                             class="multi-form delete-button"
-                            @click="editCommentView(index, false, '')"
+                            @click="editCommentView(index, false, {})"
                         >
                             <icon name="ban"/>
                             Cancel
@@ -112,6 +155,43 @@
                     :footer="false"
                     placeholder="Type here to leave a comment"
                 />
+                <div
+                    v-if="files.length > 0"
+                    class="comment-file-list round-border mt-2 p-2"
+                >
+                    <div
+                        v-for="(file, index) in files"
+                        :key="index"
+                    >
+                        <u>{{ file.file_name }}</u>
+                        <icon
+                            name="trash"
+                            class="ml-2 float-right mt-1 trash-icon"
+                            @click.native="files.splice(index, 1)"
+                        />
+                        <icon
+                            name="download"
+                            class="ml-2 float-right mt-1 edit-icon"
+                            @click.native="fileDownload(file)"
+                        />
+                    </div>
+                </div>
+                <b-button
+                    class="btn change-button mt-2"
+                    @click="$refs.newCommentFileUpload.$el.click()"
+                >
+                    <icon name="paperclip"/>
+                    Attach file
+                    <file-upload-input
+                        ref="newCommentFileUpload"
+                        :acceptedFiletype="'*/*'"
+                        :maxSizeBytes="$root.maxFileSizeBytes"
+                        :autoUpload="true"
+                        :plain="true"
+                        hidden
+                        @fileUploadSuccess="files.push($event)"
+                    />
+                </b-button>
                 <dropdown-button
                     v-if="$hasPermission('can_grade') && !entryGradePublished"
                     :up="true"
@@ -156,12 +236,18 @@
 import dropdownButton from '@/components/assets/DropdownButton.vue'
 import textEditor from '@/components/assets/TextEditor.vue'
 import sandboxedIframe from '@/components/assets/SandboxedIframe.vue'
+import fileUploadInput from '@/components/assets/file_handling/FileUploadInput.vue'
+import fileDownloadButton from '@/components/assets/file_handling/FileDownloadButton.vue'
 
 import commentAPI from '@/api/comment.js'
+
+import auth from '@/api/auth.js'
 
 export default {
     components: {
         dropdownButton,
+        fileUploadInput,
+        fileDownloadButton,
         textEditor,
         sandboxedIframe,
     },
@@ -181,9 +267,11 @@ export default {
         return {
             tempComment: '',
             commentObject: null,
+            addingAttachment: false,
             editCommentStatus: [],
             editCommentTemp: [],
             saveRequestInFlight: false,
+            files: [],
         }
     },
     watch: {
@@ -205,7 +293,7 @@ export default {
                     this.commentObject = comments
                     for (let i = 0; i < this.commentObject.length; i++) {
                         this.editCommentStatus.push(false)
-                        this.editCommentTemp.push('')
+                        this.editCommentTemp.push({})
                     }
                 })
         },
@@ -217,7 +305,7 @@ export default {
             this.$store.commit('preferences/CHANGE_PREFERENCES', { comment_button_setting: option })
         },
         addComment (option) {
-            if (this.tempComment !== '') {
+            if (this.tempComment !== '' || this.files.length > 0) {
                 if (option === 'g') {
                     this.$emit('publish-grade')
                 }
@@ -226,6 +314,7 @@ export default {
                 commentAPI.create({
                     entry_id: this.eID,
                     text: this.tempComment,
+                    files: this.files.map(f => f.id),
                     published: option === 'p' || option === 'g',
                 })
                     .then((comment) => {
@@ -236,14 +325,21 @@ export default {
                             this.editCommentTemp.push('')
                         }
                         this.tempComment = ''
+                        this.files = []
                         this.$refs['comment-text-editor-ref'].clearContent()
                     })
                     .catch(() => { this.saveRequestInFlight = false })
             }
         },
-        editCommentView (index, status, text) {
+        editCommentView (index, status, comment) {
             if (status) {
-                this.$set(this.editCommentTemp, index, text)
+                this.$set(this.editCommentTemp, index, {
+                    text: comment.text,
+                    files: comment.files.slice(),
+                    entry_id: this.eID,
+                    addingAttachment: false,
+                    published: comment.published,
+                })
             }
 
             this.$set(this.editCommentStatus, index, status)
@@ -251,7 +347,10 @@ export default {
         editComment (cID, index) {
             this.saveRequestInFlight = true
             commentAPI.update(cID, {
-                text: this.editCommentTemp[index],
+                entry_id: this.eID,
+                text: this.editCommentTemp[index].text,
+                files: this.editCommentTemp[index].files.map(f => f.id),
+                published: this.editCommentTemp[index].published,
             })
                 .then((comment) => {
                     this.saveRequestInFlight = false
@@ -278,11 +377,29 @@ export default {
                     })
             }
         },
+        fileDownload (file) {
+            auth.downloadFile(file.download_url)
+                .then((response) => {
+                    try {
+                        const blob = new Blob([response.data], { type: response.headers['content-type'] })
+                        const link = document.createElement('a')
+                        link.href = window.URL.createObjectURL(blob)
+                        link.download = file.file_name
+                        document.body.appendChild(link)
+                        link.click()
+                        link.remove()
+                    } catch (_) {
+                        this.$toasted.error('Error creating file.')
+                    }
+                })
+        },
     },
 }
 </script>
 
 <style lang="sass">
+@import '~sass/modules/colors.sass'
+
 .comment-section
     display: flex
     .profile-picture-sm
@@ -300,4 +417,7 @@ export default {
             .trash-icon, .edit-icon
                 margin-top: 4px
                 margin-left: 4px
+    .comment-file-list
+        border: 2px solid $theme-dark-grey
+        font-weight: bold
 </style>

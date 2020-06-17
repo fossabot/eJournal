@@ -103,7 +103,7 @@ setup-venv:
 		source ./venv/bin/activate && \
 		pip install -r requirements/$(requirements_file) && \
 		isort -rc src/django/ && \
-		ansible-playbook ./config/provision-local.yml --ask-become-pass --ask-vault-pass && \
+		ansible-playbook ./config/provision-local.yml --ask-vault-pass && \
 		deactivate'
 
 ##### DEPLOY COMMANDS ######

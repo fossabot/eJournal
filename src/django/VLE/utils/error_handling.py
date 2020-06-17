@@ -55,6 +55,10 @@ class VLEMissingRequiredField(Exception):
         super(VLEMissingRequiredField, self).__init__('Missing required field: ' + field.to_string())
 
 
+class LmsGradingResponseException(Exception):
+    """Exception based on LMS error response whilest grading"""
+
+
 class ErrorMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response

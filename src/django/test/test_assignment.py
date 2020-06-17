@@ -459,12 +459,11 @@ class AssignmentAPITest(TestCase):
         assert before_source_preset_nodes.count() == created_preset_nodes.count() \
             and before_source_templates.count() == created_templates.count(), \
             'Format of the import should be equal to the import target'
+        ignoring = ['id', 'format', 'forced_template', 'creation_date', 'update_date']
         for before_n, created_n in zip(before_source_preset_nodes, created_preset_nodes):
-            assert equal_models(before_n, created_n, ignore=['id', 'format', 'forced_template']), \
-                'Import preset nodes should be equal'
+            assert equal_models(before_n, created_n, ignore=ignoring), 'Import preset nodes should be equal'
         for before_t, created_t in zip(before_source_templates, created_templates):
-            assert equal_models(before_t, created_t, ignore=['id', 'format', 'forced_template']), \
-                'Import target templates should be equal'
+            assert equal_models(before_t, created_t, ignore=ignoring), 'Import target templates should be equal'
 
         # Import again, but now update all dates
         resp = api.post(self, 'assignments/{}/copy'.format(source_assignment.pk), params={
@@ -493,12 +492,12 @@ class AssignmentAPITest(TestCase):
             'Format of the import should be equal to the import target'
         for before_n, created_n in zip(before_source_preset_nodes, created_preset_nodes):
             assert equal_models(before_n, created_n,
-                                ignore=['id', 'format', 'forced_template', 'unlock_date', 'due_date', 'lock_date']), \
-                'Import preset nodes should be equal'
+                                ignore=ignoring + ['unlock_date', 'due_date', 'lock_date']), \
+                'Import preset nodes should be equal, apart from the moved dates'
         for before_t, created_t in zip(before_source_templates, created_templates):
             assert equal_models(before_t, created_t,
-                                ignore=['id', 'format', 'forced_template', 'unlock_date', 'due_date', 'lock_date']), \
-                'Import target templates should be equal'
+                                ignore=ignoring + ['unlock_date', 'due_date', 'lock_date']), \
+                'Import target templates should be equal, apart from the moved dates'
 
         created_progress_node = created_preset_nodes.filter(type=Node.PROGRESS).first()
         created_deadline_node = created_preset_nodes.filter(type=Node.ENTRYDEADLINE).first()

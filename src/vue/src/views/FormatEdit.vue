@@ -301,7 +301,7 @@ export default {
     },
     methods: {
         loadFormat () {
-            formatAPI.get(this.aID)
+            formatAPI.get(this.aID, this.cID)
                 .then((data) => {
                     this.currentData = data
                     this.originalData = JSON.stringify(data, this.replacer)
@@ -492,6 +492,7 @@ export default {
                 presets: this.presets,
                 removed_templates: this.deletedTemplates,
                 removed_presets: this.deletedPresets,
+                course_id: this.cID,
             }, { customSuccessToast: 'New format saved' })
                 .then((data) => {
                     this.currentData = data

@@ -2,10 +2,12 @@
 from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
+from sentry_sdk import capture_exception, push_scope
 
 from VLE import factory
 from VLE.lti_grade_passback import GradePassBackRequest
 from VLE.models import AssignmentParticipation, Comment, Entry, Journal
+from VLE.utils.error_handling import LmsGradingResponseException
 
 
 def publish_all_journal_grades(journal, publisher):
@@ -134,10 +136,14 @@ def send_author_status_to_LMS(journal, author, left_journal=False):
                 author, grade, result_data=result_data, send_score=False, submitted_at=submitted_at)
             response_teacher = grade_request.send_post_request()
 
-    return {
-        'to_teacher': response_teacher,
-        'to_student': response_student,
-        'successful':
-            (response_teacher is None or response_teacher['code_mayor'] == 'success') and
-            (response_student is None or response_student['code_mayor'] == 'success')
-    }
+    successful = (response_teacher is None or response_teacher['code_mayor'] == 'success') and \
+        (response_student is None or response_student['code_mayor'] == 'success')
+    result = {'to_teacher': response_teacher, 'to_student': response_student}
+
+    if not successful:
+        with push_scope() as scope:
+            scope.level = 'error'
+            scope.set_context('data', result)
+            capture_exception(LmsGradingResponseException('Error on sending grade to LMS'))
+
+    return {'successful': successful, **result}

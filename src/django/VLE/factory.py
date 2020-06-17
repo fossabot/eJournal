@@ -12,17 +12,8 @@ from django.utils import timezone
 
 import VLE.validators as validators
 from VLE.models import (Assignment, AssignmentParticipation, Comment, Content, Course, Entry, Field, Format, Grade,
-                        Group, Instance, Journal, Node, Participation, PresetNode, Role, Template, User)
+                        Group, Journal, Node, Participation, PresetNode, Role, Template, User)
 from VLE.utils.error_handling import VLEBadRequest
-
-
-def make_instance(allow_standalone_registration=None):
-    if allow_standalone_registration is not None:
-        instance = Instance(allow_standalone_registration=allow_standalone_registration)
-    else:
-        instance = Instance()
-    instance.save()
-    return instance
 
 
 def make_user(username, password=None, email=None, lti_id=None, profile_picture=settings.DEFAULT_PROFILE_PICTURE,

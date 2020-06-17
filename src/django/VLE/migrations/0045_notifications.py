@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('VLE', '0041_increase_filename_length'),
+        ('VLE', '0044_change_profile_picture'),
     ]
 
     operations = [

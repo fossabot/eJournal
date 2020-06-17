@@ -17,7 +17,7 @@ import VLE.utils.generic_utils as utils
 import VLE.utils.responses as response
 import VLE.validators as validators
 from VLE.models import Assignment, Course, Field, Journal, PresetNode, Template, User
-from VLE.serializers import AssignmentDetailsSerializer, AssignmentSerializer, CourseSerializer, TemplateSerializer
+from VLE.serializers import AssignmentSerializer, CourseSerializer, SmallAssignmentSerializer, TemplateSerializer
 from VLE.utils import file_handling, grading
 from VLE.utils.error_handling import VLEMissingRequiredKey, VLEParamWrongType
 
@@ -75,7 +75,7 @@ class AssignmentView(viewsets.ViewSet):
 
         query = Assignment.objects.filter(courses__in=courses).distinct()
         viewable = [assignment for assignment in query if request.user.can_view(assignment)]
-        serializer = AssignmentSerializer(viewable, many=True, context={'user': request.user, 'course': course})
+        serializer = SmallAssignmentSerializer(viewable, many=True, context={'user': request.user, 'course': course})
 
         data = serializer.data
         for i, assignment in enumerate(data):
@@ -319,7 +319,8 @@ class AssignmentView(viewsets.ViewSet):
             Q(lock_date__gt=now) | Q(lock_date=None), courses__in=courses
         ).distinct()
         viewable = [assignment for assignment in query if request.user.can_view(assignment)]
-        upcoming = AssignmentSerializer(viewable, context={'user': request.user, 'course': course}, many=True).data
+        upcoming = SmallAssignmentSerializer(
+            viewable, context={'user': request.user, 'course': course}, many=True).data
 
         return response.success({'upcoming': upcoming})
 
@@ -425,8 +426,8 @@ class AssignmentView(viewsets.ViewSet):
             if assignments:
                 importable.append({
                     'course': CourseSerializer(course).data,
-                    'assignments': AssignmentDetailsSerializer(assignments, context={'user': request.user},
-                                                               many=True).data
+                    'assignments': SmallAssignmentSerializer(
+                        assignments, context={'user': request.user}, many=True).data
                 })
         return response.success({'data': importable})
 

@@ -488,21 +488,23 @@ export default {
             initialCalls.push(assignmentAPI.get(this.aID, this.cID))
             initialCalls.push(groupAPI.getFromAssignment(this.cID, this.aID))
             /* Superuser does not have any participation, this should not redict to error, nor give an error toast */
-            initialCalls.push(
-                participationAPI.get(this.cID, { redirect: !this.isSuperuser, customErrorToast: '' }).catch(() => {}))
+            if (!this.isSuperuser) {
+                initialCalls.push(participationAPI.get(this.cID))
+            }
 
             Promise.all(initialCalls).then((results) => {
                 this.loadingJournals = false
                 this.assignment = results[0]
                 this.assignmentJournals = results[0].journals
                 this.groups = results[1].sort((a, b) => b.name < a.name)
-                const participant = results[2]
-
-                /* If the group filter has not been set, set it to the
-                   groups of the user provided that yields journals. */
-                if (!this.getSelfSetGroupFilter && participant && participant.groups) {
-                    this.setJournalGroupFilter(participant.groups.filter(
-                        participantGroup => this.groups.some(group => group.id === participantGroup.id)))
+                if (!this.isSuperuser) {
+                    const participant = results[2]
+                    /* If the group filter has not been set, set it to the
+                       groups of the user provided that yields journals. */
+                    if (!this.getSelfSetGroupFilter && participant && participant.groups) {
+                        this.setJournalGroupFilter(participant.groups.filter(
+                            participantGroup => this.groups.some(group => group.id === participantGroup.id)))
+                    }
                 }
 
                 /* If there are no groups or the current group filter yields no journals, remove the filter. */

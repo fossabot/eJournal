@@ -3,6 +3,7 @@
         :accept="acceptedFiletype"
         :state="Boolean(file)"
         :placeholder="placeholderText"
+        :plain="plain"
         class="fileinput"
         @change="fileHandler"
     />
@@ -22,7 +23,7 @@ export default {
             Number,
         },
         aID: {
-            required: true,
+            default: null,
             String,
         },
         autoUpload: {
@@ -34,6 +35,9 @@ export default {
         },
         placeholder: {
             default: 'No file chosen',
+        },
+        plain: {
+            default: false,
         },
         contentID: {
             default: null,
