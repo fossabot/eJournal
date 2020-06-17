@@ -119,6 +119,7 @@ class AssignmentAPITest(TestCase):
 
         api.get(self, 'assignments', params={'pk': assignment.pk}, user=student, status=403)
 
+        # Add journals with some graded but unpublished entries
         for _ in range(2):
             student = factory.Student()
             student_participation = factory.Participation(
@@ -151,6 +152,7 @@ class AssignmentAPITest(TestCase):
         assert resp['stats']['unpublished_own_groups'] == 0,\
             'Own group stats should be empty without being member of a group'
 
+        # Add student and teacher to the same group
         student_participation.groups.add(group)
         teacher_participation = Participation.objects.get(user=self.teacher, course=self.course)
         teacher_participation.groups.add(group)
@@ -162,6 +164,7 @@ class AssignmentAPITest(TestCase):
         assert resp['stats']['needs_marking_own_groups'] == 6, '6 entries in own group do not have a grade yet'
         assert resp['stats']['unpublished_own_groups'] == 4, '4 grades in own group still need to be published'
 
+        # Grade all entries for the assignment and publish grades
         for entry in Entry.objects.filter(node__journal__assignment=assignment):
             api.create(self, 'grades', params={'entry_id': entry.pk, 'grade': 5, 'published': True},
                        user=self.teacher)
