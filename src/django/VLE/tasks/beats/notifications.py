@@ -106,16 +106,37 @@ def get_content_from_notifications(notifications, user, period):
     content = []
     sending = []
     for notification in notifications:
-        if getattr(user.preferences, VLE.models.Notification.TYPES[notification.type]['name']) in period['pref']:
+        notification.refresh_from_db()
+        if not notification.sent and \
+           getattr(user.preferences, VLE.models.Notification.TYPES[notification.type]['name']) in period['pref']:
             notification.sent = True
             notification.save()
+
             sending.append(notification.pk)
+            notification_content = notification.content
+
+            # Potentially batch notifications
+            if notification.type in VLE.models.Notification.BATCHED_TYPES:
+                filter = {
+                    'type': notification.type,
+                    VLE.models.Notification.BATCHED_TYPES[notification.type]: getattr(
+                        notification, VLE.models.Notification.BATCHED_TYPES[notification.type]).pk
+                }
+                # See if there are also other notifications
+                count = 1 + notifications.filter(**filter).count()
+                # Include them in the send as a batched notification
+                notifications.filter(**filter).update(sent=True)
+                if count > 1:
+                    notification_content = notification.batch_content(n=count)
+
             content.append({
                 'title': notification.title,
-                'content': notification.content,
+                'content': notification_content,
                 'url': notification.url,
             })
+
     return content, sending
+
 
 @shared_task
 def send_digest_notifications():
@@ -137,12 +158,13 @@ def send_digest_notifications():
 
     # Loop over all users that potentially have a new notification
     for user in VLE.models.Notification.objects.filter(
-        sent=False).order_by('user__pk').values_list('user', flat=True).distinct():
+       sent=False).order_by('user__pk').values_list('user', flat=True).distinct():
 
         old_sending_len = len(sending)
         user = VLE.models.User.objects.get(pk=user)
-        notifications = VLE.models.Notification.objects.filter(user=user, sent=False)
-        content = {}
+        notifications = VLE.models.Notification.objects.filter(
+            user=user, sent=False)
+        content = []
 
         # Loop over notifications belonging to one course
         for course in notifications.filter(course__isnull=False).values_list('course', flat=True).distinct():
@@ -150,27 +172,36 @@ def send_digest_notifications():
             course_notis = notifications.filter(course=course, assignment__isnull=True)
             general_notis, course_sending = get_content_from_notifications(course_notis, user, period)
             sending += course_sending
-            content[course.name] = {}
+            content.append({
+                'name': course.name,
+                'subcontent': [],
+            })
             if general_notis:
-                content[course.name]['Course notifications'] = general_notis
+                content[-1]['subcontent'].append({
+                    'name': 'Course notifications',
+                    'notifications': general_notis,
+                })
 
             # Loop over notifications belonging to one assignment
             for assignment in notifications.filter(
-                course=course, assignment__isnull=False).values_list('assignment', flat=True).distinct():
+               course=course, assignment__isnull=False).values_list('assignment', flat=True).distinct():
                 assignment = VLE.models.Assignment.objects.get(pk=assignment)
                 assignment_notis = notifications.filter(assignment=assignment, node__isnull=True)
                 other_assignment_notis = notifications.filter(assignment=assignment, node__isnull=False)
                 general_notis, assignment_sending = get_content_from_notifications(assignment_notis, user, period)
                 other_notis, other_sending = get_content_from_notifications(other_assignment_notis, user, period)
-                sending += assignment_sending
-                sending += other_sending
+                sending += assignment_sending + other_sending
                 if general_notis or other_notis:
-                    content[course.name][assignment.name] = general_notis + other_notis
+                    content[-1]['subcontent'].append({
+                        'name': assignment.name,
+                        'notifications': general_notis + other_notis,
+                    })
 
             # If no notifications are found for the set preference, remove the course from the content
-            if content[course.name] == {}:
-                content.pop(course.name)
+            if not content[-1]['subcontent']:
+                content.pop()
 
+        # If there is nothing to be send, dont send an email
         if old_sending_len == len(sending):
             continue
 
@@ -186,9 +217,6 @@ def send_digest_notifications():
 
         html_content = render_to_string('digest.html', {'email_data': email_data})
         text_content = strip_tags(html_content)
-
-        # with open('test{}.html'.format(user.full_name), 'w') as file:
-        #     file.write(html_content)
 
         email = EmailMultiAlternatives(
             subject='{} digest - eJournal'.format(period['name'].title()),

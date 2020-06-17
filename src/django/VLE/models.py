@@ -475,12 +475,12 @@ class Preferences(models.Model):
 
 
 class Notification(models.Model):
-    NEW_COMMENT = 'comm'
-    NEW_ASSIGNMENT = 'assi'
-    NEW_COURSE = 'cour'
-    NEW_GRADE = 'grad'
-    NEW_ENTRY = 'entr'
-    NEW_NODE = 'node'
+    NEW_COURSE = '1'
+    NEW_ASSIGNMENT = '2'
+    NEW_NODE = '3'
+    NEW_ENTRY = '4'
+    NEW_GRADE = '5'
+    NEW_COMMENT = '6'
     TYPES = {
         NEW_COURSE: {
             'name': 'new_course_notifications',
@@ -540,9 +540,15 @@ class Notification(models.Model):
             },
         },
     }
+    # Specify which notifications can be batched in the email, and on what model field they need to be batched to
+    BATCHED_TYPES = {
+        NEW_ENTRY: 'journal',
+        NEW_GRADE: 'journal',
+        NEW_COMMENT: 'entry',
+    }
 
     type = models.TextField(
-        max_length=4,
+        max_length=2,
         choices=((type, dic['name']) for type, dic in TYPES.items()),
         null=False,
     )
@@ -569,6 +575,11 @@ class Notification(models.Model):
         on_delete=models.CASCADE,
         null=True,
     )
+    journal = models.ForeignKey(
+        'journal',
+        on_delete=models.CASCADE,
+        null=True,
+    )
     node = models.ForeignKey(
         'node',
         on_delete=models.CASCADE,
@@ -590,11 +601,6 @@ class Notification(models.Model):
         null=True,
     )
 
-    @property
-    def journal(self):
-        return self.node.journal if self.node else None
-
-
     def __fill_text(self, text, n=None):
         return text.format(
             comment=self.comment.author.full_name if self.comment else None,
@@ -606,12 +612,15 @@ class Notification(models.Model):
         )
 
     @property
-    def title(self, n=None):
-        return self.__fill_text(self.TYPES[self.type]['content']['title'], n=n)
+    def title(self):
+        return self.__fill_text(self.TYPES[self.type]['content']['title'])
 
     @property
-    def content(self, n=None):
-        return self.__fill_text(self.TYPES[self.type]['content']['content'], n=n)
+    def content(self):
+        return self.__fill_text(self.TYPES[self.type]['content']['content'])
+
+    def batch_content(self, n=None):
+        return self.__fill_text(self.TYPES[self.type]['content']['batch_content'], n=n)
 
     @property
     def url(self):
@@ -628,7 +637,9 @@ class Notification(models.Model):
             if self.entry:
                 self.node = self.entry.node
             if self.node:
-                self.assignment = self.node.journal.assignment
+                self.journal = self.node.journal
+            if self.journal:
+                self.assignment = self.journal.assignment
             if self.assignment:
                 self.course = self.assignment.get_active_course(self.user)
 

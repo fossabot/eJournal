@@ -20,11 +20,11 @@
                                 {% endfor %}
                             {% endif %}
                             {% if email_data.notifications %}
-                                {% for course_name, course_notifications in email_data.notifications.items %}
-                                    <h2>{{ course_name }}</h2>
-                                    {% for assignment_name, assignment_notifications in course_notifications.items %}
-                                        <h3>{{ assignment_name }}</h3>
-                                        {% for notification in assignment_notifications %}
+                                {% for course_notifications in email_data.notifications %}
+                                    <h2>{{ course_notifications.name }}</h2>
+                                    {% for assignment_notifications in course_notifications.subcontent %}
+                                        <h3>{{ assignment_notifications.name }}</h3>
+                                        {% for notification in assignment_notifications.notifications %}
                                             <p>
                                                 <b>{{ notification.title }}</b>
                                             </p>

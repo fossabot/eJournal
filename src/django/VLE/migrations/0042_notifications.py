@@ -54,7 +54,7 @@ class Migration(migrations.Migration):
             name='Notification',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('type', models.TextField(choices=[('cour', 'new_course_notifications'), ('assi', 'new_assignment_notifications'), ('node', 'new_node_notifications'), ('entr', 'new_entry_notifications'), ('grad', 'new_grade_notifications'), ('comm', 'new_comment_notifications')], max_length=4)),
+                ('type', models.TextField(choices=[('1', 'new_course_notifications'), ('2', 'new_assignment_notifications'), ('3', 'new_node_notifications'), ('4', 'new_entry_notifications'), ('5', 'new_grade_notifications'), ('6', 'new_comment_notifications')], max_length=2)),
                 ('message', models.TextField()),
                 ('sent', models.BooleanField(default=False)),
                 ('creation_date', models.DateTimeField(auto_now_add=True)),
@@ -64,6 +64,7 @@ class Migration(migrations.Migration):
                 ('entry', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='VLE.Entry')),
                 ('grade', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='VLE.Grade')),
                 ('node', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='VLE.Node')),
+                ('journal', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='VLE.Journal')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
         ),

@@ -180,6 +180,18 @@ class NotificationTest(TestCase):
         pass
 
     def test_digest(self):
+        """Test digesting of emails.
+
+        This will send the following notifications:
+        for the teacher:
+            1 new entry
+            2 new comments (batched)
+        for the student:
+            2 new grades (1 extra because of limitations of the current factoryboy) (batched)
+            1 new comment
+            1 course membership
+            1 assignment membership
+        """
         journal = factory.Journal()  # added to course
         student = journal.authors.first().user
         teacher = journal.assignment.author
@@ -209,7 +221,8 @@ class NotificationTest(TestCase):
         student.preferences.save()
         teacher.preferences.save()
 
-        entry = factory.Grade(entry__node__journal=journal).entry  # "2" new grades
+        # "2" new grades for student, 1 new entry for teacher, 1 course & assignment membership for student
+        entry = factory.Grade(entry__node__journal=journal).entry
 
         factory.StudentComment(entry=entry, author=student)
         factory.StudentComment(entry=entry, author=student)  # 2 new comments for teacher
@@ -229,15 +242,20 @@ class NotificationTest(TestCase):
             'Teacher should not receive the two comment notifications as that is set on OFF'
 
         teacher_mail = mail.outbox[-2].body
+        assert '2 new comments' in teacher_mail
+        assert '{} posted'.format(student.full_name) in teacher_mail
+        assert assignment.name not in teacher_mail
+
         student_mail = mail.outbox[-1].body
-        for n in Notification.objects.filter(user=student, sent=True):
-            assert n.content in student_mail
-            assert n.title in student_mail
-            assert n.content not in teacher_mail
-        for n in Notification.objects.filter(user=teacher, sent=True):
-            assert n.content in teacher_mail
-            assert n.title in teacher_mail
-            assert n.content not in student_mail
+        assert 'You are now a member of' in student_mail
+        assert 'New deadline' in student_mail
+        assert 'Course notifications' in student_mail
+        assert entry.node.journal.assignment.courses.first().name in student_mail
+        assert 'Your teacher added you to' in student_mail
+
+        before_len_mailbox = len(mail.outbox)
+        send_digest_notifications()
+        assert len(mail.outbox) == before_len_mailbox, 'No new notifications, so none should be sent'
 
     def test_save_notification(self):
         entry = factory.Entry()
