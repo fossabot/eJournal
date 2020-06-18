@@ -2,9 +2,9 @@
     <b-card :class="$root.getBorderClass(deadline.id)">
         <!-- Teacher show things todo -->
         <number-badge
-            v-if="deadline.stats && deadline.stats.needs_marking + deadline.stats.unpublished > 0"
-            :leftNum="deadline.stats.needs_marking"
-            :rightNum="deadline.stats.unpublished"
+            v-if="unpublishedOrNeedsMarking"
+            :leftNum="filterOwnGroups ? deadline.stats.needs_marking_own_groups : deadline.stats.needs_marking"
+            :rightNum="filterOwnGroups ? deadline.stats.unpublished_own_groups : deadline.stats.unpublished"
             class="float-right multi-form"
             :title="squareInfo"
         />
@@ -22,7 +22,7 @@
         <br/>
         <span v-if="deadline.deadline.date">
             <!-- Teacher deadline shows last submitted entry date  -->
-            <span v-if="deadline.stats.needs_marking + deadline.stats.unpublished > 0">
+            <span v-if="unpublishedOrNeedsMarking">
                 <icon
                     name="eye"
                     class="fill-grey shift-up-3"
@@ -59,7 +59,18 @@ export default {
     components: {
         numberBadge,
     },
-    props: ['deadline', 'course'],
+    props: {
+        deadline: {
+            required: true,
+        },
+        course: {
+            required: true,
+        },
+        filterOwnGroups: {
+            required: false,
+            default: false,
+        },
+    },
     computed: {
         timeLeft () {
             if (!this.deadline.deadline.date) { return '' }
@@ -94,18 +105,31 @@ export default {
         },
         squareInfo () {
             const info = []
-            if (this.deadline.stats.needs_marking === 1) {
+            const needsMarking = this.filterOwnGroups ? this.deadline.stats.needs_marking_own_groups
+                : this.deadline.stats.needs_marking
+            const unpublished = this.filterOwnGroups ? this.deadline.stats.unpublished_own_groups
+                : this.deadline.stats.unpublished
+
+            if (needsMarking === 1) {
                 info.push('an entry needs marking')
-            } else if (this.deadline.stats.needs_marking > 1) {
-                info.push(`${this.deadline.stats.needs_marking} entries need marking`)
+            } else if (needsMarking > 1) {
+                info.push(`${needsMarking} entries need marking`)
             }
-            if (this.deadline.stats.unpublished === 1) {
+            if (unpublished === 1) {
                 info.push('a grade needs to be published')
-            } else if (this.deadline.stats.unpublished > 1) {
-                info.push(`${this.deadline.stats.unpublished} grades need to be published`)
+            } else if (unpublished > 1) {
+                info.push(`${unpublished} grades need to be published`)
             }
             const s = info.join(' and ')
             return `${s.charAt(0).toUpperCase()}${s.slice(1)}`
+        },
+        unpublishedOrNeedsMarking () {
+            if (this.filterOwnGroups) {
+                return this.deadline.stats && this.deadline.stats.needs_marking_own_groups
+                    + this.deadline.stats.unpublished_own_groups > 0
+            } else {
+                return this.deadline.stats && this.deadline.stats.needs_marking + this.deadline.stats.unpublished > 0
+            }
         },
     },
 }

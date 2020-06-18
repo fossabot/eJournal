@@ -15,6 +15,7 @@ const getters = {
 
     // Search filters.
     todoSortBy: state => state.todo.sortBy,
+    todoFilterOwnGroups: state => state.todo.filterOwnGroups,
     journalSortAscending: state => state.journal.sortAscending,
     journalGroupFilter: state => state.journal.groupFilter,
     journalSelfSetGroupFilter: state => state.journal.selfSetGroupFilter,
@@ -29,6 +30,7 @@ const getters = {
     assignmentOverviewSortAscending: state => state.assignmentOverview.sortAscending,
     assignmentOverviewSearchValue: state => state.assignmentOverview.searchValue,
     assignmentOverviewSortBy: state => state.assignmentOverview.sortBy,
+    assignmentOverviewFilterOwnGroups: state => state.assignmentOverview.filterOwnGroups,
 }
 
 const mutations = {
@@ -75,6 +77,9 @@ const mutations = {
     [types.SET_TODO_SORT_BY] (state, sortByOption) {
         if (!preferenceOptions.TODO_SORT_OPTIONS.has(sortByOption)) { throw new Error('Invalid TODO sorting option.') }
         state.todo.sortBy = sortByOption
+    },
+    [types.SET_TODO_FILTER_OWN_GROUPS] (state, filterOwnGroups) {
+        state.todo.filterOwnGroups = filterOwnGroups
     },
     [types.SET_JOURNAL_SORT_ASCENDING] (state, sortAscending) {
         state.journal.sortAscending = sortAscending
@@ -134,6 +139,9 @@ const mutations = {
         }
         state.assignmentOverview.sortBy = sortByOption
     },
+    [types.SET_ASSIGNMENT_OVERVIEW_FILTER_OWN_GROUPS] (state, filterOwnGroups) {
+        state.assignmentOverview.filterOwnGroups = filterOwnGroups
+    },
     [types.RESET_PREFERENCES] (state) {
         state.gradeNotifications = null
         state.commentNotifications = null
@@ -145,6 +153,7 @@ const mutations = {
         state.autoSelectUngradedEntry = null
         state.autoProceedNextJournal = null
         state.todo.sortBy = 'date'
+        state.todo.filterOwnGroups = true
         state.journal.aID = null
         state.journal.sortAscending = true
         state.journal.groupFilter = null
@@ -159,6 +168,7 @@ const mutations = {
         state.assignmentOverview.sortAscending = true
         state.assignmentOverview.searchValue = ''
         state.assignmentOverview.sortBy = 'name'
+        state.assignmentOverview.filterOwnGroups = true
     },
 }
 
@@ -176,6 +186,7 @@ export default {
         commentButtonSetting: 'p',
         todo: {
             sortBy: 'date',
+            filterOwnGroups: true,
         },
         journal: {
             aID: null,
@@ -196,6 +207,7 @@ export default {
             sortAscending: true,
             searchValue: '',
             sortBy: 'name',
+            filterOwnGroups: true,
         },
     },
     getters,
