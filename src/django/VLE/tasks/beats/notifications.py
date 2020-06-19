@@ -97,14 +97,29 @@ def send_upcoming_deadlines():
     return emails_sent_to
 
 
-def get_content_from_notifications(notifications, user, period):
-    """Loop over all notifications, and put the content of the notification in a mail-friendly object.
-    NOTE: skips over notifications that are not included in the prefered period of the user
+def add_notifications_to_content(content, notifications, period, name):
+    """Add the notifications to the content supplied in a mail-template-friendly object.
 
-    returns: (content list, included notification ids)
+    Skips over notifications that are sent or should be sent at another time.
+    Will batch batchable notifications if there is more than one of them.
+
+    params:
+    content -- list of content to add the notifications in
+    notifications -- list of notifications to loop over and add to the content list
+    period -- period in which the notifications are send
+
+    returns: list of id's that are added (even when batched)
     """
-    content = []
+    if not notifications:
+        return []
+
     sending = []
+    user = notifications.first().user
+    content.append({
+        'name': name,
+        'notifications': [],
+    })
+
     for notification in notifications:
         notification.refresh_from_db()
         if not notification.sent and \
@@ -129,12 +144,59 @@ def get_content_from_notifications(notifications, user, period):
                 if count > 1:
                     notification_content = notification.batch_content(n=count)
 
-            content.append({
+            content[-1]['notifications'].append({
                 'title': notification.title,
                 'content': notification_content,
                 'url': notification.url,
             })
 
+    # If nothing is sent, remove it from the list
+    if not sending:
+        content.pop()
+
+    return sending
+
+
+def gen_content_from_notifications(notifications, period):
+    """Generate an object to be passed onto the digest template from a list of notifications
+
+    Skips over notifications that are sent or should be sent at another time.
+    Will batch batchable notifications if there is more than one of them.
+
+    params:
+    notifications -- list of notifications to loop over and add to the content list\
+    period -- period in which the notifications are send
+
+    returns: tuple of:
+        - Object that can be passed to the digest template
+        - list of id's that are added (even when batched)
+    """
+    sending = []
+    content = []
+    # Loop over notifications belonging to one course
+    for course in notifications.filter(course__isnull=False).values_list('course', flat=True).distinct():
+        course = VLE.models.Course.objects.get(pk=course)
+        content.append({
+            'name': course.name,
+            'subcontent': [],
+        })
+        sending += add_notifications_to_content(
+            content=content[-1]['subcontent'],
+            notifications=notifications.filter(course=course, assignment__isnull=True),
+            period=period,
+            name='Course notifications'
+        )
+
+        # Loop over notifications belonging to one assignment
+        for assignment in notifications.filter(
+           course=course, assignment__isnull=False).values_list('assignment', flat=True).distinct():
+            assignment = VLE.models.Assignment.objects.get(pk=assignment)
+            sending += add_notifications_to_content(
+                content=content[-1]['subcontent'],
+                notifications=notifications.filter(course=course, assignment=assignment),
+                period=period,
+                name=assignment.name,
+            )
     return content, sending
 
 
@@ -160,49 +222,15 @@ def send_digest_notifications():
     for user in VLE.models.Notification.objects.filter(
        sent=False).order_by('user__pk').values_list('user', flat=True).distinct():
 
-        old_sending_len = len(sending)
         user = VLE.models.User.objects.get(pk=user)
-        notifications = VLE.models.Notification.objects.filter(
-            user=user, sent=False)
-        content = []
-
-        # Loop over notifications belonging to one course
-        for course in notifications.filter(course__isnull=False).values_list('course', flat=True).distinct():
-            course = VLE.models.Course.objects.get(pk=course)
-            course_notis = notifications.filter(course=course, assignment__isnull=True)
-            general_notis, course_sending = get_content_from_notifications(course_notis, user, period)
-            sending += course_sending
-            content.append({
-                'name': course.name,
-                'subcontent': [],
-            })
-            if general_notis:
-                content[-1]['subcontent'].append({
-                    'name': 'Course notifications',
-                    'notifications': general_notis,
-                })
-
-            # Loop over notifications belonging to one assignment
-            for assignment in notifications.filter(
-               course=course, assignment__isnull=False).values_list('assignment', flat=True).distinct():
-                assignment = VLE.models.Assignment.objects.get(pk=assignment)
-                assignment_notis = notifications.filter(assignment=assignment, node__isnull=True)
-                other_assignment_notis = notifications.filter(assignment=assignment, node__isnull=False)
-                general_notis, assignment_sending = get_content_from_notifications(assignment_notis, user, period)
-                other_notis, other_sending = get_content_from_notifications(other_assignment_notis, user, period)
-                sending += assignment_sending + other_sending
-                if general_notis or other_notis:
-                    content[-1]['subcontent'].append({
-                        'name': assignment.name,
-                        'notifications': general_notis + other_notis,
-                    })
-
-            # If no notifications are found for the set preference, remove the course from the content
-            if not content[-1]['subcontent']:
-                content.pop()
+        content, user_sending = gen_content_from_notifications(
+            VLE.models.Notification.objects.filter(user=user, sent=False),
+            period
+        )
+        sending += user_sending
 
         # If there is nothing to be sent, dont send an email
-        if old_sending_len == len(sending):
+        if not user_sending:
             continue
 
         email_data = {
