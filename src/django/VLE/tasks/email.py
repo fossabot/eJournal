@@ -36,10 +36,14 @@ def send_push_notification(notification_pk):
 
     html_content = render_to_string('call_to_action.html', {'email_data': email_data})
     text_content = strip_tags(html_content)
+    if notification.assignment:
+        context = '{}, {}'.format(notification.assignment, notification.course)
+    else:
+        context = notification.course
 
     email = EmailMultiAlternatives(
         # QUESTION: Canvas includes the course name here, copy that or the heading we supply (e.g. 'New comment')?
-        subject='{} - eJournal'.format(notification.title),
+        subject='{} in {} - eJournal'.format(notification.title, context),
         body=text_content,
         from_email='eJournal | Noreply<noreply@{}>'.format(settings.EMAIL_SENDER_DOMAIN),
         headers={'Content-Type': 'text/plain'},
