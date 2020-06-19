@@ -31,7 +31,7 @@ postgres_dev_user_pass = password
 test-back:
 	pep8 ./src/django --max-line-length=120 --exclude='./src/django/VLE/migrations','./src/django/VLE/settings*'
 	bash -c 'source ./venv/bin/activate && flake8 --max-line-length=120 src/django --exclude="src/django/VLE/migrations/*","src/django/VLE/settings/*","src/django/VLE/settings.py","src/django/VLE/tasks/__init__.py" && deactivate'
-	bash -c "source ./venv/bin/activate && pytest -n auto --cov=VLE --cov-config .coveragerc src/django/test ${TOTEST} && deactivate"
+	bash -c "source ./venv/bin/activate && pytest -n auto --cov=VLE -vvl --cov-report term-missing --cov-config .coveragerc src/django/test ${TOTEST} && deactivate"
 	bash -c 'source ./venv/bin/activate && isort -rc src/django/ && deactivate'
 
 test-front:

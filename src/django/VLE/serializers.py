@@ -334,21 +334,22 @@ class AssignmentSerializer(serializers.ModelSerializer):
 
         course = self.context.get('course', None)
         if course is None:
+            # Get the stats from only the course that it's linked to, when no courses are supplied.
             course = self._get_course(assignment)
-        # Get the stats from only the course that its linked to, when no courses are supplied.
-        users = User.objects.filter(
+
+        all_users = User.objects.filter(
             participation__course=course, participation__role__can_have_journal=True
         )
+        own_group_users = all_users
 
-        # Get grade compared to users in the group
-        participation = Participation.objects.filter(user=self.context['user'], course=course)
-        if participation.exists():
-            participation = participation.first()
-            if participation.groups and users.filter(participation__groups=participation.groups.first()).exists():
-                users = users.filter(participation__groups=participation.groups.first())
+        own_participation = Participation.objects.filter(user=self.context['user'], course=course)
+        if own_participation.exists():
+            # Get all users that are in any of the request user's groups.
+            own_participation = own_participation.first()
+            own_group_users = all_users.filter(participation__groups__in=own_participation.groups.all())
 
         stats = {}
-        journal_set = Journal.objects.filter(assignment=assignment).filter(authors__user__in=users)
+        journal_set = Journal.objects.filter(assignment=assignment, authors__user__in=all_users)
 
         # Grader stats
         if self.context['user'].has_permission('can_grade', assignment):
@@ -356,6 +357,12 @@ class AssignmentSerializer(serializers.ModelSerializer):
                 .filter(Q(node__entry__grade__grade=None) | Q(node__entry__grade=None),
                         node__entry__isnull=False).values('node').count()
             stats['unpublished'] = journal_set \
+                .filter(node__entry__isnull=False, node__entry__grade__published=False,
+                        node__entry__grade__grade__isnull=False).values('node').count()
+            stats['needs_marking_own_groups'] = journal_set.filter(authors__user__in=own_group_users) \
+                .filter(Q(node__entry__grade__grade=None) | Q(node__entry__grade=None),
+                        node__entry__isnull=False).values('node').count()
+            stats['unpublished_own_groups'] = journal_set.filter(authors__user__in=own_group_users) \
                 .filter(node__entry__isnull=False, node__entry__grade__published=False,
                         node__entry__grade__grade__isnull=False).values('node').count()
         # Other stats
@@ -372,13 +379,12 @@ class AssignmentSerializer(serializers.ModelSerializer):
                 return assignment.get_active_course(self.context['user'])
             else:
                 return None
-        else:
-            if not self.context['course'] in assignment.courses.all():
-                raise VLEProgrammingError('Wrong course is supplied')
-            elif not self.context['user'].can_view(self.context['course']):
-                raise VLEParticipationError(self.context['course'], self.context['user'])
+        elif not self.context['course'] in assignment.courses.all():
+            raise VLEProgrammingError('Wrong course is supplied')
+        elif not self.context['user'].can_view(self.context['course']):
+            raise VLEParticipationError(self.context['course'], self.context['user'])
 
-            return self.context['course']
+        return self.context['course']
 
     def get_courses(self, assignment):
         if 'course' in self.context and self.context['course']:

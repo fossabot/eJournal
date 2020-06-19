@@ -201,7 +201,7 @@ def send_digest_notifications():
             if not content[-1]['subcontent']:
                 content.pop()
 
-        # If there is nothing to be send, dont send an email
+        # If there is nothing to be sent, dont send an email
         if old_sending_len == len(sending):
             continue
 

@@ -1,5 +1,28 @@
 <template>
     <content-single-column>
+        <div
+            v-if="$root.canGradeForSomeCourse"
+            class="text-grey float-right unselectable cursor-pointer"
+        >
+            <span
+                v-if="selectedFilterOwnGroups"
+                v-b-tooltip.hover
+                title="Only showing to do items for groups which you are a member of"
+                @click="selectedFilterOwnGroups = false"
+            >
+                Showing to do:
+                <b>own groups</b>
+            </span>
+            <span
+                v-else
+                v-b-tooltip.hover
+                title="Showing to do items for all groups"
+                @click="selectedFilterOwnGroups = true"
+            >
+                Showing to do:
+                <b>all</b>
+            </span>
+        </div>
         <bread-crumb :currentPage="'Assignments'"/>
         <input
             v-model="searchValue"
@@ -20,7 +43,7 @@
                     Sort by name
                 </option>
                 <option
-                    v-if="$hasPermission('can_add_course')"
+                    v-if="$root.canGradeForSomeCourse"
                     value="markingNeeded"
                 >
                     Sort by marking needed
@@ -58,6 +81,7 @@
                     <todo-card
                         :deadline="d"
                         :course="d.course"
+                        :filterOwnGroups="selectedFilterOwnGroups"
                     />
                 </b-link>
                 <b-link
@@ -70,6 +94,7 @@
                     <todo-card
                         :deadline="d"
                         :course="course"
+                        :filterOwnGroups="selectedFilterOwnGroups"
                     />
                 </b-link>
             </div>
@@ -113,6 +138,7 @@ export default {
             order: 'preferences/assignmentOverviewSortAscending',
             getAssignmentSearchValue: 'preferences/assignmentOverviewSearchValue',
             getAssignmentOverviewSortBy: 'preferences/assignmentOverviewSortBy',
+            getAssignmentOverviewFilterOwnGroups: 'preferences/assignmentOverviewFilterOwnGroups',
         }),
         searchValue: {
             get () {
@@ -128,6 +154,14 @@ export default {
             },
             set (value) {
                 this.setAssignmentOverviewSortBy(value)
+            },
+        },
+        selectedFilterOwnGroups: {
+            get () {
+                return this.getAssignmentOverviewFilterOwnGroups
+            },
+            set (value) {
+                this.setAssignmentOverviewOwnGroups(value)
             },
         },
         computedAssignments () {
@@ -175,6 +209,7 @@ export default {
             setOrder: 'preferences/SET_ASSIGNMENT_OVERVIEW_SORT_ASCENDING',
             setAssignmentSearchValue: 'preferences/SET_ASSIGNMENT_OVERVIEW_SEARCH_VALUE',
             setAssignmentOverviewSortBy: 'preferences/SET_ASSIGNMENT_OVERVIEW_SORT_BY',
+            setAssignmentOverviewOwnGroups: 'preferences/SET_ASSIGNMENT_OVERVIEW_FILTER_OWN_GROUPS',
         }),
         compare (a, b) {
             if (a < b) { return this.order ? 1 : -1 }
