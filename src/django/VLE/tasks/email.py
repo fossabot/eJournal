@@ -42,7 +42,6 @@ def send_push_notification(notification_pk):
         context = notification.course
 
     email = EmailMultiAlternatives(
-        # QUESTION: Canvas includes the course name here, copy that or the heading we supply (e.g. 'New comment')?
         subject='{} in {} - eJournal'.format(notification.title, context),
         body=text_content,
         from_email='eJournal | Noreply<noreply@{}>'.format(settings.EMAIL_SENDER_DOMAIN),
@@ -52,7 +51,6 @@ def send_push_notification(notification_pk):
 
     email.attach_alternative(html_content, 'text/html')
     email.send()
-    # QUESTION: What action should be taken if sending the email goes wrong?
     notification.sent = True
     notification.save()
 
