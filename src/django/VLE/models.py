@@ -479,18 +479,18 @@ class Preferences(CreateUpdateModel):
 
 
 class Notification(CreateUpdateModel):
-    NEW_COURSE = '1'
-    NEW_ASSIGNMENT = '2'
-    NEW_NODE = '3'
-    NEW_ENTRY = '4'
-    NEW_GRADE = '5'
-    NEW_COMMENT = '6'
+    NEW_COURSE = 1
+    NEW_ASSIGNMENT = 2
+    NEW_NODE = 3
+    NEW_ENTRY = 4
+    NEW_GRADE = 5
+    NEW_COMMENT = 6
     TYPES = {
         NEW_COURSE: {
             'name': 'new_course_notifications',
             'content': {
                 'title': 'New course membership',
-                'content': 'You are now a member of {course}',
+                'content': 'You are now a member of {course}.',
                 'extra_content': None,
                 'button_text': 'View Course',
             },
@@ -508,7 +508,7 @@ class Notification(CreateUpdateModel):
             'name': 'new_node_notifications',
             'content': {
                 'title': 'New deadline',
-                'content': 'A new deadline has been added to your journal',
+                'content': 'A new deadline has been added to your journal.',
                 'extra_content': None,
                 'button_text': 'View Deadline',
             },
@@ -518,7 +518,7 @@ class Notification(CreateUpdateModel):
             'content': {
                 'title': 'New entry',
                 'content': '{journal} posted {entry}.',
-                'batch_content': '{n} new entries were posted in {journal}',
+                'batch_content': '{n} new entries were posted in {journal}.',
                 'extra_content': None,
                 'button_text': 'View Entry',
             },
@@ -528,7 +528,7 @@ class Notification(CreateUpdateModel):
             'content': {
                 'title': 'New grade',
                 'content': '{entry} has been graded.',
-                'batch_content': '{n} new entries were graded',
+                'batch_content': '{entry} has been graded.',
                 'extra_content': None,
                 'button_text': 'View Grade',
             },
@@ -538,7 +538,7 @@ class Notification(CreateUpdateModel):
             'content': {
                 'title': 'New comment',
                 'content': '{comment} commented on {entry}.',
-                'batch_content': '{n} new comments on {entry} in the journal of {journal}',
+                'batch_content': '{n} new comments on {entry} in the journal of {journal}.',
                 'extra_content': None,
                 'button_text': 'View Comment',
             },
@@ -547,12 +547,11 @@ class Notification(CreateUpdateModel):
     # Specify which notifications can be batched in the email, and on what model field they need to be batched to
     BATCHED_TYPES = {
         NEW_ENTRY: 'journal',
-        NEW_GRADE: 'journal',
+        NEW_GRADE: 'entry',
         NEW_COMMENT: 'entry',
     }
 
-    type = models.TextField(
-        max_length=2,
+    type = models.IntegerField(
         choices=((type, dic['name']) for type, dic in TYPES.items()),
         null=False,
     )
