@@ -69,7 +69,7 @@ def _send_deadline_mails(deadline_query):
             continue
 
         # Dont send a mail when the target points is reached
-        if deadline['type'] == Node.PROGRESS and journal.get_grade() > deadline['target']:
+        if deadline['type'] == Node.PROGRESS and journal.grade > deadline['target']:
             continue
 
         emails_sent_to += _send_deadline_mail(deadline, journal)

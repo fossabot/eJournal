@@ -94,13 +94,13 @@ def send_author_status_to_LMS(journal, author, left_journal=False):
             'url': '{0}/Home/Course/{1}/Assignment/{2}/Journal/{3}'.format(
                 settings.BASELINK, course.pk, journal.assignment.pk, journal.pk)
         }
-        grade = journal.get_grade()
+        grade = journal.grade
     else:
         result_data = {
             'url': '{0}/Home/Course/{1}/Assignment/{2}?left_journal=true'.format(
                 settings.BASELINK, course.pk, journal.assignment.pk)
         }
-        grade = journal.get_grade() if not journal.assignment.remove_grade_upon_leaving_group else 0
+        grade = journal.grade if not journal.assignment.remove_grade_upon_leaving_group else 0
 
     submitted_at = None
 
@@ -117,9 +117,9 @@ def send_author_status_to_LMS(journal, author, left_journal=False):
             author, grade, result_data=result_data, send_score=True, submitted_at=submitted_at)
         response_student = grade_request.send_post_request()
         response_student['old_grade'] = journal.LMS_grade
-        response_student['new_grade'] = journal.get_grade()
+        response_student['new_grade'] = journal.grade
         if response_student['code_mayor'] == 'success':
-            journal.LMS_grade = journal.get_grade()
+            journal.LMS_grade = journal.grade
             journal.save()
 
     response_teacher = None

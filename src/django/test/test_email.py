@@ -246,9 +246,9 @@ class EmailAPITest(TestCase):
         group_journal = factory.GroupJournal(assignment=group_assignment)
 
         in_journal = factory.AssignmentParticipation(assignment=group_assignment)
-        group_journal.authors.add(in_journal)
+        group_journal.add_author(in_journal)
         also_in_journal = factory.AssignmentParticipation(assignment=group_assignment)
-        group_journal.authors.add(also_in_journal)
+        group_journal.add_author(also_in_journal)
         not_in_journal = factory.AssignmentParticipation(assignment=group_assignment)
 
         mails = notifications.send_upcoming_deadlines()

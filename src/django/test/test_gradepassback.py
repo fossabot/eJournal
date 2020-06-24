@@ -30,13 +30,13 @@ class GradePassBackRequestXMLTest(TestCase):
             user=self.student, assignment=self.assignment, sourcedid='f6d552',
             grade_url='https://uvadlo-tes.instructure.com/api/lti/v1/tools/267/grade_passback')
         self.journal = factory.Journal(assignment=self.assignment)
-        self.journal.authors.add(ap)
+        self.journal.add_author(ap)
         self.journal.save()
 
     def test_create_grade_passback(self):
         """Test if the GradePassBackRequest is correctly created when a journal is given"""
         passback = lti_grade.GradePassBackRequest(
-            self.journal.authors.first(), self.journal.get_grade(), send_score=True)
+            self.journal.authors.first(), self.journal.grade, send_score=True)
         assert passback.score
         assert passback.url
         assert passback.sourcedid
@@ -61,7 +61,7 @@ class GradePassBackRequestXMLTest(TestCase):
     def test_create_xml_with_score(self):
         """Test create xml with the score set."""
         passback = lti_grade.GradePassBackRequest(
-            self.journal.authors.first(), self.journal.get_grade(), send_score=True)
+            self.journal.authors.first(), self.journal.grade, send_score=True)
         result = b'<imsx_POXEnvelopeRequest xmlns="http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">\
 <imsx_POXHeader><imsx_POXRequestHeaderInfo><imsx_version>V1.0</imsx_version><imsx_messageIdentifier>0\
 </imsx_messageIdentifier></imsx_POXRequestHeaderInfo></imsx_POXHeader><imsx_POXBody><replaceResultRequest>\
@@ -73,7 +73,7 @@ class GradePassBackRequestXMLTest(TestCase):
 
     def test_create_xml_with_data_text(self):
         """Test create xml."""
-        passback = lti_grade.GradePassBackRequest(self.journal.authors.first(), self.journal.get_grade(),
+        passback = lti_grade.GradePassBackRequest(self.journal.authors.first(), self.journal.grade,
                                                   result_data={'text': 'New entry'})
         result = b'<imsx_POXEnvelopeRequest xmlns="http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">\
 <imsx_POXHeader><imsx_POXRequestHeaderInfo><imsx_version>V1.0</imsx_version><imsx_messageIdentifier>0\
@@ -85,7 +85,7 @@ class GradePassBackRequestXMLTest(TestCase):
 
     def test_create_xml_with_data_url(self):
         """Test create xml."""
-        passback = lti_grade.GradePassBackRequest(self.journal.authors.first(), self.journal.get_grade(),
+        passback = lti_grade.GradePassBackRequest(self.journal.authors.first(), self.journal.grade,
                                                   result_data={'url': 'http://127.0.0.1:8000/grade_passback'})
         result = b'<imsx_POXEnvelopeRequest xmlns="http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">\
 <imsx_POXHeader><imsx_POXRequestHeaderInfo><imsx_version>V1.0</imsx_version><imsx_messageIdentifier>0\
@@ -97,7 +97,7 @@ class GradePassBackRequestXMLTest(TestCase):
 
     def test_create_xml_with_data_url_timestamp(self):
         """Test create xml."""
-        passback = lti_grade.GradePassBackRequest(self.journal.authors.first(), self.journal.get_grade(),
+        passback = lti_grade.GradePassBackRequest(self.journal.authors.first(), self.journal.grade,
                                                   submitted_at='2017-04-16T18:54:36.736+00:00',
                                                   result_data={'url': 'http://127.0.0.1:8000/grade_passback'})
         result = b'<imsx_POXEnvelopeRequest xmlns="http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">\
@@ -111,7 +111,7 @@ class GradePassBackRequestXMLTest(TestCase):
 
     def test_create_xml_with_data_launchUrl(self):
         """Test create xml."""
-        passback = lti_grade.GradePassBackRequest(self.journal.authors.first(), self.journal.get_grade(),
+        passback = lti_grade.GradePassBackRequest(self.journal.authors.first(), self.journal.grade,
                                                   result_data={'launchUrl': 'http://127.0.0.1:8000/grade_passback'})
         result = b'<imsx_POXEnvelopeRequest xmlns="http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">\
 <imsx_POXHeader><imsx_POXRequestHeaderInfo><imsx_version>V1.0</imsx_version><imsx_messageIdentifier>0\
@@ -128,7 +128,7 @@ class GradePassBackRequestXMLTest(TestCase):
 
     def test_parse_return_xml(self):
         """"""
-        passback = lti_grade.GradePassBackRequest(self.journal.authors.first(), self.journal.get_grade())
+        passback = lti_grade.GradePassBackRequest(self.journal.authors.first(), self.journal.grade)
         xml = b'<?xml version="1.0" encoding="UTF-8"?>\
 <imsx_POXEnvelopeResponse xmlns="http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">\
 <imsx_POXHeader><imsx_POXResponseHeaderInfo><imsx_version>V1.0</imsx_version><imsx_messageIdentifier/>\
@@ -144,7 +144,7 @@ class GradePassBackRequestXMLTest(TestCase):
 
     def test_parse_return_empty_xml(self):
         """"""
-        passback = lti_grade.GradePassBackRequest(self.journal.authors.first(), self.journal.get_grade())
+        passback = lti_grade.GradePassBackRequest(self.journal.authors.first(), self.journal.grade)
         xml = b'<?xml version="1.0" encoding="UTF-8"?>\
 <imsx_POXEnvelopeResponse xmlns="http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">\
 <imsx_POXHeader><imsx_POXResponseHeaderInfo><imsx_version>V1.0</imsx_version><imsx_messageIdentifier/>\

@@ -25,9 +25,11 @@ class StatisticsTests(TestCase):
         for entry in entries[1:]:
             api.create(self, 'grades', params={'entry_id': entry.id, 'grade': 1, 'published': True},
                        user=self.journal.assignment.courses.first().author)
-        assert self.journal.get_grade() == 3
+        self.journal.refresh_from_db()
+        assert self.journal.grade == 3
         self.journal.bonus_points = 5
         self.journal.save()
-        assert self.journal.get_grade() == 8
+        self.journal.refresh_from_db()
+        assert self.journal.grade == 8
         assert utils.get_submitted_count(entries) == 4
         assert utils.get_graded_count(entries) == 3

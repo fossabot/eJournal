@@ -20,7 +20,7 @@ class EntryAPITest(TestCase):
         self.teacher = self.journal.assignment.courses.first().author
         APteacher = factory.AssignmentParticipation(user=self.teacher)
         self.journal_teacher = factory.Journal(assignment=self.journal.assignment)
-        self.journal_teacher.authors.add(APteacher)
+        self.journal_teacher.add_author(APteacher)
         self.journal_teacher.save()
         # self.teacher = self.journal_teacher.authors.first().user
         self.format = self.journal.assignment.format
@@ -208,7 +208,7 @@ class EntryAPITest(TestCase):
 
         # Check if last_edited_by gets set to the correct other user
         last_edited = factory.AssignmentParticipation(assignment=self.journal.assignment)
-        self.journal.authors.add(last_edited)
+        self.journal.add_author(last_edited)
         resp = api.update(self, 'entries', params=params.copy(), user=last_edited.user)['entry']
         assert resp['last_edited_by'] == last_edited.user.full_name
 
