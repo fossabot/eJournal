@@ -215,6 +215,8 @@ class EmailAPITest(TestCase):
             'Journal with proper grade should only get notified of unfilled entries'
         assert mails.count(journal_empty_but_no_notifications.authors.first().user.email) == 0, \
             'Without email notifications, one should never get notified'
+        assert mails.count(assignment.author.email) == 0, \
+            'Teacher should not get any notifications'
 
         # Test assigned to
         group = Group.objects.create(course=assignment.courses.first(), name='test')
@@ -229,6 +231,23 @@ class EmailAPITest(TestCase):
                 mails.count(journal_filled_and_graded_100.authors.first().user.email) == 0 and
                 mails.count(journal_empty_but_no_notifications.authors.first().user.email) == 0), \
             'Authors not in the assigned to groups, should not get an email'
+
+        assignment = factory.Assignment()
+        assignment.is_published = False
+        assignment.save()
+        # ENTRYDEADLINE inside deadline
+        PresetNode.objects.create(
+            description='Entrydeadline node description',
+            due_date=timezone.now().date() + datetime.timedelta(days=7, hours=2),
+            lock_date=timezone.now().date() + datetime.timedelta(days=8),
+            type=Node.ENTRYDEADLINE,
+            forced_template=Template.objects.filter(format__assignment=assignment).first(),
+            format=assignment.format,
+        )
+        journal_unpublished_assignment = factory.Journal(assignment=assignment)
+        mails = notifications.send_upcoming_deadlines()
+        assert mails.count(journal_unpublished_assignment.authors.first().user.email) == 0, \
+            'Unpublished assignment should get no emails'
 
     def test_deadline_email_groups(self):
         group_assignment = factory.GroupAssignment()
