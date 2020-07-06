@@ -33,6 +33,8 @@
                 :displayMode="false"
                 :nodeID="entryNode.nID"
                 :entryID="entryNode.entry.id"
+                @uploadingFile="uploadingFiles ++"
+                @finishedUploadingFile="uploadingFiles --"
             />
 
             <b-alert
@@ -45,6 +47,7 @@
             </b-alert>
             <b-button
                 class="add-button float-right mt-2"
+                :class="{'input-disabled': uploadingFiles > 0}"
                 @click="saveEdit"
             >
                 <icon name="save"/>
@@ -132,22 +135,21 @@
             </div>
         </b-card>
 
-        <comment-card
+        <comments
             :eID="entryNode.entry.id"
             :entryGradePublished="gradePublished"
-            :journal="journal"
         />
     </div>
 </template>
 
 <script>
 import sandboxedIframe from '@/components/assets/SandboxedIframe.vue'
-import commentCard from '@/components/entry/CommentCard.vue'
+import comments from '@/components/entry/Comments.vue'
 import entryFields from '@/components/entry/EntryFields.vue'
 
 export default {
     components: {
-        commentCard,
+        comments,
         entryFields,
         sandboxedIframe,
     },
@@ -162,6 +164,7 @@ export default {
             dismissSecs: 3,
             dismissCountDown: 0,
             showDismissibleAlert: false,
+            uploadingFiles: 0,
         }
     },
     computed: {

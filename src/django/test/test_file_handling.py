@@ -118,7 +118,7 @@ class FileHandlingTest(TestCase):
         assert FileContext.objects.get(pk=file1.pk).file.path != FileContext.objects.get(pk=file2.pk).file.path
         assert FileContext.objects.get(pk=file2.pk).file.path != FileContext.objects.get(pk=file3.pk).file.path
 
-    def test_remove_unused_files(self):
+    def test_remove_unused_files_content(self):
         # Test uploading two files, then post entry, 1 gets removed
         content_fake = api.post(
             self, 'files', params={'file': self.image}, user=self.student, content_type=MULTIPART_CONTENT, status=201)
@@ -177,6 +177,24 @@ class FileHandlingTest(TestCase):
         assert self.student.filecontext_set.filter(pk=content_new_rt['id']).exists(), 'new file should exist'
         assert self.student.filecontext_set.filter(pk=content_new_rt2['id']).exists(), 'new file should exist'
         assert not self.student.filecontext_set.filter(pk=content_old_rt['id']).exists(), 'old file should be removed'
+
+    def test_remove_unused_files_comment(self):
+        # Test uploading two files, then post comment, 1 gets removed
+        content_fake = api.post(
+            self, 'files', params={'file': self.image, 'in_rich_text': True}, user=self.student,
+            content_type=MULTIPART_CONTENT, status=201)
+        content_real = api.post(
+            self, 'files', params={'file': self.image, 'in_rich_text': True}, user=self.student,
+            content_type=MULTIPART_CONTENT, status=201)
+        params = {
+            'entry_id': factory.Entry(node__journal=self.journal).pk,
+            'text': '<p><img src="{}"</p>'.format(content_real['download_url']),
+            'published': True,
+            'files': [],
+        }
+        api.create(self, 'comments', params=params, user=self.student)
+        assert self.student.filecontext_set.filter(pk=content_real['id']).exists(), 'real file should stay'
+        assert not self.student.filecontext_set.filter(pk=content_fake['id']).exists(), 'fake file should be removed'
 
     def test_remove_profile_picture(self):
         user = factory.Student()

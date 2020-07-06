@@ -90,6 +90,8 @@
                 :id="'rich-text-editor-field-' + i"
                 :key="'rich-text-editor-field-' + i"
                 v-model="completeContent[i].data"
+                @startedUploading="$emit('uploadingFile')"
+                @finishedUploading="$emit('finishedUploadingFile')"
             />
             <url-input
                 v-else-if="field.type == 'u'"
