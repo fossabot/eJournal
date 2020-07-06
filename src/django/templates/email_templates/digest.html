@@ -21,14 +21,12 @@
                             {% endif %}
                             {% if email_data.notifications %}
                                 {% for course_notifications in email_data.notifications %}
-                                    <h2>{{ course_notifications.name }}</h2>
+                                    <h2 style="color: #252C39">{{ course_notifications.name }}</h2>
                                     {% for assignment_notifications in course_notifications.subcontent %}
-                                        <h3>{{ assignment_notifications.name }}</h3>
+                                        <h3 style="color: #252C39">{{ assignment_notifications.name }}</h3>
                                         {% for notification in assignment_notifications.notifications %}
-                                            <p>
-                                                <b>{{ notification.title }}</b>
-                                            </p>
-                                            <p style="color: rgb(0, 0, 0)">
+                                            <b style="color: #252C39">{{ notification.title }}</b>
+                                            <p style="color: #252C39">
                                                 {{ notification.content }}
                                             </p>
                                             <a href="{{ notification.url }}" style="color:#15c">Click to view</a>
