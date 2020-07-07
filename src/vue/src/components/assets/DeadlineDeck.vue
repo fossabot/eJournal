@@ -7,7 +7,7 @@
             To Do
         </h3>
         <div
-            v-if="$root.canGradeForSomeCourse"
+            v-if="$root.canGradeForSomeCourse()"
             class="text-grey float-right unselectable cursor-pointer"
         >
             <span
@@ -29,55 +29,57 @@
                 <b>all</b>
             </span>
         </div>
-        <div v-if="computedDeadlines.length > 0">
-            <b-form-select
-                v-if="$root.canGradeForSomeCourse && computedDeadlines.length > 1"
-                v-model="sortBy"
-                :selectSize="1"
-                class="theme-select multi-form"
-            >
-                <option value="date">
-                    Sort by date
-                </option>
-                <option value="markingNeeded">
-                    Sort by marking needed
-                </option>
-            </b-form-select>
-            <div
-                v-for="(d, i) in computedDeadlines"
-                :key="i"
-            >
-                <b-link
-                    :to="$root.assignmentRoute(d)"
-                    tag="b-button"
+        <load-wrapper :loading="loadingDeadlines">
+            <div v-if="computedDeadlines.length > 0">
+                <b-form-select
+                    v-if="$root.canGradeForSomeCourse() && computedDeadlines.length > 1"
+                    v-model="sortBy"
+                    :selectSize="1"
+                    class="theme-select multi-form"
                 >
-                    <todo-card
-                        :deadline="d"
-                        :course="d.course"
-                        :filterOwnGroups="filterOwnGroups"
-                    />
-                </b-link>
+                    <option value="date">
+                        Sort by date
+                    </option>
+                    <option value="markingNeeded">
+                        Sort by marking needed
+                    </option>
+                </b-form-select>
+                <div
+                    v-for="(d, i) in computedDeadlines"
+                    :key="i"
+                >
+                    <b-link
+                        :to="$root.assignmentRoute(d)"
+                        tag="b-button"
+                    >
+                        <todo-card
+                            :deadline="d"
+                            :course="d.course"
+                            :filterOwnGroups="filterOwnGroups"
+                        />
+                    </b-link>
+                </div>
             </div>
-        </div>
-        <b-card
-            v-else
-            class="border-dark-grey no-hover"
-        >
-            <div class="text-center multi-form">
-                <icon
-                    name="check"
-                    scale="4"
-                    class="fill-green mb-2 text-shadow"
-                /><br/>
-                <b class="field-heading">
-                    All done!
-                </b>
-            </div>
-            You do not have any {{ $root.canGradeForSomeCourse
-                ? `entries to grade${filterOwnGroups ? ' (in you own groups)' : ''}`
-                : 'upcoming deadlines' }}
-            at this moment.
-        </b-card>
+            <b-card
+                v-else
+                class="border-dark-grey no-hover"
+            >
+                <div class="text-center multi-form">
+                    <icon
+                        name="check"
+                        scale="4"
+                        class="fill-green mb-2 text-shadow"
+                    /><br/>
+                    <b class="field-heading">
+                        All done!
+                    </b>
+                </div>
+                You do not have any {{ $root.canGradeForSomeCourse()
+                    ? `entries to grade${filterOwnGroups ? ' (in you own groups)' : ''}`
+                    : 'upcoming deadlines' }}
+                at this moment.
+            </b-card>
+        </load-wrapper>
     </div>
 </template>
 
@@ -85,15 +87,18 @@
 import assignmentAPI from '@/api/assignment.js'
 
 import todoCard from '@/components/assets/TodoCard.vue'
+import loadWrapper from '@/components/loading/LoadWrapper.vue'
 import { mapGetters, mapMutations } from 'vuex'
 
 export default {
     components: {
         todoCard,
+        loadWrapper,
     },
     data () {
         return {
             deadlines: [],
+            loadingDeadlines: true,
         }
     },
     computed: {
@@ -135,7 +140,7 @@ export default {
             }
 
             let deadlines = this.deadlines
-            if (this.$root.canGradeForSomeCourse && deadlines.length > 0) {
+            if (this.$root.canGradeForSomeCourse() && deadlines.length > 0) {
                 if (this.filterOwnGroups) {
                     deadlines = deadlines.filter(
                         dd => (dd.stats.needs_marking_own_groups + dd.stats.unpublished_own_groups) > 0
@@ -162,7 +167,10 @@ export default {
     },
     created () {
         assignmentAPI.getUpcoming(this.$route.params.cID)
-            .then((deadlines) => { this.deadlines = deadlines })
+            .then((deadlines) => {
+                this.deadlines = deadlines
+                this.loadingDeadlines = false
+            })
     },
     methods: {
         ...mapMutations({
