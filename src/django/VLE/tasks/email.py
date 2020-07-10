@@ -28,7 +28,7 @@ def send_push_notification(notification_pk):
     email_data = {
         'heading': notification.title,
         'main_content': notification.content,
-        'button_text': VLE.models.Notification.TYPES[notification.type]['content']['button_text'],
+        'button_text': notification.button_text,
         'full_name': notification.user.full_name,
         'button_url': notification.url,
         'profile_url': '{}/Profile'.format(settings.BASELINK)

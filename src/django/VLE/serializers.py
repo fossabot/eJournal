@@ -124,11 +124,11 @@ class PreferencesSerializer(serializers.ModelSerializer):
             'user',
             # Toggle preferences
             'auto_select_ungraded_entry', 'auto_proceed_next_journal',
-            # Push / daily / weekly / monthly notification preferences
+            # notification preferences
             'new_grade_notifications', 'new_comment_notifications', 'new_entry_notifications',
             'new_course_notifications', 'new_assignment_notifications', 'new_node_notifications',
-            # other notification preferences
-            'upcoming_deadline_notifications',
+            # reminder preferences
+            'upcoming_deadline_reminder',
             # Hidden preferences
             'show_format_tutorial', 'hide_version_alert', 'grade_button_setting', 'comment_button_setting',
         )

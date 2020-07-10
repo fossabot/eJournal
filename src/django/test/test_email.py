@@ -200,7 +200,7 @@ class EmailAPITest(TestCase):
         e_2.grade = Grade.objects.create(grade=2, published=True, entry=e_2)
         e_2.save()
 
-        mails = notifications.send_upcoming_deadlines()
+        mails = notifications.generate_upcoming_deadline_notifications().values_list('user__email', flat=True)
         assert mails.count(journal_empty.authors.first().user.email) == 2, \
             'Journal without entries should get all deadlines'
         assert mails.count(journal_filled.authors.first().user.email) == 1, \
@@ -217,7 +217,7 @@ class EmailAPITest(TestCase):
         assignment.assigned_groups.add(group)
         group.participation_set.add(Participation.objects.get(user=journal_empty.authors.first().user))
 
-        mails = notifications.send_upcoming_deadlines()
+        mails = notifications.generate_upcoming_deadline_notifications().values_list('user__email', flat=True)
         assert mails.count(journal_empty.authors.first().user.email) == 2, \
             'Authors in the assigned to groups, should get an email'
         assert (mails.count(journal_filled.authors.first().user.email) == 0 and
@@ -254,7 +254,7 @@ class EmailAPITest(TestCase):
         group_journal.authors.add(also_in_journal)
         not_in_journal = factory.AssignmentParticipation(assignment=group_assignment)
 
-        mails = notifications.send_upcoming_deadlines()
+        mails = notifications.generate_upcoming_deadline_notifications().values_list('user__email', flat=True)
         assert mails.count(in_journal.user.email) == 2, \
             'All students in journal should get a mail'
         assert mails.count(also_in_journal.user.email) == 2, \
@@ -264,7 +264,7 @@ class EmailAPITest(TestCase):
 
         also_in_journal.user.verified_email = False
         also_in_journal.user.save()
-        mails = notifications.send_upcoming_deadlines()
+        mails = notifications.generate_upcoming_deadline_notifications().values_list('user__email', flat=True)
         assert mails.count(in_journal.user.email) == 2, \
             'Only student with verified mail should get an email'
         assert mails.count(also_in_journal.user.email) == 0, \
@@ -273,7 +273,7 @@ class EmailAPITest(TestCase):
         also_in_journal.user.verified_email = True
         also_in_journal.user.preferences.upcoming_deadline_notifications = False
         also_in_journal.user.preferences.save()
-        mails = notifications.send_upcoming_deadlines()
+        mails = notifications.generate_upcoming_deadline_notifications().values_list('user__email', flat=True)
         assert mails.count(in_journal.user.email) == 2, \
             'Only student with verified mail should get an email'
         assert mails.count(also_in_journal.user.email) == 0, \

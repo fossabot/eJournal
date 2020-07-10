@@ -383,19 +383,27 @@ class Preferences(CreateUpdateModel):
 
     Describes the preferences of a user:
     - show_format_tutorial: whether or not to show the assignment format tutorial.
-    - grade_notifications: whether or not to receive grade notifications via email.
-    - comment_notifications: whether or not to receive comment notifications via email.
-    - upcoming_deadline_notifications: whether or not to receive upcoming deadline notifications via email.
+    - ..._reminder: when a user wants to be reminded of an event that will happen in the future
+    - ..._notifications: when a user wants to receive this notification, either immidiatly, daily, weekly, or never
     - hide_version_alert: latest version number for which a version alert has been dismissed.
     """
     DAILY = 'd'
     WEEKLY = 'w'
     PUSH = 'p'
     OFF = 'o'
+    DAY_AND_WEEK = 'a'
+    WEEK = 'w'
+    DAY = 'd'
     FREQUENCIES = (
         (DAILY, 'd'),
         (WEEKLY, 'w'),
         (PUSH, 'p'),
+        (OFF, 'o'),
+    )
+    REMINDER = (
+        (DAY_AND_WEEK, 'a'),
+        (WEEK, 'w'),
+        (DAY, 'd'),
         (OFF, 'o'),
     )
 
@@ -404,7 +412,7 @@ class Preferences(CreateUpdateModel):
         on_delete=models.CASCADE,
         primary_key=True
     )
-    # QUESTION: are these valid defaults?
+
     new_grade_notifications = models.TextField(
         max_length=1,
         choices=FREQUENCIES,
@@ -435,9 +443,13 @@ class Preferences(CreateUpdateModel):
         choices=FREQUENCIES,
         default=WEEKLY,
     )
-    upcoming_deadline_notifications = models.BooleanField(
-        default=True
+
+    upcoming_deadline_reminder = models.TextField(
+        max_length=1,
+        choices=REMINDER,
+        default=WEEKLY,
     )
+
     show_format_tutorial = models.BooleanField(
         default=True
     )
@@ -485,13 +497,13 @@ class Notification(CreateUpdateModel):
     NEW_ENTRY = 4
     NEW_GRADE = 5
     NEW_COMMENT = 6
+    UPCOMING_DEADLINE = 7
     TYPES = {
         NEW_COURSE: {
             'name': 'new_course_notifications',
             'content': {
                 'title': 'New course membership',
                 'content': 'You are now a member of {course}.',
-                'extra_content': None,
                 'button_text': 'View Course',
             },
         },
@@ -500,7 +512,6 @@ class Notification(CreateUpdateModel):
             'content': {
                 'title': 'New assignment',
                 'content': 'Your teacher added you to {assignment}.',
-                'extra_content': None,
                 'button_text': 'View Assignment',
             },
         },
@@ -509,7 +520,6 @@ class Notification(CreateUpdateModel):
             'content': {
                 'title': 'New deadline',
                 'content': 'A new deadline has been added to your journal.',
-                'extra_content': None,
                 'button_text': 'View Deadline',
             },
         },
@@ -519,7 +529,6 @@ class Notification(CreateUpdateModel):
                 'title': 'New entry',
                 'content': '{journal} posted {entry}.',
                 'batch_content': '{n} new entries were posted in {journal}.',
-                'extra_content': None,
                 'button_text': 'View Entry',
             },
         },
@@ -529,7 +538,6 @@ class Notification(CreateUpdateModel):
                 'title': 'New grade',
                 'content': '{entry} has been graded.',
                 'batch_content': '{entry} has been graded.',
-                'extra_content': None,
                 'button_text': 'View Grade',
             },
         },
@@ -539,8 +547,15 @@ class Notification(CreateUpdateModel):
                 'title': 'New comment',
                 'content': '{comment} commented on {entry}.',
                 'batch_content': '{n} new comments on {entry} in the journal of {journal}.',
-                'extra_content': None,
                 'button_text': 'View Comment',
+            },
+        },
+        UPCOMING_DEADLINE: {
+            'name': 'None',
+            'content': {
+                'title': 'Upcoming deadline',
+                'content': 'You have an unfinished deadline coming up at {data}',
+                'button_text': 'View Deadline',
             },
         },
     }
@@ -607,7 +622,8 @@ class Notification(CreateUpdateModel):
             journal=self.journal.get_name() if self.journal else None,
             assignment=self.assignment.name if self.assignment else None,
             course=self.course.name if self.course else None,
-            n=n
+            date=self.node.preset.due_date if self.node and self.node.preset else None,
+            n=n,
         )
 
     @property
@@ -617,6 +633,10 @@ class Notification(CreateUpdateModel):
     @property
     def content(self):
         return self.__fill_text(self.TYPES[self.type]['content']['content'])
+
+    @property
+    def button_text(self):
+        return Notification.TYPES[notification.type]['content']['button_text']
 
     def batch_content(self, n=None):
         return self.__fill_text(self.TYPES[self.type]['content']['batch_content'], n=n)
@@ -645,8 +665,9 @@ class Notification(CreateUpdateModel):
         super(Notification, self).save(*args, **kwargs)
 
         if is_new:
-            # Send notification on creation if user preference is set to push
-            if getattr(self.user.preferences, Notification.TYPES[self.type]['name']) == Preferences.PUSH:
+            # Send notification on creation if user preference is set to push, default (for reminders) is daily
+            if getattr(self.user.preferences, Notification.TYPES[self.type]['name'], Preferences.DAILY) == \
+               Preferences.PUSH:
                 send_push_notification.delay(self.pk)
 
 
