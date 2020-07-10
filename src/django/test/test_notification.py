@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.test.utils import override_settings
 
 import VLE.factory
-from VLE.models import Notification, Preferences, gen_url
+from VLE.models import Notification, Preferences, User, gen_url
 from VLE.permissions import get_supervisors_of
 from VLE.tasks.beats.notifications import send_digest_notifications
 from VLE.tasks.email import send_push_notification
@@ -233,9 +233,10 @@ class NotificationTest(TestCase):
         assignment.is_published = True
         assignment.save()
 
-        before_count = Notification.objects.count()
+        before_count = Notification.objects.exclude(type=Notification.UPCOMING_DEADLINE).count()
         send_digest_notifications()
-        assert Notification.objects.count() == before_count, 'No notifications should be deleted'
+        assert Notification.objects.exclude(type=Notification.UPCOMING_DEADLINE).count() == before_count, \
+            'Only two upcoming deadline notifications should be deleted'
 
         assert not Notification.objects.filter(user=student, sent=False).exists()
         assert Notification.objects.filter(user=teacher, sent=False).count() == 0, \
@@ -249,13 +250,26 @@ class NotificationTest(TestCase):
         student_mail = mail.outbox[-1].body
         assert 'You are now a member of' in student_mail
         assert 'New deadline' in student_mail
+        # assert 'Upcoming deadline' in student_mail
         assert 'Course notifications' in student_mail
         assert entry.node.journal.assignment.courses.first().name in student_mail
         assert 'Your teacher added you to' in student_mail
 
         before_len_mailbox = len(mail.outbox)
         send_digest_notifications()
-        assert len(mail.outbox) == before_len_mailbox, 'No new notifications, so none should be sent'
+        assert Notification.objects.exclude(type=Notification.UPCOMING_DEADLINE).count() == before_count, \
+            'Only two upcoming deadline notifications should be deleted'
+
+        before_len_mailbox = len(mail.outbox)
+        factory.TeacherComment(entry=entry, author=teacher, published=True)  # 1 new comment for student
+        User.objects.all().update(verified_email=False)
+        send_digest_notifications()
+        assert len(mail.outbox) == before_len_mailbox, \
+            'No new notifications should be sent with unverified email'
+        User.objects.all().update(verified_email=True)
+        send_digest_notifications()
+        assert len(mail.outbox) != before_len_mailbox, \
+            'After verification, notification should be send'
 
     def test_save_notification(self):
         entry = factory.Entry()

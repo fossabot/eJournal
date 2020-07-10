@@ -13,58 +13,62 @@ from django.utils.html import strip_tags
 import VLE.models
 
 
-def _generate_upcoming_deadline_notifications(deadline_query, preferences):
+def _generate_upcoming_deadline_notifications(node_query, preferences):
     """_generate_upcoming_deadline_notifications
 
-    This sends mails to the users who are connected to the PresetNodes query that is send with.
+    Send notifications to all users that are connected to the upcoming deadline
+    NOTE: skips when preferences are turned to not receive the upcoming deadline
 
     Arguments:
-    deadline_query -- query of PresetNodes
+    node_query -- query of Nodes
     preferences -- one of these preference options needs to be set in the user preference
     """
     notifications = []
     # Remove all filled entrydeadline
-    no_submissions = Q(type=VLE.models.Node.ENTRYDEADLINE, node__entry__isnull=True) | Q(type=VLE.models.Node.PROGRESS)
-    deadlines = deadline_query.filter(no_submissions).distinct()
-    for deadline in deadlines:
+    no_submissions = Q(preset__type=VLE.models.Node.ENTRYDEADLINE, entry__isnull=True) | \
+        Q(preset__type=VLE.models.Node.PROGRESS)
+    nodes = node_query.filter(no_submissions).distinct()
+    for node in nodes:
         # Only send to users who have a journal
         try:
-            journal = VLE.models.Journal.objects.get(pk=deadline.node.journal)
+            journal = VLE.models.Journal.objects.get(pk=node.journal.pk)
         except VLE.models.Journal.DoesNotExist:
             continue
 
         # Dont send a mail when the target points is reached
-        if deadline.type == VLE.models.Node.PROGRESS and journal.get_grade() > deadline.target:
+        if node.preset.type == VLE.models.Node.PROGRESS and journal.get_grade() > node.preset.target:
             continue
 
         for author in journal.authors.filter(user__preferences__upcoming_deadline_reminder__in=preferences):
-            if author.user.can_view(journal):
-                VLE.models.Notification.objects.create(
-                    type=Notification.UPCOMING_DEADLINE,
-                    user=author.user,
-                    node=deadline.node,
-                )
+            # Filter out any duplicate creation of upcoming deadline notifications
+            if VLE.models.Notification.objects.filter(
+               type=VLE.models.Notification.UPCOMING_DEADLINE, user=author.user, node=node,
+               creation_date__gt=timezone.now().date() - datetime.timedelta(days=1)).exists():
+                continue
+            notifications.append(VLE.models.Notification.objects.create(
+                type=VLE.models.Notification.UPCOMING_DEADLINE,
+                user=author.user,
+                node=node,
+            ))
 
     return notifications
 
 
-@shared_task
 def generate_upcoming_deadline_notifications():
     """generate_upcoming_deadline_notifications
 
-    Sends reminder emails to users who have upcoming deadlines.
-    Each user receives one a week before, and a day before a mail about the deadline.
+    Send notifications to all users that have an open deadline
     """
     return _generate_upcoming_deadline_notifications(
-        VLE.models.PresetNode.objects.filter(
-            due_date__range=(
+        VLE.models.Node.objects.filter(
+            preset__due_date__range=(
                 timezone.now().date() + datetime.timedelta(days=1),
                 timezone.now().date() + datetime.timedelta(days=2))
         ),
         [VLE.models.Preferences.DAY, VLE.models.Preferences.DAY_AND_WEEK],
     ) + _generate_upcoming_deadline_notifications(
-        VLE.models.PresetNode.objects.filter(
-            due_date__range=(
+        VLE.models.Node.objects.filter(
+            preset__due_date__range=(
                 timezone.now().date() + datetime.timedelta(days=7),
                 timezone.now().date() + datetime.timedelta(days=8))
         ),
@@ -98,8 +102,9 @@ def add_notifications_to_content(content, notifications, period, name):
     for notification in notifications:
         notification.refresh_from_db()
         if not notification.sent and \
-           getattr(user.preferences, VLE.models.Notification.TYPES[notification.type]['name'], Preferences.DAILY) in \
-           period['pref']:
+           getattr(
+            user.preferences, VLE.models.Notification.TYPES[notification.type]['name'], VLE.models.Preferences.DAILY) \
+           in period['pref']:
             notification.sent = True
             notification.save()
 
@@ -183,6 +188,9 @@ def send_digest_notifications():
     For users with daily notifications, it will send all non send notifications that the user would like to receive
     For users with weekly notifications, it will only send all notifications on mondays
     """
+    # Generate the new upcoming deadline notifications of the day
+    generate_upcoming_deadline_notifications()
+
     period = {
         'name': 'weekly',
         'pref': [VLE.models.Preferences.DAILY, VLE.models.Preferences.WEEKLY],
@@ -198,8 +206,10 @@ def send_digest_notifications():
     # Loop over all users that potentially have a new notification
     for user in VLE.models.Notification.objects.filter(
        sent=False).order_by('user__pk').values_list('user', flat=True).distinct():
-
         user = VLE.models.User.objects.get(pk=user)
+        if not user.verified_email:
+            continue
+        print(user.verified_email)
         content, user_sending = gen_content_from_notifications(
             VLE.models.Notification.objects.filter(user=user, sent=False),
             period
@@ -222,6 +232,9 @@ def send_digest_notifications():
 
         html_content = render_to_string('digest.html', {'email_data': email_data})
         text_content = strip_tags(html_content)
+
+        with open('test{}.html'.format(user.username), 'w') as f:
+            f.write(html_content)
 
         email = EmailMultiAlternatives(
             subject='{} digest - eJournal'.format(period['name'].title()),

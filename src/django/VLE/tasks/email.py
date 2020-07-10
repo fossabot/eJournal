@@ -25,6 +25,12 @@ def send_push_notification(notification_pk):
             'description': 'Notification nr {} was already sent'.format(notification_pk),
             'successful': False,
         }
+    if not notification.user.verified_email:
+        return {
+            'description': 'Notification nr {} has unverified email adress'.format(notification_pk),
+            'successful': False,
+        }
+
     email_data = {
         'heading': notification.title,
         'main_content': notification.content,

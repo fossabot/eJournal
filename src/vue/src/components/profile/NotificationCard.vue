@@ -1,6 +1,96 @@
 <template>
     <div>
         <h4 class="theme-h4 mb-2 mt-4">
+            <span>Email reminders</span>
+        </h4>
+        <b-card
+            :class="$root.getBorderClass($route.params.uID)"
+            class="no-hover multi-form"
+        >
+            <b-row>
+                <b-col
+                    col="3"
+                    class="text-center"
+                >
+                    <icon
+                        name="bell"
+                        class="fill-grey shift-up-3 mr-1"
+                    />
+                    Day and week before
+                </b-col>
+                <b-col
+                    col="3"
+                    class="text-center"
+                >
+                    <icon
+                        name="clock"
+                        class="fill-grey shift-up-3 mr-1"
+                    />
+                    Day before
+                </b-col>
+                <b-col
+                    col="3"
+                    class="text-center"
+                >
+                    <icon
+                        name="calendar"
+                        class="fill-grey shift-up-3 mr-1"
+                    />
+                    Week before
+                </b-col>
+                <b-col
+                    col="3"
+                    class="text-center"
+                >
+                    <icon
+                        name="times"
+                        class="fill-grey shift-up-3 mr-1"
+                    />
+                    No reminders
+                </b-col>
+            </b-row>
+            <hr/>
+            <div
+                v-for="preference in reminderPreferences"
+                :key="preference['key']"
+                class="clearfix mt-2"
+            >
+                <radio-button
+                    v-model="$store.getters['preferences/saved'][preference['key']]"
+                    :options="[
+                        {
+                            value: 'p',
+                            icon: 'bell',
+                            class: 'add-button',
+                        },
+                        {
+                            value: 'd',
+                            icon: 'clock',
+                            class: 'add-button',
+                        },
+                        {
+                            value: 'w',
+                            icon: 'calendar',
+                            class: 'add-button',
+                        },
+                        {
+                            value: 'o',
+                            icon: 'times',
+                            class: 'delete-button',
+                        },
+                    ]"
+                    class="float-right"
+                    @input="e => changePreference(preference['key'], e)"
+                />
+                <h2 class="theme-h2 field-heading multi-form">
+                    {{ preference['name'] }}
+                    <tooltip
+                        :tip="preference['tooltip']"
+                    />
+                </h2>
+            </div>
+        </b-card>
+        <h4 class="theme-h4 mb-2 mt-4">
             <span>Email notifications</span>
         </h4>
         <b-card
@@ -26,7 +116,7 @@
                         name="clock"
                         class="fill-grey shift-up-3 mr-1"
                     />
-                    Daily summarry
+                    Daily summary
                 </b-col>
                 <b-col
                     col="3"
@@ -50,33 +140,8 @@
                 </b-col>
             </b-row>
             <hr/>
-            <div class="clearfix multi-form">
-                <radio-button
-                    v-model="$store.getters['preferences/saved'].upcoming_deadline_notifications"
-                    :options="[
-                        {
-                            value: true,
-                            icon: 'check',
-                            class: 'add-button',
-                        },
-                        {
-                            value: false,
-                            icon: 'times',
-                            class: 'delete-button',
-                        },
-                    ]"
-                    class="float-right"
-                    @input="e => changePreference('upcoming_deadline_notifications', e)"
-                />
-                <h2 class="theme-h2 field-heading multi-form">
-                    Upcoming deadlines
-                    <tooltip
-                        tip="Receive an email one week and one day in advance of an unfinished deadline"
-                    />
-                </h2>
-            </div>
             <div
-                v-for="preference in preferences"
+                v-for="preference in notificationPreferences"
                 :key="preference['key']"
                 class="clearfix mt-2"
             >
@@ -130,7 +195,7 @@ export default {
     props: ['userData'],
     data () {
         return {
-            preferences: [
+            notificationPreferences: [
                 {
                     name: 'New course',
                     key: 'new_course_notifications',
@@ -160,6 +225,13 @@ export default {
                     name: 'New comment',
                     key: 'new_comment_notifications',
                     tooltip: 'Receive an email when a new comment is posted.',
+                },
+            ],
+            reminderPreferences: [
+                {
+                    name: 'Upcoming deadline',
+                    key: 'upcoming_deadline_reminder',
+                    tooltip: 'Receive an email in advance of an unfinished deadline',
                 },
             ],
         }

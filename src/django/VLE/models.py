@@ -391,7 +391,7 @@ class Preferences(CreateUpdateModel):
     WEEKLY = 'w'
     PUSH = 'p'
     OFF = 'o'
-    DAY_AND_WEEK = 'a'
+    DAY_AND_WEEK = 'p'
     WEEK = 'w'
     DAY = 'd'
     FREQUENCIES = (
@@ -447,7 +447,7 @@ class Preferences(CreateUpdateModel):
     upcoming_deadline_reminder = models.TextField(
         max_length=1,
         choices=REMINDER,
-        default=WEEKLY,
+        default=DAY_AND_WEEK,
     )
 
     show_format_tutorial = models.BooleanField(
@@ -554,7 +554,7 @@ class Notification(CreateUpdateModel):
             'name': 'None',
             'content': {
                 'title': 'Upcoming deadline',
-                'content': 'You have an unfinished deadline coming up at {data}',
+                'content': 'You have an unfinished deadline that is due on {deadline}',
                 'button_text': 'View Deadline',
             },
         },
@@ -622,7 +622,7 @@ class Notification(CreateUpdateModel):
             journal=self.journal.get_name() if self.journal else None,
             assignment=self.assignment.name if self.assignment else None,
             course=self.course.name if self.course else None,
-            date=self.node.preset.due_date if self.node and self.node.preset else None,
+            deadline=self.node.preset.due_date.strftime("%B %d at %H:%M") if self.node and self.node.preset else None,
             n=n,
         )
 
@@ -636,7 +636,7 @@ class Notification(CreateUpdateModel):
 
     @property
     def button_text(self):
-        return Notification.TYPES[notification.type]['content']['button_text']
+        return Notification.TYPES[self.type]['content']['button_text']
 
     def batch_content(self, n=None):
         return self.__fill_text(self.TYPES[self.type]['content']['batch_content'], n=n)
