@@ -1,7 +1,7 @@
 from django_test_migrations.contrib.unittest_case import MigratorTestCase
 
 
-class TestMigration0042(MigratorTestCase):
+class TestMigration0045(MigratorTestCase):
     """This class is used to test direct migrations."""
 
     migrate_from = ('VLE', '0043_comment_files')
@@ -23,4 +23,4 @@ class TestMigration0042(MigratorTestCase):
         user_off = User.objects.get(username='test1', email='test1@mail.com')
         user_on = User.objects.get(username='test2', email='test2@mail.com')
         assert Preferences.objects.filter(user_id=user_off.pk, upcoming_deadline_reminder='o').exists()
-        assert Preferences.objects.filter(user_id=user_on.pk, upcoming_deadline_reminder='a').exists()
+        assert Preferences.objects.filter(user_id=user_on.pk, upcoming_deadline_reminder='p').exists()

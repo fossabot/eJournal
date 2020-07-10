@@ -8,7 +8,7 @@ from django.test import TestCase
 from django.test.utils import override_settings
 from django.utils import timezone
 
-from VLE.models import Grade, Group, Node, Participation, Preferences, PresetNode, Template, User
+from VLE.models import Grade, Group, Node, Notification, Participation, Preferences, PresetNode, Template, User
 from VLE.tasks.beats import notifications
 
 
@@ -236,6 +236,7 @@ class EmailAPITest(TestCase):
         assignment.assigned_groups.add(group)
         group.participation_set.add(Participation.objects.get(user=journal_empty.authors.first().user))
 
+        Notification.objects.all().delete()
         mails = [n.user.email for n in notifications.generate_upcoming_deadline_notifications()]
         assert mails.count(journal_empty.authors.first().user.email) == 3, \
             'Authors in the assigned to groups, should get an email'
