@@ -289,7 +289,7 @@ export default {
                 this.loadingNodes = false
                 if (this.$route.query.nID !== undefined) {
                     this.currentNode = this.findEntryNode(parseInt(this.$route.query.nID, 10))
-                } else {
+                } else if (this.$hasPermission('can_grade', 'assignment', this.aID)) {
                     this.selectFirstUngradedNode(gradeUpdated)
                 }
             })

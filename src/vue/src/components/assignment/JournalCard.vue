@@ -15,8 +15,8 @@
                     />
                     <number-badge
                         v-if="$hasPermission('can_view_all_journals') &&
-                            journal.marking_needed + journal.unpublished > 0"
-                        :leftNum="journal.marking_needed"
+                            journal.needs_marking + journal.unpublished > 0"
+                        :leftNum="journal.needs_marking"
                         :rightNum="journal.unpublished"
                         :title="squareInfo"
                     />
@@ -132,10 +132,10 @@ export default {
         },
         squareInfo () {
             const info = []
-            if (this.journal.marking_needed === 1) {
+            if (this.journal.needs_marking === 1) {
                 info.push('an entry needs marking')
-            } else if (this.journal.marking_needed > 1) {
-                info.push(`${this.journal.marking_needed} entries need marking`)
+            } else if (this.journal.needs_marking > 1) {
+                info.push(`${this.journal.needs_marking} entries need marking`)
             }
             if (this.journal.unpublished === 1) {
                 info.push('a grade needs to be published')

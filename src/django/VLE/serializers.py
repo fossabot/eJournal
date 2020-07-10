@@ -499,6 +499,8 @@ class JournalSerializer(serializers.ModelSerializer):
     author_count = serializers.SerializerMethodField()
     groups = serializers.SerializerMethodField()
     usernames = serializers.SerializerMethodField()
+    unpublished = serializers.SerializerMethodField()
+    needs_marking = serializers.SerializerMethodField()
 
     class Meta:
         model = Journal
@@ -516,6 +518,22 @@ class JournalSerializer(serializers.ModelSerializer):
         if self.context.get('can_view_usernames', False) or \
            'user' in self.context and self.context['user'].has_permission('can_grade', journal.assignment):
             return journal.usernames
+
+        return None
+
+    def get_unpublished(self, journal):
+        # If annotated that it is allowed, immediatly get it, else check for can_view_all_journals
+        if self.context.get('can_view_usernames', False) or \
+           'user' in self.context and self.context['user'].has_permission('can_grade', journal.assignment):
+            return journal.unpublished
+
+        return None
+
+    def get_needs_marking(self, journal):
+        # If annotated that it is allowed, immediatly get it, else check for can_view_all_journals
+        if self.context.get('can_view_usernames', False) or \
+           'user' in self.context and self.context['user'].has_permission('can_grade', journal.assignment):
+            return journal.needs_marking
 
         return None
 

@@ -17,7 +17,7 @@ def get_nodes(journal, user=None):
     add-node if the user can add to the journal, the subsequent
     progress node is in the future and maximally one.
     """
-    can_add = user and journal.authors.filter(user=user).exists() and not journal.needs_lti_link()
+    can_add = user and journal.authors.filter(user=user).exists() and not journal.needs_lti_link
 
     node_list = []
     for node in utils.get_sorted_nodes(journal):

@@ -1,3 +1,4 @@
+import store from '@/store'
 import * as types from '../constants/mutation-types.js'
 import * as preferenceOptions from '../constants/preference-types.js'
 
@@ -106,7 +107,11 @@ const mutations = {
             state.journal.groupFilter = null
             state.journal.selfSetGroupFilter = false
             state.journal.searchValue = ''
-            state.journal.sortBy = 'markingNeeded'
+            if (store.getters['permissions/hasPermission']('can_grade', 'assignment', aID)) {
+                state.journal.sortBy = 'markingNeeded'
+            } else {
+                state.journal.sortBy = 'name'
+            }
         }
     },
     [types.SET_COURSE_MEMBERS_SORT_ASCENDING] (state, sortAscending) {

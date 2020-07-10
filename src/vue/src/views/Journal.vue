@@ -40,7 +40,6 @@ export default {
         })
     },
     beforeRouteLeave (to, from, next) {
-        // TODO: change to authon in journal
         if (this.isOwn && !this.$refs['journal-student-ref'].discardChanges()) {
             next(false)
         } else if (this.isOwn === false && !this.$refs['journal-non-student-ref'].discardChanges()) {

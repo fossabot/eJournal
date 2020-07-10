@@ -27,7 +27,7 @@ export default {
                 }
                 return 0
             },
-            markingNeeded: (a, b) => compare(a.marking_needed, b.marking_needed),
+            markingNeeded: (a, b) => compare(a.needs_marking, b.needs_marking),
             points: (a, b) => compare(a.grade, b.grade),
         }
 
@@ -41,7 +41,7 @@ export default {
 
         function searchFilter (journal) {
             return journal.name.toLowerCase().includes(searchValue.toLowerCase())
-                || journal.usernames.toLowerCase().includes(searchValue.toLowerCase())
+                || (journal.usernames && journal.usernames.toLowerCase().includes(searchValue.toLowerCase()))
                 || journal.full_names.toLowerCase().includes(searchValue.toLowerCase())
         }
         let filteredJournals = journals

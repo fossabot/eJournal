@@ -44,10 +44,10 @@
                     <option value="name">
                         Sort by name
                     </option>
-                    <option value="username">
+                    <option value="username" v-if="$hasPermission('can_grade', 'assignment', String(this.aID))">
                         Sort by username
                     </option>
-                    <option value="markingNeeded">
+                    <option value="markingNeeded" v-if="$hasPermission('can_grade', 'assignment', String(this.aID))">
                         Sort by marking needed
                     </option>
                     <option value="points">
@@ -341,7 +341,7 @@
         </load-wrapper>
 
         <div
-            v-if="stats"
+            v-if="stats && $hasPermission('can_grade', 'assignment', String(this.aID))"
             slot="right-content-column"
         >
             <h3 class="theme-h3">
@@ -578,7 +578,7 @@ export default {
             let points = 0
 
             for (let i = 0; i < filteredJournals.length; i++) {
-                needsMarking += filteredJournals[i].marking_needed
+                needsMarking += filteredJournals[i].needs_marking
                 unpublished += filteredJournals[i].unpublished
                 points += filteredJournals[i].grade
             }
