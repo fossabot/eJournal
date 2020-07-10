@@ -194,6 +194,10 @@ new Vue({
                     `${name}.xlsx`)
                 })
         },
+        canGradeForSomeCourse () {
+            return Object.entries(this.$store.getters['user/permissions']).some(
+                ([key, value]) => ((key.indexOf('assignment') >= 0) && value.can_grade))
+        },
     },
     render: h => h(App),
     template: '<App/>',

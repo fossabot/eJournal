@@ -27,7 +27,7 @@ export default {
                 }
                 return 0
             },
-            markingNeeded: (a, b) => compare(a.stats.marking_needed, b.stats.marking_needed),
+            markingNeeded: (a, b) => compare(a.marking_needed, b.marking_needed),
             points: (a, b) => compare(a.grade, b.grade),
         }
 

@@ -112,20 +112,69 @@ class AssignmentAPITest(TestCase):
         self.course.refresh_from_db()
         assert 'random_lti_id_salkdjfhas' in self.course.assignment_lti_id_set
 
-    def test_get(self):
+    def test_get_assignment(self):
         student = factory.Student()
         assignment = factory.Assignment(courses=[self.course])
+        group = factory.Group(course=self.course)
 
         api.get(self, 'assignments', params={'pk': assignment.pk}, user=student, status=403)
-        factory.Participation(
-            user=student, course=self.course, role=Role.objects.get(course=self.course, name='Student'))
+
+        # Add journals with some graded but unpublished entries
+        for _ in range(2):
+            student = factory.Student()
+            student_participation = factory.Participation(
+                user=student, course=self.course, role=Role.objects.get(course=self.course, name='Student')
+            )
+            journal = Journal.objects.get(authors__user=student, assignment=assignment)
+            for i in range(10):
+                entry = factory.Entry(node__journal=journal)
+                if i > 5:
+                    api.create(self, 'grades', params={'entry_id': entry.pk, 'grade': 5, 'published': False},
+                               user=self.teacher)
+
         resp = api.get(self, 'assignments', params={'pk': assignment.pk, 'course_id': self.course.pk},
                        user=student)['assignment']
         assert resp['journal'] is not None, 'Response should include student serializer'
+        assert 'needs_marking' not in resp['stats'], 'Student serializer should not include grading stats'
+        assert 'unpublished' not in resp['stats'], 'Student serializer should not include grading stats'
+        assert 'needs_marking_own_groups' not in resp['stats'], 'Student serializer should not include grading stats'
+        assert 'unpublished_own_groups' not in resp['stats'], 'Student serializer should not include grading stats'
+        assert resp['stats']['average_points'] == 0,\
+            'Student serializer should not reveal stats about unpublished grades'
 
         resp = api.get(self, 'assignments', params={'pk': assignment.pk, 'course_id': self.course.pk},
                        user=self.teacher)['assignment']
         assert resp['journals'] is not None, 'Response should include teacher serializer'
+        assert resp['stats']['needs_marking'] == 12, '12 entries do not have a grade yet'
+        assert resp['stats']['unpublished'] == 8, '8 grades still need to be published'
+        assert resp['stats']['needs_marking_own_groups'] == 0,\
+            'Own group stats should be empty without being member of a group'
+        assert resp['stats']['unpublished_own_groups'] == 0,\
+            'Own group stats should be empty without being member of a group'
+
+        # Add student and teacher to the same group
+        student_participation.groups.add(group)
+        teacher_participation = Participation.objects.get(user=self.teacher, course=self.course)
+        teacher_participation.groups.add(group)
+
+        resp = api.get(self, 'assignments', params={'pk': assignment.pk, 'course_id': self.course.pk},
+                       user=self.teacher)['assignment']
+        assert resp['stats']['needs_marking'] == 12, 'Non-group stats shall remain the same when in a group'
+        assert resp['stats']['unpublished'] == 8, 'Non-group stats shall remain the same when in a group'
+        assert resp['stats']['needs_marking_own_groups'] == 6, '6 entries in own group do not have a grade yet'
+        assert resp['stats']['unpublished_own_groups'] == 4, '4 grades in own group still need to be published'
+
+        # Grade all entries for the assignment and publish grades
+        for entry in Entry.objects.filter(node__journal__assignment=assignment):
+            api.create(self, 'grades', params={'entry_id': entry.pk, 'grade': 5, 'published': True},
+                       user=self.teacher)
+
+        resp = api.get(self, 'assignments', params={'pk': assignment.pk, 'course_id': self.course.pk},
+                       user=self.teacher)['assignment']
+        assert resp['stats']['needs_marking'] == 0, 'All entries are graded and grades are published'
+        assert resp['stats']['unpublished'] == 0, 'All entries are graded and grades are published'
+        assert resp['stats']['needs_marking_own_groups'] == 0, 'All entries are graded and grades are published'
+        assert resp['stats']['unpublished_own_groups'] == 0, 'All entries are graded and grades are published'
 
         # Check group assignment
         group_assignment = factory.GroupAssignment()
@@ -805,7 +854,7 @@ class AssignmentAPITest(TestCase):
         ap2 = factory.AssignmentParticipation(user=factory.Student(), assignment=assignment)
         ap3_in_journal = factory.AssignmentParticipation(user=factory.Student(), assignment=assignment)
         j1 = factory.GroupJournal(assignment=assignment)
-        j1.authors.add(ap3_in_journal)
+        j1.add_author(ap3_in_journal)
         t1 = factory.Participation(
             user=factory.Teacher(), course=assignment.courses.first(),
             role=Role.objects.get(course=assignment.courses.first(), name='Teacher'))
@@ -883,8 +932,7 @@ class AssignmentAPITest(TestCase):
 
             test_bonus_helper(
                 '{},2'.format(lti_bonus_student.username), status=200, delimiter=d)
-            # assert False
-            assert Journal.objects.get(pk=lti_journal.pk).get_grade() == 2 + lti_journal.get_grade(), \
+            assert Journal.objects.get(pk=lti_journal.pk).grade == 2 + lti_journal.grade, \
                 'Bonus points should be added'
 
         # With ; this would return 2 lines as it cannot find the correct delimiter, therefor this test is only once

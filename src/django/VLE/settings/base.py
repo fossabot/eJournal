@@ -90,6 +90,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_celery_results',
     'django_celery_beat',
+    'computedfields',
 ]
 
 REST_FRAMEWORK = {

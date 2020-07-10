@@ -20,7 +20,7 @@ class JournalFactory(factory.django.DjangoModelFactory):
         if not VLE.models.AssignmentParticipation.objects.filter(journal=self).exists():
             author = test.factory.participation.AssignmentParticipationFactory(
                 journal=self, assignment=self.assignment)
-            self.authors.add(author)
+            self.add_author(author)
 
 
 class LtiJournalFactory(JournalFactory):

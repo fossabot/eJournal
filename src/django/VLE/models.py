@@ -7,6 +7,7 @@ import os
 import random
 import string
 
+from computedfields.models import ComputedFieldsModel, computed, update_dependent
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import ArrayField, CIEmailField, CITextField
@@ -788,6 +789,7 @@ class Assignment(CreateUpdateModel):
         if active_lti_id_modified:
             # Reset all sourcedid if the active lti id is updated.
             AssignmentParticipation.objects.filter(assignment=self).update(sourcedid=None, grade_url=None)
+            update_dependent(AssignmentParticipation.objects.filter(assignment=self))
 
             if self.active_lti_id is not None and self.active_lti_id not in self.lti_id_set:
                 self.lti_id_set.append(self.active_lti_id)
@@ -823,7 +825,7 @@ class Assignment(CreateUpdateModel):
                     ap = AssignmentParticipation.objects.get(assignment=self, user=user['users'])
                     if not Journal.objects.filter(assignment=self, authors__in=[ap]).exists():
                         journal = Journal.objects.create(assignment=self)
-                        journal.authors.add(ap)
+                        journal.add_author(ap)
 
     def get_active_lti_course(self):
         """"Query for retrieving the course which matches the active lti id of the assignment."""
@@ -939,7 +941,7 @@ class AssignmentParticipation(CreateUpdateModel):
         if is_new:
             if self.assignment.is_published and not self.assignment.is_group_assignment and not self.journal:
                 journal = Journal.objects.create(assignment=self.assignment)
-                journal.authors.add(self)
+                journal.add_author(self)
 
     def to_string(self, user=None):
         if user is None or not (user == self.user or user.is_supervisor_of(self.user)):
@@ -976,7 +978,7 @@ class JournalManager(models.Manager):
         ).distinct().order_by('pk')
 
 
-class Journal(CreateUpdateModel):
+class Journal(CreateUpdateModel, ComputedFieldsModel):
     """Journal.
 
     A journal is a collection of Nodes that holds the student's
@@ -1001,11 +1003,11 @@ class Journal(CreateUpdateModel):
         default=1
     )
 
-    name = models.TextField(
+    stored_name = models.TextField(
         null=True,
     )
 
-    image = models.TextField(
+    stored_image = models.TextField(
         null=True,
     )
 
@@ -1021,24 +1023,56 @@ class Journal(CreateUpdateModel):
     outdated_link_warning_msg = 'This journal has an outdated LMS uplink and can no longer be edited. Visit  ' \
         + 'eJournal from an updated LMS connection.'
 
-    def get_grade(self):
+    @computed(models.FloatField(null=True), depends=[
+        ['node_set', ['entry']],
+        ['node_set.entry', ['grade']],
+    ])
+    def grade(self):
         return round(self.bonus_points + (
             self.node_set.filter(entry__grade__published=True)
             .values('entry__grade__grade')
             .aggregate(Sum('entry__grade__grade'))['entry__grade__grade__sum'] or 0), 2)
 
+    @computed(models.FloatField(null=True), depends=[
+        ['node_set', ['entry']],
+        ['node_set.entry', ['grade']],
+    ])
+    def unpublished(self):
+        return self.node_set.filter(entry__grade__published=False).count()
+
+    @computed(models.FloatField(null=True), depends=[
+        ['node_set', ['entry']],
+        ['node_set.entry', ['grade']],
+    ])
+    def needs_marking(self):
+        return self.node_set.filter(entry__isnull=False, entry__grade__isnull=True).count()
+
+    @computed(ArrayField(models.TextField(), default=list), depends=[
+        ['authors', ['journal', 'sourcedid']],
+        ['authors.user', ['full_name']],
+        ['assignment', ['active_lti_id']],
+    ])
     def needs_lti_link(self):
-        return any(author.needs_lti_link() for author in self.authors.all())
+        if not self.assignment.active_lti_id:
+            return list()
+        return list(self.authors.filter(sourcedid__isnull=True).values_list('user__full_name', flat=True))
 
-    def get_name(self):
-        if self.name is not None:
-            return self.name
+    @computed(models.TextField(null=True), depends=[
+        ['self', ['stored_name']],
+        ['authors.user', ['full_name']],
+    ])
+    def name(self):
+        if self.stored_name:
+            return self.stored_name
+        return ', '.join(self.authors.values_list('user__full_name', flat=True))
 
-        return self.get_full_names()
-
-    def get_image(self):
-        if self.image:
-            return self.image
+    @computed(models.TextField(null=True), depends=[
+        ['self', ['stored_image']],
+        ['authors.user', ['profile_picture']],
+    ])
+    def image(self):
+        if self.stored_image:
+            return self.stored_image
 
         user_with_pic = self.authors.all().exclude(user__profile_picture=settings.DEFAULT_PROFILE_PICTURE).first()
         if user_with_pic is not None:
@@ -1046,8 +1080,25 @@ class Journal(CreateUpdateModel):
 
         return settings.DEFAULT_PROFILE_PICTURE
 
-    def get_full_names(self):
+    @computed(models.TextField(null=True), depends=[
+        ['authors.user', ['full_name']],
+    ])
+    def full_names(self):
         return ', '.join(self.authors.values_list('user__full_name', flat=True))
+
+    @computed(models.TextField(null=True), depends=[
+        ['authors.user', ['username']],
+    ])
+    def usernames(self):
+        return ', '.join(self.authors.values_list('user__username', flat=True))
+
+    def add_author(self, author):
+        self.authors.add(author)
+        self.save()
+
+    def remove_author(self, author):
+        self.authors.remove(author)
+        self.save()
 
     def reset(self):
         Node.objects.filter(journal=self).delete()
@@ -1058,9 +1109,9 @@ class Journal(CreateUpdateModel):
 
     def save(self, *args, **kwargs):
         is_new = self._state.adding
-        if self.name is None:
+        if self.stored_name is None:
             if self.assignment.is_group_assignment:
-                self.name = 'Journal {}'.format(Journal.objects.filter(assignment=self.assignment).count() + 1)
+                self.stored_name = 'Journal {}'.format(Journal.objects.filter(assignment=self.assignment).count() + 1)
         super(Journal, self).save(*args, **kwargs)
         # On create add preset nodes
         if is_new:

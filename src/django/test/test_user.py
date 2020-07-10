@@ -379,7 +379,7 @@ class UserAPITest(TestCase):
         user1 = journal.authors.first().user
         ap2 = factory.AssignmentParticipation(assignment=journal.assignment)
         user2 = ap2.user
-        journal.authors.add(ap2)
+        journal.add_author(ap2)
         user3 = factory.AssignmentParticipation(assignment=journal.assignment).user
 
         assert user1.can_view(user2) and user2.can_view(user1), 'Users in same journal should be able to see each other'

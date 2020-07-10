@@ -1,7 +1,9 @@
 import datetime
+import re
 import test.factory as factory
 from test.utils import api
 
+from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core import mail
 from django.test import TestCase
@@ -33,6 +35,11 @@ class EmailAPITest(TestCase):
         assert len(mail.outbox) == 1, 'An actual mail should be sent'
         assert mail.outbox[0].to == [self.student.email], 'Email should be sent to the mail adress of the student'
         assert self.student.full_name in mail.outbox[0].body, 'Full name is expected to be used to increase delivery'
+        assert '{}/PasswordRecovery/{}/'.format(settings.BASELINK, self.student.username) in \
+            mail.outbox[0].alternatives[0][0], 'Recovery token link should be in email'
+
+        token = re.search(r'PasswordRecovery\/(.*)\/([^"]*)', mail.outbox[0].alternatives[0][0]).group(0).split('/')[-1]
+        assert PasswordResetTokenGenerator().check_token(self.student, token), 'Token should be valid'
 
         resp = api.post(self, 'forgot_password', params={'identifier': self.student.email})
         assert 'An email was sent' in resp['description'], \
@@ -82,11 +89,11 @@ class EmailAPITest(TestCase):
 
     def test_verify_email(self):
         api.post(self, 'verify_email', status=400)
+        token = PasswordResetTokenGenerator().make_token(self.not_verified)
         # Test invalid token
         api.post(self, 'verify_email',
                  params={'username': self.not_verified.username, 'token': 'invalid_token'}, status=400)
         # Test invalid username
-        token = PasswordResetTokenGenerator().make_token(self.not_verified)
         api.post(self, 'verify_email', params={'username': factory.Student().username, 'token': token}, status=400)
 
         # Test everything valid
@@ -208,6 +215,8 @@ class EmailAPITest(TestCase):
             'Journal with proper grade should only get notified of unfilled entries'
         assert mails.count(journal_empty_but_no_notifications.authors.first().user.email) == 0, \
             'Without email notifications, one should never get notified'
+        assert mails.count(assignment.author.email) == 0, \
+            'Teacher should not get any notifications'
 
         # Test assigned to
         group = Group.objects.create(course=assignment.courses.first(), name='test')
@@ -222,6 +231,23 @@ class EmailAPITest(TestCase):
                 mails.count(journal_filled_and_graded_100.authors.first().user.email) == 0 and
                 mails.count(journal_empty_but_no_notifications.authors.first().user.email) == 0), \
             'Authors not in the assigned to groups, should not get an email'
+
+        assignment = factory.Assignment()
+        assignment.is_published = False
+        assignment.save()
+        # ENTRYDEADLINE inside deadline
+        PresetNode.objects.create(
+            description='Entrydeadline node description',
+            due_date=timezone.now().date() + datetime.timedelta(days=7, hours=2),
+            lock_date=timezone.now().date() + datetime.timedelta(days=8),
+            type=Node.ENTRYDEADLINE,
+            forced_template=Template.objects.filter(format__assignment=assignment).first(),
+            format=assignment.format,
+        )
+        journal_unpublished_assignment = factory.Journal(assignment=assignment)
+        mails = notifications.send_upcoming_deadlines()
+        assert mails.count(journal_unpublished_assignment.authors.first().user.email) == 0, \
+            'Unpublished assignment should get no emails'
 
     def test_deadline_email_groups(self):
         group_assignment = factory.GroupAssignment()
@@ -246,9 +272,9 @@ class EmailAPITest(TestCase):
         group_journal = factory.GroupJournal(assignment=group_assignment)
 
         in_journal = factory.AssignmentParticipation(assignment=group_assignment)
-        group_journal.authors.add(in_journal)
+        group_journal.add_author(in_journal)
         also_in_journal = factory.AssignmentParticipation(assignment=group_assignment)
-        group_journal.authors.add(also_in_journal)
+        group_journal.add_author(also_in_journal)
         not_in_journal = factory.AssignmentParticipation(assignment=group_assignment)
 
         mails = notifications.send_upcoming_deadlines()

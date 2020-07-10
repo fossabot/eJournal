@@ -1,11 +1,12 @@
 import test.factory as factory
 from test.utils import api
 
+from computedfields.models import update_dependent
 from django.conf import settings
 from django.test import TestCase
 
 import VLE.factory
-from VLE.models import Journal
+from VLE.models import AssignmentParticipation, Journal, User
 from VLE.utils.error_handling import VLEBadRequest
 
 
@@ -24,6 +25,89 @@ class JournalAPITest(TestCase):
         self.g_student = self.ap.user
         group_course = self.group_assignment.courses.first()
         self.g_teacher = group_course.author
+
+    def test_computed_name(self):
+        journal = factory.Journal()
+        assert journal.name == journal.authors.first().user.full_name
+
+        # Test author name
+        user = journal.authors.first().user
+        user.full_name = 'Other name'
+        user.save()
+        journal.refresh_from_db()
+        assert journal.name == 'Other name'
+        assert journal.full_names == 'Other name'
+        assert journal.usernames == user.username
+
+        # Test stored name
+        journal.stored_name = 'stored name'
+        journal.save()
+        journal.refresh_from_db()
+        assert journal.name == 'stored name'
+        assert journal.full_names == 'Other name'
+        journal.stored_name = None
+        journal.save()
+
+        # Test add author
+        ap = AssignmentParticipation.objects.create(user=factory.Student(), assignment=journal.assignment)
+        journal.add_author(ap)
+        journal.refresh_from_db()
+        assert ', ' in journal.name
+        assert ap.user.full_name in journal.name
+        assert 'Other name' in journal.full_names
+        assert ap.user.full_name in journal.full_names
+        assert ap.user.username in journal.usernames
+        assert ', ' in journal.usernames
+
+        # Test updates also on .update
+        User.objects.filter(pk=ap.user.pk).update(full_name='update name')
+        update_dependent(User.objects.filter(pk=ap.user.pk))
+        journal.refresh_from_db()
+        assert 'update name' in journal.name
+        assert 'update name' in journal.full_names
+
+        # Test remove author
+        journal.remove_author(ap)
+        assert ap.user.full_name not in journal.name
+        assert ap.user.full_name not in journal.full_names
+        assert journal.name == 'Other name'
+        assert journal.full_names == 'Other name'
+
+    def test_computed_grade(self):
+        journal = factory.Journal()
+        assert journal.grade == 0
+        assert journal.unpublished == 0
+        assert journal.needs_marking == 0
+
+        factory.Grade(grade=5, published=False, entry__node__journal=journal)
+        journal.refresh_from_db()
+        assert journal.grade == 0
+        assert journal.unpublished == 1
+        assert journal.needs_marking == 0
+
+        grade = factory.Grade(grade=5, published=True, entry__node__journal=journal)
+        journal.refresh_from_db()
+        assert journal.grade == 5
+        assert journal.unpublished == 1
+        assert journal.needs_marking == 0
+
+        factory.Grade(entry=grade.entry, grade=3, published=True)
+        journal.refresh_from_db()
+        assert journal.grade == 3
+        assert journal.unpublished == 1
+        assert journal.needs_marking == 0
+
+        entry = factory.Entry(grade=None, node__journal=journal)
+        journal.refresh_from_db()
+        assert journal.grade == 3
+        assert journal.unpublished == 1
+        assert journal.needs_marking == 1
+
+        factory.Grade(entry=entry, published=False, grade=10)
+        journal.refresh_from_db()
+        assert journal.grade == 3
+        assert journal.unpublished == 2
+        assert journal.needs_marking == 0
 
     def test_get_journal(self):
         payload = {'assignment_id': self.assignment.pk, 'course_id': self.course.pk}
@@ -54,17 +138,19 @@ class JournalAPITest(TestCase):
             'student should not need an LTI link if student has a sources id'
 
     def test_journal_get_image(self):
-        assert self.journal.get_image() == settings.DEFAULT_PROFILE_PICTURE
+        assert self.journal.image == settings.DEFAULT_PROFILE_PICTURE
         self.student.profile_picture = 'new_image'
         self.student.save()
-        assert self.journal.get_image() == 'new_image'
+        self.journal.refresh_from_db()
+        assert self.journal.image == 'new_image'
 
         second_ap = factory.AssignmentParticipation(assignment=self.group_assignment)
-        self.group_journal.authors.add(second_ap)
-        assert self.group_journal.get_image() == settings.DEFAULT_PROFILE_PICTURE
+        self.group_journal.add_author(second_ap)
+        assert self.group_journal.image == settings.DEFAULT_PROFILE_PICTURE
         second_ap.user.profile_picture = 'new_image'
         second_ap.user.save()
-        assert Journal.objects.get(pk=self.group_journal.pk).get_image() == 'new_image'
+        self.group_journal.refresh_from_db()
+        assert self.group_journal.image == 'new_image'
 
     def test_create_journal(self):
         payload = {
@@ -91,16 +177,16 @@ class JournalAPITest(TestCase):
         assert before_count + 2 == after_count, '2 new journals should be added'
         assert Journal.objects.filter(assignment=self.group_assignment).last().author_limit == 3, \
             'Journal should have the proper max amount of users'
-        assert Journal.objects.filter(assignment=self.group_assignment).first().get_name() == 'Journal 1', \
+        assert Journal.objects.filter(assignment=self.group_assignment).first().name == 'Journal 1', \
             'Group journals should get a default name if it is not specified'
 
     def test_journal_name(self):
         non_group_journal = factory.Journal()
-        assert non_group_journal.get_name() == non_group_journal.authors.first().user.full_name, \
+        assert non_group_journal.name == non_group_journal.authors.first().user.full_name, \
             'Non group journals should get name of author'
         non_group_journal.authors.first().user.full_name = non_group_journal.authors.first().user.full_name + 'NEW'
         non_group_journal.authors.first().user.save()
-        assert non_group_journal.get_name() == non_group_journal.authors.first().user.full_name, \
+        assert non_group_journal.name == non_group_journal.authors.first().user.full_name, \
             'Non group journals name should get updated when author name changes'
 
     def test_make_journal(self):
@@ -157,9 +243,9 @@ class JournalAPITest(TestCase):
         api.update(self, 'journals', params={'pk': self.group_journal.pk, 'author_limit': 4}, user=self.g_teacher)
         assert Journal.objects.get(pk=self.group_journal.pk).author_limit == 4
         # Check teacher cannot update author_limit when there are more student in journal
-        self.group_journal.authors.add(factory.AssignmentParticipation(assignment=self.group_assignment))
-        self.group_journal.authors.add(factory.AssignmentParticipation(assignment=self.group_assignment))
-        self.group_journal.authors.add(factory.AssignmentParticipation(assignment=self.group_assignment))
+        self.group_journal.add_author(factory.AssignmentParticipation(assignment=self.group_assignment))
+        self.group_journal.add_author(factory.AssignmentParticipation(assignment=self.group_assignment))
+        self.group_journal.add_author(factory.AssignmentParticipation(assignment=self.group_assignment))
         api.update(
             self, 'journals', params={'pk': self.group_journal.pk, 'author_limit': 1}, user=self.g_teacher, status=400)
 
@@ -170,7 +256,7 @@ class JournalAPITest(TestCase):
         journal = Journal.objects.get(pk=self.group_journal.pk)
         assert journal.author_limit == 9 and journal.name == 'NEW'
         for _ in range(9):
-            self.group_journal.authors.add(factory.AssignmentParticipation(assignment=self.group_assignment))
+            self.group_journal.add_author(factory.AssignmentParticipation(assignment=self.group_assignment))
         api.update(
             self, 'journals', params={'pk': self.group_journal.pk, 'author_limit': 0},
             user=self.g_teacher)
@@ -203,7 +289,7 @@ class JournalAPITest(TestCase):
         # Check cannot delete with authors
         api.delete(self, 'journals', params={'pk': self.group_journal.pk}, user=self.g_teacher, status=400)
         # Check valid deletion
-        self.group_journal.authors.remove(self.group_journal.authors.first())
+        self.group_journal.remove_author(self.group_journal.authors.first())
         api.delete(self, 'journals', params={'pk': self.group_journal.pk}, user=self.g_teacher)
 
     def test_join(self):
@@ -324,7 +410,7 @@ class JournalAPITest(TestCase):
             user=self.g_teacher)
 
     def test_leave(self):
-        self.group_journal.authors.add(self.ap)
+        self.group_journal.add_author(self.ap)
         self.group_journal.save()
 
         assert self.group_journal.authors.filter(user=self.g_student).exists(), \
@@ -338,13 +424,13 @@ class JournalAPITest(TestCase):
         # check not possible to leave non group assignment
         api.update(self, 'journals/leave', params={'pk': self.journal.pk}, user=self.student, status=400)
         # Check leave locked journal
-        self.group_journal.authors.add(self.ap)
+        self.group_journal.add_author(self.ap)
         self.group_journal.locked = True
         self.group_journal.save()
         api.update(self, 'journals/leave', params={'pk': self.group_journal.pk}, user=self.g_student, status=400)
 
     def test_kick(self):
-        self.group_journal.authors.add(self.ap)
+        self.group_journal.add_author(self.ap)
         self.group_journal.save()
 
         assert self.group_journal.authors.filter(user=self.g_student).exists(), \
@@ -357,7 +443,7 @@ class JournalAPITest(TestCase):
         # Check not in journal
         api.update(self, 'journals/kick', params={'pk': self.group_journal.pk, 'user_id': self.g_student.pk},
                    user=self.g_teacher, status=400)
-        self.group_journal.authors.add(self.ap)
+        self.group_journal.add_author(self.ap)
         self.group_journal.locked = True
         self.group_journal.save()
         # check not possible to kick from non group assignment
@@ -371,7 +457,7 @@ class JournalAPITest(TestCase):
                    user=self.g_teacher)
 
     def test_lock(self):
-        self.group_journal.authors.add(self.ap)
+        self.group_journal.add_author(self.ap)
         self.group_journal.save()
 
         api.update(self, 'journals/lock', params={

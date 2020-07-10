@@ -245,7 +245,7 @@ def make_journal(assignment, author=None, author_limit=None):
             journal = Journal.all_objects.get(assignment=assignment, authors__in=[ap])
         else:
             journal = Journal.objects.create(assignment=assignment)
-            journal.authors.add(ap)
+            journal.add_author(ap)
 
     return journal
 

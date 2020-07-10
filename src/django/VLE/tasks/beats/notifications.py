@@ -19,6 +19,9 @@ def _send_deadline_mail(deadline, journal):
     # remove where the user does not want to recieve an email.
     for author in journal.authors.filter(
        user__verified_email=True, user__preferences__upcoming_deadline_notifications=True):
+        # Do not send email to users that cannot view the assignment
+        if not author.user.can_view(journal.assignment):
+            continue
         course = assignment.get_active_course(author.user)
         email_data = {}
         email_data['heading'] = 'Upcoming deadline'
@@ -69,7 +72,7 @@ def _send_deadline_mails(deadline_query):
             continue
 
         # Dont send a mail when the target points is reached
-        if deadline['type'] == Node.PROGRESS and journal.get_grade() > deadline['target']:
+        if deadline['type'] == Node.PROGRESS and journal.grade > deadline['target']:
             continue
 
         emails_sent_to += _send_deadline_mail(deadline, journal)
