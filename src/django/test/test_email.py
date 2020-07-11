@@ -268,7 +268,7 @@ class EmailAPITest(TestCase):
             format=assignment.format,
         )
         journal_unpublished_assignment = factory.Journal(assignment=assignment)
-        mails = notifications.send_upcoming_deadlines()
+        mails = [n.user.email for n in notifications.generate_upcoming_deadline_notifications()]
         assert mails.count(journal_unpublished_assignment.authors.first().user.email) == 0, \
             'Unpublished assignment should get no emails'
 

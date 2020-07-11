@@ -4,8 +4,8 @@ from django_test_migrations.contrib.unittest_case import MigratorTestCase
 class TestMigration0045(MigratorTestCase):
     """This class is used to test direct migrations."""
 
-    migrate_from = ('VLE', '0043_comment_files')
-    migrate_to = ('VLE', '0045_notifications')
+    migrate_from = ('VLE', '0046_compute_journal2')
+    migrate_to = ('VLE', '0047_notifications')
 
     def prepare(self):
         """Prepare some data before the migration."""

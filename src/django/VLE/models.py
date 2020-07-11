@@ -402,9 +402,9 @@ class Preferences(CreateUpdateModel):
         (OFF, 'o'),
     )
     REMINDER = (
-        (DAY_AND_WEEK, 'a'),
-        (WEEK, 'w'),
         (DAY, 'd'),
+        (WEEK, 'w'),
+        (DAY_AND_WEEK, 'p'),
         (OFF, 'o'),
     )
 
@@ -620,7 +620,7 @@ class Notification(CreateUpdateModel):
         return text.format(
             comment=self.comment.author.full_name if self.comment else None,
             entry=self.entry.template.name if self.entry and self.entry.template else None,
-            journal=self.journal.get_name() if self.journal else None,
+            journal=self.journal.name if self.journal else None,
             assignment=self.assignment.name if self.assignment else None,
             course=self.course.name if self.course else None,
             deadline=self.node.preset.due_date.strftime("%B %d at %H:%M") if self.node and self.node.preset else None,
