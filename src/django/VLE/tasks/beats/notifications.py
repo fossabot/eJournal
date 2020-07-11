@@ -209,7 +209,7 @@ def send_digest_notifications():
         user = VLE.models.User.objects.get(pk=user)
         if not user.verified_email:
             continue
-        print(user.verified_email)
+
         content, user_sending = gen_content_from_notifications(
             VLE.models.Notification.objects.filter(user=user, sent=False),
             period
@@ -232,9 +232,6 @@ def send_digest_notifications():
 
         html_content = render_to_string('digest.html', {'email_data': email_data})
         text_content = strip_tags(html_content)
-
-        with open('test{}.html'.format(user.username), 'w') as f:
-            f.write(html_content)
 
         email = EmailMultiAlternatives(
             subject='{} digest - eJournal'.format(period['name'].title()),
