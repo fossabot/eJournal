@@ -96,10 +96,9 @@
             </div>
         </b-card>
 
-        <comment-card
+        <comments
             :eID="entryNode.entry.id"
             :entryGradePublished="gradePublished"
-            :journal="journal"
             @publish-grade="commitGrade('p')"
         />
 
@@ -167,14 +166,14 @@
 </template>
 
 <script>
-import commentCard from '@/components/entry/CommentCard.vue'
+import comments from '@/components/entry/Comments.vue'
 import dropdownButton from '@/components/assets/DropdownButton.vue'
 import entryFields from '@/components/entry/EntryFields.vue'
 import gradeAPI from '@/api/grade.js'
 
 export default {
     components: {
-        commentCard,
+        comments,
         dropdownButton,
         entryFields,
     },

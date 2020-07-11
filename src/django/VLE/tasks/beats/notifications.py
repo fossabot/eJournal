@@ -36,7 +36,7 @@ def _generate_upcoming_deadline_notifications(node_query, preferences):
             continue
 
         # Dont send a mail when the target points is reached
-        if node.preset.type == VLE.models.Node.PROGRESS and journal.get_grade() > node.preset.target:
+        if node.preset.type == VLE.models.Node.PROGRESS and journal.grade > node.preset.target:
             continue
 
         for author in journal.authors.filter(user__preferences__upcoming_deadline_reminder__in=preferences):
@@ -44,6 +44,9 @@ def _generate_upcoming_deadline_notifications(node_query, preferences):
             if VLE.models.Notification.objects.filter(
                type=VLE.models.Notification.UPCOMING_DEADLINE, user=author.user, node=node,
                creation_date__gt=timezone.now().date() - datetime.timedelta(days=1)).exists():
+                continue
+            # Do not send email to users that cannot view the assignment
+            if not author.user.can_view(node.journal.assignment):
                 continue
             notifications.append(VLE.models.Notification.objects.create(
                 type=VLE.models.Notification.UPCOMING_DEADLINE,

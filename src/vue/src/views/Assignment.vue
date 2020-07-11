@@ -578,8 +578,8 @@ export default {
             let points = 0
 
             for (let i = 0; i < filteredJournals.length; i++) {
-                needsMarking += filteredJournals[i].stats.marking_needed
-                unpublished += filteredJournals[i].stats.unpublished
+                needsMarking += filteredJournals[i].marking_needed
+                unpublished += filteredJournals[i].unpublished
                 points += filteredJournals[i].grade
             }
             this.stats = {

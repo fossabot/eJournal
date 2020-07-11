@@ -6,7 +6,7 @@ Functions to convert certain data to other formats.
 import datetime
 
 from django.conf import settings
-from django.db.models import Min, Q
+from django.db.models import Avg, Count, Min, Q, Sum
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -320,7 +320,9 @@ class AssignmentSerializer(serializers.ModelSerializer):
             course = self.context['course']
             users = course.participation_set.filter(role__can_have_journal=True).values('user')
             return JournalSerializer(
-                journals.filter(Q(authors__user__in=users) | Q(authors__isnull=True)).distinct(), many=True,
+                journals.filter(Q(authors__user__in=users) | Q(authors__isnull=True)).annotate(
+                    author_count=Count('authors', distinct=True)
+                ).distinct(), many=True,
                 context={
                     **self.context,
                     'can_view_usernames': self.context['user'].has_permission('can_view_all_journals', assignment)
@@ -353,20 +355,15 @@ class AssignmentSerializer(serializers.ModelSerializer):
 
         # Grader stats
         if self.context['user'].has_permission('can_grade', assignment):
-            stats['needs_marking'] = journal_set \
-                .filter(Q(node__entry__grade__grade=None) | Q(node__entry__grade=None),
-                        node__entry__isnull=False).values('node').count()
-            stats['unpublished'] = journal_set \
-                .filter(node__entry__isnull=False, node__entry__grade__published=False,
-                        node__entry__grade__grade__isnull=False).values('node').count()
-            stats['needs_marking_own_groups'] = journal_set.filter(authors__user__in=own_group_users) \
-                .filter(Q(node__entry__grade__grade=None) | Q(node__entry__grade=None),
-                        node__entry__isnull=False).values('node').count()
-            stats['unpublished_own_groups'] = journal_set.filter(authors__user__in=own_group_users) \
-                .filter(node__entry__isnull=False, node__entry__grade__published=False,
-                        node__entry__grade__grade__isnull=False).values('node').count()
+            own_group = journal_set.filter(authors__user__in=own_group_users)
+            stats.update({
+                'needs_marking': journal_set.aggregate(Sum('needs_marking'))['needs_marking__sum'] or 0,
+                'unpublished': journal_set.aggregate(Sum('unpublished'))['unpublished__sum'] or 0,
+                'needs_marking_own_groups': own_group.aggregate(Sum('needs_marking'))['needs_marking__sum'] or 0,
+                'unpublished_own_groups': own_group.aggregate(Sum('unpublished'))['unpublished__sum'] or 0,
+            })
         # Other stats
-        stats['average_points'] = sum([journal.get_grade() for journal in journal_set]) / (journal_set.count() or 1)
+        stats['average_points'] = journal_set.aggregate(Avg('grade'))['grade__avg']
 
         return stats
 
@@ -508,48 +505,28 @@ class RoleSerializer(serializers.ModelSerializer):
 
 
 class JournalSerializer(serializers.ModelSerializer):
-    name = serializers.SerializerMethodField()
-    usernames = serializers.SerializerMethodField()
-    full_names = serializers.SerializerMethodField()
-    image = serializers.SerializerMethodField()
-    grade = serializers.SerializerMethodField()
     author_count = serializers.SerializerMethodField()
-    stats = serializers.SerializerMethodField()
     groups = serializers.SerializerMethodField()
-    needs_lti_link = serializers.SerializerMethodField()
+    usernames = serializers.SerializerMethodField()
 
     class Meta:
         model = Journal
-        fields = ('id', 'bonus_points', 'grade', 'needs_lti_link', 'name', 'image', 'author_limit',
-                  'locked', 'author_count', 'stats', 'usernames', 'full_names', 'groups')
+        fields = ('id', 'bonus_points', 'grade', 'name', 'image', 'author_limit',
+                  'locked', 'author_count', 'full_names', 'groups',
+                  'grade', 'name', 'image', 'needs_lti_link', 'unpublished', 'needs_marking', 'usernames')
         read_only_fields = ('id', 'assignment', 'authors', 'grade')
 
-    def get_grade(self, journal):
-        return journal.get_grade()
-
-    def get_needs_lti_link(self, journal):
-        if not journal.assignment.active_lti_id:
-            return []
-        return list(journal.authors.filter(sourcedid__isnull=True).values_list('user__full_name', flat=True))
-
     def get_author_count(self, journal):
-        return journal.authors.count()
-
-    def get_name(self, journal):
-        return journal.get_name()
-
-    def get_full_names(self, journal):
-        return journal.get_full_names()
+        # If annotated in the query, get that, else query here
+        return journal.__dict__.get('author_count', journal.authors.count())
 
     def get_usernames(self, journal):
+        # If annotated that it is allowed, immediatly get it, else check for can_view_all_journals
         if self.context.get('can_view_usernames', False) or \
            'user' in self.context and self.context['user'].has_permission('can_view_all_journals', journal.assignment):
-            return ', '.join(journal.authors.values_list('user__username', flat=True))
+            return journal.usernames
 
         return None
-
-    def get_image(self, journal):
-        return journal.get_image()
 
     def get_groups(self, journal):
         if 'course' not in self.context:
@@ -557,12 +534,6 @@ class JournalSerializer(serializers.ModelSerializer):
         return list(Participation.objects.filter(
             user__in=journal.authors.values('user'),
             course=self.context['course']).values_list('groups__pk', flat=True).distinct())
-
-    def get_stats(self, journal):
-        return {
-            'unpublished': journal.node_set.filter(entry__grade__published=False).count(),
-            'marking_needed': journal.node_set.filter(entry__isnull=False, entry__grade__isnull=True).count(),
-        }
 
 
 class FormatSerializer(serializers.ModelSerializer):

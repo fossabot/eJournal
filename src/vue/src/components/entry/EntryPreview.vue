@@ -21,8 +21,8 @@
                 :completeContent="completeContent"
                 :displayMode="false"
                 :nodeID="nID"
-                @uploadingFile="uploadingFile = true"
-                @finishedUploadingFile="uploadingFile = false"
+                @uploadingFile="uploadingFiles ++"
+                @finishedUploadingFile="uploadingFiles --"
             />
 
             <b-alert
@@ -35,7 +35,7 @@
             </b-alert>
             <b-button
                 class="add-button float-right"
-                :class="{ 'input-disabled': saveRequestInFlight || uploadingFile }"
+                :class="{ 'input-disabled': saveRequestInFlight || uploadingFiles > 0 }"
                 @click="save"
             >
                 <icon name="paper-plane"/>
@@ -78,7 +78,7 @@ export default {
             dismissCountDown: 0,
             showDismissibleAlert: false,
             saveRequestInFlight: false,
-            uploadingFile: false,
+            uploadingFiles: 0,
         }
     },
     watch: {

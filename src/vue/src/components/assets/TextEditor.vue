@@ -86,6 +86,7 @@ export default {
     },
     data () {
         return {
+            uploading: 0,
             content: '',
             editor: null,
             justFocused: false,
@@ -273,10 +274,15 @@ export default {
             } else {
                 formData.append('in_rich_text', true)
                 formData.append('file', file)
-
+                this.uploading += 1
+                this.$emit('startedUploading')
                 auth.uploadFile('files', formData)
                     .then((response) => { success(response.data.download_url) })
                     .catch(() => { failure('File upload failed') })
+                    .finally(() => {
+                        this.uploading -= 1
+                        this.$emit('finishedUploading')
+                    })
             }
         },
         insertDataURL () {

@@ -114,7 +114,7 @@ def _can_edit_entry(user, entry):
         entry.node.journal.assignment.is_locked() or
         entry.is_graded() or
         entry.is_locked() or
-        entry.node.journal.needs_lti_link()
+        len(entry.node.journal.needs_lti_link) > 0
     ):
         return False
 

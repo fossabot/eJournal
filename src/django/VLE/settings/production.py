@@ -30,6 +30,7 @@ USER_MAX_TOTAL_STORAGE_BYTES = 104857600
 USER_MAX_EMAIL_ATTACHMENT_BYTES = 10485760
 
 MIDDLEWARE = ['corsheaders.middleware.CorsMiddleware'] + MIDDLEWARE
+
 ALLOWED_HOSTS = ['.ejournal.app', '.canvas.uva.nl']
 
 SESSION_COOKIE_SECURE = True

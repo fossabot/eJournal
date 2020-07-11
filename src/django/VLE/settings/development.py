@@ -28,8 +28,16 @@ CORS_ORIGIN_ALLOW_ALL = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = True
 
-MIDDLEWARE = ['corsheaders.middleware.CorsMiddleware'] + MIDDLEWARE
+INSTALLED_APPS += ['silk']
+
+MIDDLEWARE = [
+    'silk.middleware.SilkyMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+] + MIDDLEWARE
 ALLOWED_HOSTS = ['*']
+
+SILKY_PYTHON_PROFILER = True
+SILKY_PYTHON_PROFILER_RESULT_PATH = '/'
 
 if 'TRAVIS' in os.environ:
     DATABASES = {

@@ -49,7 +49,7 @@ class EntryView(viewsets.ViewSet):
         if assignment.is_locked():
             return response.forbidden('The assignment is locked, entries can no longer be edited/changed.')
 
-        if journal.needs_lti_link():
+        if len(journal.needs_lti_link) > 0:
             return response.forbidden(journal.outdated_link_warning_msg)
 
         # Check if the template is available
@@ -153,7 +153,7 @@ class EntryView(viewsets.ViewSet):
             return response.bad_request('You are not allowed to edit graded entries.')
         if entry.is_locked():
             return response.bad_request('You are not allowed to edit locked entries.')
-        if journal.needs_lti_link():
+        if len(journal.needs_lti_link) > 0:
             return response.forbidden(journal.outdated_link_warning_msg)
 
         # Check for required fields
@@ -242,7 +242,7 @@ class EntryView(viewsets.ViewSet):
                 return response.forbidden('You are not allowed to delete entries in a locked assignment.')
         elif not request.user.is_superuser:
             return response.forbidden('You are not allowed to delete someone else\'s entry.')
-        if journal.needs_lti_link():
+        if len(journal.needs_lti_link) > 0:
             return response.forbidden(journal.outdated_link_warning_msg)
 
         if entry.node.type != Node.ENTRYDEADLINE:

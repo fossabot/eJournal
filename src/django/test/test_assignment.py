@@ -112,7 +112,7 @@ class AssignmentAPITest(TestCase):
         self.course.refresh_from_db()
         assert 'random_lti_id_salkdjfhas' in self.course.assignment_lti_id_set
 
-    def test_get(self):
+    def test_get_assignment(self):
         student = factory.Student()
         assignment = factory.Assignment(courses=[self.course])
         group = factory.Group(course=self.course)
@@ -855,7 +855,7 @@ class AssignmentAPITest(TestCase):
         ap2 = factory.AssignmentParticipation(user=factory.Student(), assignment=assignment)
         ap3_in_journal = factory.AssignmentParticipation(user=factory.Student(), assignment=assignment)
         j1 = factory.GroupJournal(assignment=assignment)
-        j1.authors.add(ap3_in_journal)
+        j1.add_author(ap3_in_journal)
         t1 = factory.Participation(
             user=factory.Teacher(), course=assignment.courses.first(),
             role=Role.objects.get(course=assignment.courses.first(), name='Teacher'))
@@ -933,8 +933,7 @@ class AssignmentAPITest(TestCase):
 
             test_bonus_helper(
                 '{},2'.format(lti_bonus_student.username), status=200, delimiter=d)
-            # assert False
-            assert Journal.objects.get(pk=lti_journal.pk).get_grade() == 2 + lti_journal.get_grade(), \
+            assert Journal.objects.get(pk=lti_journal.pk).grade == 2 + lti_journal.grade, \
                 'Bonus points should be added'
 
         # With ; this would return 2 lines as it cannot find the correct delimiter, therefor this test is only once
