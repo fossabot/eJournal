@@ -75,7 +75,7 @@ class ErrorMiddleware:
         elif isinstance(exception, ObjectDoesNotExist):
             return response.not_found('{0} does not exist.'.format(str(exception).split()[0]), exception=exception)
         elif isinstance(exception, ValidationError):
-            return response.validation_error(str(exception), exception=exception)
+            return response.validation_error(', '.join(exception.messages), exception=exception)
 
         # Variable exceptions
         elif isinstance(exception, VLEMissingRequiredKey):

@@ -668,7 +668,7 @@ class ContentSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', )
 
     def get_data(self, content):
-        if content.field.type in Field.FILE_TYPES:
+        if content.field.type == Field.FILE:
             try:
                 return FileSerializer(FileContext.objects.get(pk=content.data)).data
             except FileContext.DoesNotExist:

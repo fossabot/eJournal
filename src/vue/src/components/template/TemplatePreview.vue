@@ -26,15 +26,6 @@
                 class="theme-input input-disabled"
             />
             <file-upload-input
-                v-else-if="field.type == 'i'"
-                :acceptedFiletype="'image/*'"
-                :maxSizeBytes="$root.maxFileSizeBytes"
-                :autoUpload="false"
-                :aID="$route.params.aID"
-                :nID="'1'"
-                class="input-disabled"
-            />
-            <file-upload-input
                 v-else-if="field.type == 'f'"
                 :acceptedFiletype="'*/*'"
                 :maxSizeBytes="$root.maxFileSizeBytes"
@@ -47,15 +38,6 @@
                 v-else-if="field.type == 'v'"
                 class="theme-input input-disabled"
                 placeholder="Enter YouTube URL..."
-            />
-            <file-upload-input
-                v-else-if="field.type == 'p'"
-                :acceptedFiletype="'application/pdf'"
-                :maxSizeBytes="$root.maxFileSizeBytes"
-                :autoUpload="false"
-                :aID="$route.params.aID"
-                :nID="'1'"
-                class="input-disabled"
             />
             <text-editor
                 v-else-if="field.type == 'rt'"

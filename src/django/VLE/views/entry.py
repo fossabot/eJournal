@@ -74,12 +74,12 @@ class EntryView(viewsets.ViewSet):
                 field_id, = utils.required_typed_params(content, (int, 'id'))
                 field = Field.objects.get(pk=field_id)
                 data, = utils.required_params(content, 'data')
-                if data is not None and field.type in field.FILE_TYPES:
+                if data is not None and field.type == field.FILE:
                     data, = utils.required_typed_params(data, (str, 'id'))
 
                 created_content = factory.make_content(node.entry, data, field)
 
-                if field.type in field.FILE_TYPES:  # Image, file or PDF
+                if field.type == field.FILE:
                     if field.required and not data:
                         raise FileContext.DoesNotExist
                     if data:
@@ -165,7 +165,7 @@ class EntryView(viewsets.ViewSet):
             field_id, = utils.required_typed_params(content, (int, 'id'))
             data, = utils.required_params(content, 'data')
             field = Field.objects.get(pk=field_id)
-            if data is not None and field.type in field.FILE_TYPES:
+            if data is not None and field.type == field.FILE:
                 data, = utils.required_typed_params(data, (str, 'id'))
 
             old_content = entry.content_set.filter(field=field)
@@ -189,7 +189,7 @@ class EntryView(viewsets.ViewSet):
                 changed = True
 
             if changed:
-                if field.type in field.FILE_TYPES:  # Image, file or PDF
+                if field.type == field.FILE:
                     if field.required and not data:
                         raise FileContext.DoesNotExist
                     if data:
