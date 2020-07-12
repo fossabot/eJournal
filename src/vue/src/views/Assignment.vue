@@ -44,10 +44,16 @@
                     <option value="name">
                         Sort by name
                     </option>
-                    <option value="username" v-if="$hasPermission('can_grade', 'assignment', String(this.aID))">
+                    <option
+                        v-if="$hasPermission('can_grade', 'assignment', String(aID))"
+                        value="username"
+                    >
                         Sort by username
                     </option>
-                    <option value="markingNeeded" v-if="$hasPermission('can_grade', 'assignment', String(this.aID))">
+                    <option
+                        v-if="$hasPermission('can_grade', 'assignment', String(aID))"
+                        value="markingNeeded"
+                    >
                         Sort by marking needed
                     </option>
                     <option value="points">
@@ -341,7 +347,7 @@
         </load-wrapper>
 
         <div
-            v-if="stats && $hasPermission('can_grade', 'assignment', String(this.aID))"
+            v-if="stats && $hasPermission('can_grade', 'assignment', String(aID))"
             slot="right-content-column"
         >
             <h3 class="theme-h3">
