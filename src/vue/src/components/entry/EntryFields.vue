@@ -44,21 +44,9 @@
                 />
             </reset-wrapper>
             <file-upload-input
-                v-else-if="field.type == 'i'"
-                :placeholder="completeContent[i].data ? completeContent[i].data.file_name : null"
-                :acceptedFiletype="'image/*'"
-                :maxSizeBytes="$root.maxFileSizeBytes"
-                :autoUpload="true"
-                :aID="$route.params.aID"
-                :contentID="completeContent[i].contentID"
-                @uploadingFile="$emit('uploadingFile')"
-                @fileUploadFailed="$emit('finishedUploadingFile')"
-                @fileUploadSuccess="completeContent[i].data = $event; $emit('finishedUploadingFile')"
-            />
-            <file-upload-input
                 v-else-if="field.type == 'f'"
                 :placeholder="completeContent[i].data ? completeContent[i].data.file_name : null"
-                :acceptedFiletype="'*/*'"
+                :acceptedFiletype="field.options ? '.' + field.options.split(', ').join(', .') : '*/*'"
                 :maxSizeBytes="$root.maxFileSizeBytes"
                 :autoUpload="true"
                 :aID="$route.params.aID"
@@ -72,18 +60,6 @@
                 :placeholder="completeContent[i].data ? completeContent[i].data : 'Enter YouTube URL...'"
                 class="theme-input"
                 @input="completeContent[i].data = youtubeEmbedFromURL($event)"
-            />
-            <file-upload-input
-                v-else-if="field.type == 'p'"
-                :placeholder="completeContent[i].data ? completeContent[i].data.file_name : null"
-                :acceptedFiletype="'application/pdf'"
-                :maxSizeBytes="$root.maxFileSizeBytes"
-                :autoUpload="true"
-                :aID="$route.params.aID"
-                :contentID="completeContent[i].contentID"
-                @uploadingFile="$emit('uploadingFile')"
-                @fileUploadFailed="$emit('finishedUploadingFile')"
-                @fileUploadSuccess="completeContent[i].data = $event; $emit('finishedUploadingFile')"
             />
             <text-editor
                 v-else-if="field.type == 'rt'"
@@ -125,19 +101,14 @@
                 class="show-enters"
             >{{ completeContent[field.location].data }}</span>
             <span
-                v-if="field.type == 'd'"
+                v-else-if="field.type == 'd'"
                 class="show-enters"
             >{{ $root.beautifyDate(completeContent[field.location].data, true, false) }}</span>
             <span
-                v-if="field.type == 'dt'"
+                v-else-if="field.type == 'dt'"
                 class="show-enters"
             >{{ $root.beautifyDate(completeContent[field.location].data) }}</span>
-            <image-file-display
-                v-else-if="field.type == 'i'"
-                :id="'image-display-field-' + field.location"
-                :file="completeContent[field.location].data"
-            />
-            <file-download-button
+            <file-display
                 v-else-if="field.type == 'f'"
                 :file="completeContent[field.location].data"
             />
@@ -148,10 +119,6 @@
                 aspect="16by9"
                 allowfullscreen
             />
-            <pdf-display
-                v-else-if="field.type == 'p'"
-                :file="completeContent[field.location].data"
-            />
             <sandboxed-iframe
                 v-else-if="field.type == 'rt'"
                 :content="completeContent[field.location].data"
@@ -159,7 +126,9 @@
             <a
                 v-else-if="field.type == 'u'"
                 :href="completeContent[field.location].data"
-            >{{ completeContent[field.location].data }}</a>
+            >
+                {{ completeContent[field.location].data }}
+            </a>
             <span v-else-if="field.type == 's'">{{ completeContent[field.location].data }}</span>
         </div>
     </div>
@@ -169,9 +138,7 @@
 import fileUploadInput from '@/components/assets/file_handling/FileUploadInput.vue'
 import textEditor from '@/components/assets/TextEditor.vue'
 import urlInput from '@/components/assets/UrlInput.vue'
-import fileDownloadButton from '@/components/assets/file_handling/FileDownloadButton.vue'
-import imageFileDisplay from '@/components/assets/file_handling/ImageFileDisplay.vue'
-import pdfDisplay from '@/components/assets/PdfDisplay.vue'
+import fileDisplay from '@/components/assets/file_handling/FileDisplay.vue'
 import sandboxedIframe from '@/components/assets/SandboxedIframe.vue'
 
 export default {
@@ -179,9 +146,7 @@ export default {
         fileUploadInput,
         textEditor,
         urlInput,
-        pdfDisplay,
-        fileDownloadButton,
-        imageFileDisplay,
+        fileDisplay,
         sandboxedIframe,
     },
     props: {

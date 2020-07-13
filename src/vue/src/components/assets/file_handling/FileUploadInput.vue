@@ -1,12 +1,20 @@
 <template>
-    <b-form-file
-        :accept="acceptedFiletype"
-        :state="Boolean(file)"
-        :placeholder="placeholderText"
-        :plain="plain"
-        class="fileinput"
-        @change="fileHandler"
-    />
+    <div>
+        <b-form-file
+            :accept="acceptedFiletype"
+            :state="Boolean(file)"
+            :placeholder="placeholderText"
+            :plain="plain"
+            class="fileinput"
+            @change="fileHandler"
+        />
+        <small
+            v-if="acceptedFiletype !== '*/*'"
+            class="multi-form"
+        >
+            <b>Accepted extension(s):</b> {{ acceptedFiletype }}
+        </small>
+    </div>
 </template>
 
 <script>
@@ -53,8 +61,8 @@ export default {
         // Assume the given file is present in the backend
         if (this.placeholder !== null && this.placeholder !== 'No file chosen') {
             this.file = true
-            this.placeholderText = this.placeholder
         }
+        this.placeholderText = this.placeholder ? this.placeholder : 'No file chosen'
     },
     methods: {
         fileHandler (e) {
@@ -75,8 +83,6 @@ export default {
         uploadFile () {
             const formData = new FormData()
             formData.append('file', this.file)
-            formData.append('assignment_id', this.aID)
-            formData.append('content_id', this.contentID)
             this.$emit('uploadingFile')
             auth.uploadFile(this.endpoint, formData, { customSuccessToast: 'File upload success.' })
                 .then((resp) => {

@@ -1432,20 +1432,15 @@ class Field(CreateUpdateModel):
 
     TEXT = 't'
     RICH_TEXT = 'rt'
-    IMG = 'i'
     FILE = 'f'
     VIDEO = 'v'
-    PDF = 'p'
     URL = 'u'
     DATE = 'd'
     DATETIME = 'dt'
     SELECTION = 's'
-    FILE_TYPES = [PDF, FILE, IMG]
     TYPES = (
         (TEXT, 'text'),
         (RICH_TEXT, 'rich text'),
-        (IMG, 'img'),
-        (PDF, 'pdf'),
         (FILE, 'file'),
         (VIDEO, 'vid'),
         (URL, 'url'),
@@ -1474,6 +1469,11 @@ class Field(CreateUpdateModel):
 
     def to_string(self, user=None):
         return "{} ({})".format(self.title, self.id)
+
+    def save(self, *args, **kwargs):
+        if self.type == Field.FILE and self.options:
+            self.options = ', '.join(f.strip().lower() for f in self.options.split(','))
+        return super(Field, self).save(*args, **kwargs)
 
 
 class Content(CreateUpdateModel):

@@ -94,6 +94,13 @@ new Vue({
             dateFormat: 'Y-m-d',
             disableMobile: true,
         },
+        fileTypes: {
+            // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/Img
+            // Only used extensions that are supported by all named browsers
+            // No: apng (IE), webp (IE, Safari), tiff (all)
+            img: 'bmp, gif, ico, cur, jpg, jpeg, jfif, pjpeg, pjp, png, svg',
+            pdf: 'pdf',
+        },
     },
     computed: {
         /* Bootstrap breakpoints for custom events. */
