@@ -197,7 +197,7 @@ class Command(BaseCommand):
                     {"title": "Summary", "location": 1, "type": Field.RICH_TEXT},
                     {"title": "Experience", "location": 2, "type": Field.RICH_TEXT},
                     {"title": "Requested Points", "location": 3, "type": Field.TEXT},
-                    {"title": "Proof", "location": 4, "type": Field.IMG, "required": False},
+                    {"title": "Proof", "location": 4, "type": Field.FILE, "required": False},
                 ]
             },
             {
@@ -209,9 +209,26 @@ class Command(BaseCommand):
             {
                 "name": "Files",
                 "fields": [
-                    {"title": "IMG", "location": 0, "type": Field.IMG, "required": False},
-                    {"title": "FILE", "location": 1, "type": Field.FILE, "required": False},
-                    {"title": "PDF", "location": 2, "type": Field.PDF, "required": False},
+                    {
+                        "title": "IMG",
+                        "location": 0,
+                        "type": Field.FILE,
+                        "required": False,
+                        "options": 'bmp, gif, ico, cur, jpg, jpeg, jfif, pjpeg, pjp, png, svg',
+                    },
+                    {
+                        "title": "FILE",
+                        "location": 1,
+                        "type": Field.FILE,
+                        "required": False,
+                    },
+                    {
+                        "title": "PDF",
+                        "location": 2,
+                        "type": Field.FILE,
+                        "required": False,
+                        "options": 'pdf',
+                    },
                 ]
             }
         ]
@@ -221,7 +238,10 @@ class Command(BaseCommand):
             template = factory.make_entry_template(t["name"], format)
             templates.append(template)
             for f in t["fields"]:
-                factory.make_field(template, f["title"], f["location"], f["type"], required=f.get('required', True))
+                factory.make_field(
+                    template, f["title"], f["location"], f["type"],
+                    required=f.get('required', True), options=f.get('options', None)
+                )
 
         return templates
 
@@ -455,14 +475,14 @@ class Command(BaseCommand):
                                 factory.make_content(node.entry, faker.catch_phrase(), field)
 
                         try:
-                            if field.type in [Field.FILE, Field.IMG]:
+                            if field.type == Field.FILE and (not field.options or 'png' in field.options):
                                 with open('../vue/public/journal-view.png', 'rb') as file:
                                     image = SimpleUploadedFile('test-image.png', file.read(), content_type='image/png')
                                     fc = FileContext.objects.create(
                                         file=image, author=journal.authors.first().user, file_name=image.name)
                                     content = factory.make_content(node.entry, str(fc.pk), field)
                                     file_handling.establish_file(journal.authors.first().user, fc.pk, content=content)
-                            if field.type in [Field.PDF]:
+                            elif field.type == Field.FILE:
                                 with open('../vue/public/eJournal-privacy-notice.pdf', 'rb') as file:
                                     pdf = SimpleUploadedFile(
                                         'eJournal-privacy-notice.pdf', file.read(), content_type='application/pdf')

@@ -10,8 +10,7 @@ from VLE.models import Entry, Field, FileContext, PresetNode, Template
 from VLE.utils import file_handling
 from VLE.utils.error_handling import VLEBadRequest, VLEPermissionError
 
-BOUNDARY = 'BoUnDaRyStRiNg'
-MULTIPART_CONTENT = 'multipart/form-data; boundary=%s' % BOUNDARY
+MULTIPART_CONTENT = 'multipart/form-data; boundary=BoUnDaRyStRiNg'
 
 
 class FileHandlingTest(TestCase):
@@ -25,9 +24,9 @@ class FileHandlingTest(TestCase):
         self.video = SimpleUploadedFile('file.mp4', b'file_content', content_type='video/mp4')
         self.image = SimpleUploadedFile('file.png', b'image_content', content_type='image/png')
         self.template = factory.TemplateAllTypes(format=self.format)
-        self.img_field = Field.objects.get(template=self.template, type=Field.IMG)
+        self.img_field = Field.objects.get(template=self.template, type=Field.FILE, options__contains='png')
         self.rt_field = Field.objects.get(template=self.template, type=Field.RICH_TEXT)
-        self.file_field = Field.objects.get(template=self.template, type=Field.FILE)
+        self.file_field = Field.objects.get(template=self.template, type=Field.FILE, options=None)
 
         self.create_params = {
             'journal_id': self.journal.pk,

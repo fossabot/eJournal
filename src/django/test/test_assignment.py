@@ -888,8 +888,7 @@ class AssignmentAPITest(TestCase):
         def test_bonus_helper(content, status=200, user=lti_teacher, delimiter=','):
             if delimiter != ',':
                 content = content.replace(',', delimiter)
-            BOUNDARY = 'BoUnDaRyStRiNg'
-            MULTIPART_CONTENT = 'multipart/form-data; boundary=%s' % BOUNDARY
+            MULTIPART_CONTENT = 'multipart/form-data; boundary=BoUnDaRyStRiNg'
             bonus_file = SimpleUploadedFile('bonus.csv', str.encode(content), content_type='text/csv')
 
             return api.post(

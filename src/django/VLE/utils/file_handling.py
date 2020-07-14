@@ -142,7 +142,7 @@ def remove_unused_user_files(user):
 
     # Remove overwritten files
     for file in VLE.models.FileContext.objects.filter(author=user, content__isnull=False):
-        if file.content.field.type in VLE.models.Field.FILE_TYPES:  # Check if file is replaced
+        if file.content.field.type == VLE.models.Field.FILE:  # Check if file is replaced
             if str(file.pk) != file.content.data:
                 file.delete()
         # Remove rich_text files

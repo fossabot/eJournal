@@ -25,10 +25,6 @@ LOG_DIR = os.path.join(BASE_DIR, 'logs/')
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 
-USER_MAX_FILE_SIZE_BYTES = 10485760
-USER_MAX_TOTAL_STORAGE_BYTES = 104857600
-USER_MAX_EMAIL_ATTACHMENT_BYTES = 10485760
-
 CORS_ORIGIN_ALLOW_ALL = True
 CSP_DEFAULT_SRC = ("'self'", "'unsafe-inline'")
 

@@ -1729,26 +1729,23 @@ class Field(CreateUpdateModel):
 
     TEXT = 't'
     RICH_TEXT = 'rt'
-    IMG = 'i'
     FILE = 'f'
     VIDEO = 'v'
-    PDF = 'p'
     URL = 'u'
     DATE = 'd'
     DATETIME = 'dt'
     SELECTION = 's'
-    FILE_TYPES = [PDF, FILE, IMG]
+    NO_SUBMISSION = 'n'
     TYPES = (
         (TEXT, 'text'),
         (RICH_TEXT, 'rich text'),
-        (IMG, 'img'),
-        (PDF, 'pdf'),
         (FILE, 'file'),
         (VIDEO, 'vid'),
         (URL, 'url'),
         (DATE, 'date'),
         (DATETIME, 'datetime'),
-        (SELECTION, 'selection')
+        (SELECTION, 'selection'),
+        (NO_SUBMISSION, 'no submission')
     )
     type = models.TextField(
         max_length=4,
@@ -1771,6 +1768,11 @@ class Field(CreateUpdateModel):
 
     def to_string(self, user=None):
         return "{} ({})".format(self.title, self.id)
+
+    def save(self, *args, **kwargs):
+        if self.type == Field.FILE and self.options:
+            self.options = ', '.join(f.strip().lower() for f in self.options.split(','))
+        return super(Field, self).save(*args, **kwargs)
 
 
 class Content(CreateUpdateModel):

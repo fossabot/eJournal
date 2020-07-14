@@ -44,21 +44,9 @@
                 />
             </reset-wrapper>
             <file-upload-input
-                v-else-if="field.type == 'i'"
-                :placeholder="completeContent[i].data ? completeContent[i].data.file_name : null"
-                :acceptedFiletype="'image/*'"
-                :maxSizeBytes="$root.maxFileSizeBytes"
-                :autoUpload="true"
-                :aID="$route.params.aID"
-                :contentID="completeContent[i].contentID"
-                @uploadingFile="$emit('uploadingFile')"
-                @fileUploadFailed="$emit('finishedUploadingFile')"
-                @fileUploadSuccess="completeContent[i].data = $event; $emit('finishedUploadingFile')"
-            />
-            <file-upload-input
                 v-else-if="field.type == 'f'"
                 :placeholder="completeContent[i].data ? completeContent[i].data.file_name : null"
-                :acceptedFiletype="'*/*'"
+                :acceptedFiletype="field.options ? '.' + field.options.split(', ').join(', .') : '*/*'"
                 :maxSizeBytes="$root.maxFileSizeBytes"
                 :autoUpload="true"
                 :aID="$route.params.aID"
@@ -69,21 +57,9 @@
             />
             <b-input
                 v-else-if="field.type == 'v'"
-                :placeholder="completeContent[i].data ? completeContent[i].data : 'Enter YouTube URL...'"
+                v-model="completeContent[i].data"
+                placeholder="Enter a YouTube URL"
                 class="theme-input"
-                @input="completeContent[i].data = youtubeEmbedFromURL($event)"
-            />
-            <file-upload-input
-                v-else-if="field.type == 'p'"
-                :placeholder="completeContent[i].data ? completeContent[i].data.file_name : null"
-                :acceptedFiletype="'application/pdf'"
-                :maxSizeBytes="$root.maxFileSizeBytes"
-                :autoUpload="true"
-                :aID="$route.params.aID"
-                :contentID="completeContent[i].contentID"
-                @uploadingFile="$emit('uploadingFile')"
-                @fileUploadFailed="$emit('finishedUploadingFile')"
-                @fileUploadSuccess="completeContent[i].data = $event; $emit('finishedUploadingFile')"
             />
             <text-editor
                 v-else-if="field.type == 'rt'"
@@ -95,7 +71,7 @@
             />
             <url-input
                 v-else-if="field.type == 'u'"
-                :placeholder="completeContent[i].data"
+                placeholder="Enter a URL"
                 @correctUrlInput="completeContent[i].data = $event"
             />
             <b-form-select
@@ -125,32 +101,23 @@
                 class="show-enters"
             >{{ completeContent[field.location].data }}</span>
             <span
-                v-if="field.type == 'd'"
+                v-else-if="field.type == 'd'"
                 class="show-enters"
             >{{ $root.beautifyDate(completeContent[field.location].data, true, false) }}</span>
             <span
-                v-if="field.type == 'dt'"
+                v-else-if="field.type == 'dt'"
                 class="show-enters"
             >{{ $root.beautifyDate(completeContent[field.location].data) }}</span>
-            <image-file-display
-                v-else-if="field.type == 'i'"
-                :id="'image-display-field-' + field.location"
-                :file="completeContent[field.location].data"
-            />
-            <file-download-button
+            <file-display
                 v-else-if="field.type == 'f'"
                 :file="completeContent[field.location].data"
             />
             <b-embed
                 v-else-if="field.type == 'v'"
-                :src="completeContent[field.location].data"
+                :src="youtubeEmbedFromURL(completeContent[field.location].data)"
                 type="iframe"
                 aspect="16by9"
                 allowfullscreen
-            />
-            <pdf-display
-                v-else-if="field.type == 'p'"
-                :file="completeContent[field.location].data"
             />
             <sandboxed-iframe
                 v-else-if="field.type == 'rt'"
@@ -159,7 +126,9 @@
             <a
                 v-else-if="field.type == 'u'"
                 :href="completeContent[field.location].data"
-            >{{ completeContent[field.location].data }}</a>
+            >
+                {{ completeContent[field.location].data }}
+            </a>
             <span v-else-if="field.type == 's'">{{ completeContent[field.location].data }}</span>
         </div>
     </div>
@@ -169,9 +138,7 @@
 import fileUploadInput from '@/components/assets/file_handling/FileUploadInput.vue'
 import textEditor from '@/components/assets/TextEditor.vue'
 import urlInput from '@/components/assets/UrlInput.vue'
-import fileDownloadButton from '@/components/assets/file_handling/FileDownloadButton.vue'
-import imageFileDisplay from '@/components/assets/file_handling/ImageFileDisplay.vue'
-import pdfDisplay from '@/components/assets/PdfDisplay.vue'
+import fileDisplay from '@/components/assets/file_handling/FileDisplay.vue'
 import sandboxedIframe from '@/components/assets/SandboxedIframe.vue'
 
 export default {
@@ -179,9 +146,7 @@ export default {
         fileUploadInput,
         textEditor,
         urlInput,
-        pdfDisplay,
-        fileDownloadButton,
-        imageFileDisplay,
+        fileDisplay,
         sandboxedIframe,
     },
     props: {
@@ -225,6 +190,7 @@ export default {
             if (match && match[2].length === 11) {
                 return `https://www.youtube.com/embed/${match[2]}?rel=0&amp;showinfo=0`
             } else {
+                this.$toasted.error('A YouTube video field contained an invalid URL.')
                 return null
             }
         },

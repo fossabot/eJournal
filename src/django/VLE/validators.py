@@ -4,18 +4,11 @@ from datetime import datetime
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import URLValidator
+from django.core.validators import FileExtensionValidator, URLValidator
 from sentry_sdk import capture_message
 
-from VLE.models import Field
+from VLE.models import Field, FileContext
 from VLE.utils.error_handling import VLEMissingRequiredField
-
-
-# Base 64 image is roughly 37% larger than a plain image
-def validate_profile_picture_base64(url_data):
-    """Checks if the original size does not exceed 10MB AFTER encoding."""
-    if len(url_data) > settings.USER_MAX_FILE_SIZE_BYTES * 1.37:
-        raise ValidationError("Max size of file is {} Bytes".format(settings.USER_MAX_FILE_SIZE_BYTES))
 
 
 def validate_user_file(in_memory_uploaded_file, user):
@@ -69,16 +62,24 @@ def validate_entry_content(data, field):
 
     if field.type == Field.SELECTION:
         if data not in json.loads(field.options):
-            raise ValidationError("Selected option is not in the given options")
+            raise ValidationError("Selected option is not in the given options.")
 
     if field.type == Field.DATE:
         try:
             datetime.strptime(data, '%Y-%m-%d')
-        except ValueError as e:
+        except (ValueError, TypeError) as e:
             raise ValidationError(str(e))
 
     if field.type == Field.DATETIME:
         try:
             datetime.strptime(data, '%Y-%m-%dT%H:%M:%S')
-        except ValueError as e:
+        except (ValueError, TypeError) as e:
             raise ValidationError(str(e))
+
+    if field.type == Field.FILE:
+        if field.options:
+            validator = FileExtensionValidator(field.options.split(', '))
+            validator(FileContext.objects.get(pk=data['id']).file)
+
+    if field.type == Field.NO_SUBMISSION:
+        raise ValidationError("No submission is allowed for this field.")
