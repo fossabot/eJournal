@@ -34,11 +34,12 @@
                         v-model="field.type"
                         :options="fieldTypes"
                         class="theme-select multi-form mr-2"
-                        @change="field.options = ''; selectedExtensionType = ''"
+                        @change="selectedType"
                     />
                     <b-button
                         v-if="!field.required"
                         class="optional-field-template float-right multi-form"
+                        :class="{ 'input-disabled': field.type === 'n' }"
                         @click.stop
                         @click="field.required = !field.required"
                     >
@@ -57,7 +58,7 @@
                 </div>
 
                 <!-- Field Options -->
-                <div v-if="field.type == 'f'">
+                <div v-if="field.type === 'f'">
                     <b-select
                         v-model="selectedExtensionType"
                         :options="fileExtensions"
@@ -74,7 +75,7 @@
                         @input="selectedExtensionType = ' '"
                     />
                 </div>
-                <div v-if="field.type == 's'">
+                <div v-else-if="field.type === 's'">
                     <!-- Event targeting allows us to access the input value -->
                     <div class="d-flex">
                         <b-input
@@ -102,6 +103,13 @@
                         </b-button>
                     </div>
                 </div>
+                <small
+                    v-else-if="field.type === 'n'"
+                >
+                    <b>Note:</b> Students cannot provide any input for this field.
+                    The title and / or description above can be used to provide additional instructions within your
+                    template.
+                </small>
             </b-col>
             <b-col
                 cols="12"
@@ -159,6 +167,7 @@ export default {
                 d: 'Date',
                 dt: 'Date Time',
                 s: 'Selection',
+                n: 'No Submission (Description Only)',
             },
             fileExtensions,
             selectedExtensionType: '',
@@ -183,6 +192,13 @@ export default {
                 } else {
                     this.selectedExtensionType = ' '
                 }
+            }
+        },
+        selectedType () {
+            this.field.options = ''
+            this.selectedExtensionType = ''
+            if (this.field.type === 'n') {
+                this.field.required = false
             }
         },
         addSelectionOption (target, field) {

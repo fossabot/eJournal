@@ -106,33 +106,52 @@ class EntryAPITest(TestCase):
         # TODO: Test added index
 
     def test_valid_entry(self):
+        """Attempt to post an entry with valid and invalid content for each field."""
+        # Get a template which contains all field types (each of them optional).
         template = factory.TemplateAllTypes(format=self.format)
         fields = Field.objects.filter(template=template)
-        entries = {
-            Field.TEXT: ['text', 'VALID'],
-            Field.RICH_TEXT: ['<p> RICH </p>', 'VALID'],
-            Field.VIDEO: ['https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'INVALID'],
-            Field.URL: ['https://ejournal.app', 'INVALID'],
-            Field.DATE: ['2019-10-10', 'INVALID'],
-            Field.DATETIME: ['2019-10-10T12:12:00', 'INVALID'],
-            Field.SELECTION: ['a', 'INVALID'],
+
+        # Define valid and invalid contents for each of the fields.
+        valid_content = {
+            Field.TEXT: 'text',
+            Field.RICH_TEXT: '<p> RICH </p>',
+            Field.VIDEO: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+            Field.URL: 'https://ejournal.app',
+            Field.DATE: '2019-10-10',
+            Field.DATETIME: '2019-10-10T12:12:00',
+            Field.SELECTION: 'a',
         }
-        create_params = {
-            'journal_id': self.journal.pk,
-            'template_id': template.pk,
-            'content': [{
-                'id': f.pk,
-                'data': entries[f.type][0]
-            } for f in fields if f.type in entries]
+        invalid_content = {
+            # Field.VIDEO: 'https://www.test.com/watch?v=dQw4w9WgXcQ', TODO: This should fail.
+            Field.URL: 'textonly',
+            Field.DATE: 6,
+            Field.DATETIME: 'text',
+            Field.SELECTION: 'x',
+            Field.NO_SUBMISSION: 'a',
         }
 
-        api.create(self, 'entries', params=create_params, user=self.student)['entry']
-        # Test is all
-        for i, field in enumerate(create_params['content']):
-            field['data'] = list(entries.values())[i][1]
-            if field['data'] != 'VALID':
+        # Attempt to post an entry with valid and invalid content for each field.
+        for field in fields:
+            create_params = {
+                'journal_id': self.journal.pk,
+                'template_id': template.pk,
+            }
+
+            # If valid input is defined for this field type, creating an entry should be succesful.
+            if field.type in valid_content:
+                create_params['content'] = [{
+                    'id': field.pk,
+                    'data': valid_content[field.type]
+                }]
+                api.create(self, 'entries', params=create_params, user=self.student)
+
+            # If invalid input is defined for this field type, creating an entry should fail.
+            if field.type in invalid_content:
+                create_params['content'] = [{
+                    'id': field.pk,
+                    'data': invalid_content[field.type]
+                }]
                 api.create(self, 'entries', params=create_params, user=self.student, status=400)
-            field['data'] = list(entries.values())[i][0]
 
     def test_required_and_optional(self):
         # Creation with only required params should work
