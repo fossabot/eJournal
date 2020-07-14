@@ -57,9 +57,9 @@
             />
             <b-input
                 v-else-if="field.type == 'v'"
-                :placeholder="completeContent[i].data ? completeContent[i].data : 'Enter YouTube URL...'"
+                v-model="completeContent[i].data"
+                placeholder="Enter a YouTube URL"
                 class="theme-input"
-                @input="completeContent[i].data = youtubeEmbedFromURL($event)"
             />
             <text-editor
                 v-else-if="field.type == 'rt'"
@@ -71,7 +71,7 @@
             />
             <url-input
                 v-else-if="field.type == 'u'"
-                :placeholder="completeContent[i].data"
+                placeholder="Enter a URL"
                 @correctUrlInput="completeContent[i].data = $event"
             />
             <b-form-select
@@ -114,7 +114,7 @@
             />
             <b-embed
                 v-else-if="field.type == 'v'"
-                :src="completeContent[field.location].data"
+                :src="youtubeEmbedFromURL(completeContent[field.location].data)"
                 type="iframe"
                 aspect="16by9"
                 allowfullscreen
@@ -190,6 +190,7 @@ export default {
             if (match && match[2].length === 11) {
                 return `https://www.youtube.com/embed/${match[2]}?rel=0&amp;showinfo=0`
             } else {
+                this.$toasted.error('A YouTube video field contained an invalid URL.')
                 return null
             }
         },

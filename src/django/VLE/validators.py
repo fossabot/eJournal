@@ -62,21 +62,24 @@ def validate_entry_content(data, field):
 
     if field.type == Field.SELECTION:
         if data not in json.loads(field.options):
-            raise ValidationError("Selected option is not in the given options")
+            raise ValidationError("Selected option is not in the given options.")
 
     if field.type == Field.DATE:
         try:
             datetime.strptime(data, '%Y-%m-%d')
-        except ValueError as e:
+        except (ValueError, TypeError) as e:
             raise ValidationError(str(e))
 
     if field.type == Field.DATETIME:
         try:
             datetime.strptime(data, '%Y-%m-%dT%H:%M:%S')
-        except ValueError as e:
+        except (ValueError, TypeError) as e:
             raise ValidationError(str(e))
 
     if field.type == Field.FILE:
         if field.options:
             validator = FileExtensionValidator(field.options.split(', '))
             validator(FileContext.objects.get(pk=data['id']).file)
+
+    if field.type == Field.NO_SUBMISSION:
+        raise ValidationError("No submission is allowed for this field.")

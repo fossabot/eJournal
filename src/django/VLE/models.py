@@ -1435,6 +1435,7 @@ class Field(CreateUpdateModel):
     DATE = 'd'
     DATETIME = 'dt'
     SELECTION = 's'
+    NO_SUBMISSION = 'n'
     TYPES = (
         (TEXT, 'text'),
         (RICH_TEXT, 'rich text'),
@@ -1443,7 +1444,8 @@ class Field(CreateUpdateModel):
         (URL, 'url'),
         (DATE, 'date'),
         (DATETIME, 'datetime'),
-        (SELECTION, 'selection')
+        (SELECTION, 'selection'),
+        (NO_SUBMISSION, 'no submission')
     )
     type = models.TextField(
         max_length=4,

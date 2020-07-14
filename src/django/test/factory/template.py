@@ -46,6 +46,7 @@ class TemplateAllTypesFactory(TemplateFactory):
             ('DATE', VLE.models.Field.DATE),
             ('DATETIME', VLE.models.Field.DATETIME),
             ('SELECTION', VLE.models.Field.SELECTION),
+            ('NO_SUBMISSION', VLE.models.Field.NO_SUBMISSION),
         ]
         for i, field in enumerate(fields):
             new_field = VLE.models.Field.objects.create(
