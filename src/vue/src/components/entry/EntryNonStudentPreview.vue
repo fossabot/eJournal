@@ -69,8 +69,6 @@
                     :template="entryNode.entry.template"
                     :completeContent="completeContent"
                     :displayMode="true"
-                    :journalID="journal.id"
-                    :entryID="entryNode.entry.id"
                 />
             </div>
             <hr class="full-width"/>

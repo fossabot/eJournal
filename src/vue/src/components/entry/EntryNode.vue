@@ -32,7 +32,6 @@
                 :completeContent="completeContent"
                 :displayMode="false"
                 :nodeID="entryNode.nID"
-                :entryID="entryNode.entry.id"
                 @uploadingFile="uploadingFiles ++"
                 @finishedUploadingFile="uploadingFiles --"
             />
@@ -106,8 +105,6 @@
                 :template="entryNode.entry.template"
                 :completeContent="completeContent"
                 :displayMode="true"
-                :journalID="journal.id"
-                :entryID="entryNode.entry.id"
             />
             <hr class="full-width"/>
             <div>

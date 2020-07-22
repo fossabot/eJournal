@@ -163,13 +163,6 @@ export default {
         nodeID: {
             required: true,
         },
-        journalID: {
-            default: null,
-            required: false,
-        },
-        entryID: {
-            default: '-1',
-        },
     },
     computed: {
         fieldsToDisplay () {
