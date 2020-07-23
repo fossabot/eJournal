@@ -5,7 +5,7 @@
             :accept="acceptedFiletype"
             :state="Boolean(file)"
             :placeholder="placeholderText"
-            class="fileinput"
+            class="fileinput mb-2"
             @change="fileHandler"
         />
         <hr class="mt-2"/>

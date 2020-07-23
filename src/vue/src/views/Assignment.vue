@@ -113,14 +113,14 @@
 
             <b-modal
                 ref="assignmentExportSpreadsheetModal"
-                title="Export to spreadsheet"
+                title="Export results"
                 size="lg"
                 hideFooter
                 noEnforceFocus
             >
                 <b-card class="no-hover">
                     <h2 class="theme-h2 multi-form">
-                        Export assignment results
+                        Export assignment results to spreadsheet
                     </h2>
                     Select which columns should be included in the exported file.
                     <hr/>
@@ -135,14 +135,14 @@
 
             <b-modal
                 ref="teacherInitiatedEntries"
-                title="Export to spreadsheet"
+                title="Post teacher entries"
                 size="lg"
                 hideFooter
                 noEnforceFocus
             >
                 <b-card class="no-hover">
                     <h2 class="theme-h2 multi-form">
-                        Add teacher initiated entries
+                        Post teacher-initiated entries to student journals
                     </h2>
 
                     <hr/>
@@ -384,7 +384,7 @@
                     @click="showModal('teacherInitiatedEntries')"
                 >
                     <icon name="plus"/>
-                    Create teacher entries
+                    Post teacher entries
                 </b-button>
             </b-col>
         </b-row>
