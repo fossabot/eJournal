@@ -110,32 +110,31 @@
                             v-if="!loadingNodes"
                             :journal="journal"
                             :assignment="assignment"
-                            class="mb-2 no-hover"
                         />
-                        <div
-                            v-if="filteredJournals.length > 1"
-                            class="d-flex"
-                        >
-                            <b-button
-                                v-if="filteredJournals.length !== 0"
-                                :to="{ name: 'Journal', params: { cID: cID, aID: aID, jID: prevJournal.id } }"
-                                class="mr-2 flex-grow-1"
-                                tag="b-button"
-                            >
-                                <icon name="arrow-left"/>
-                                Previous
-                            </b-button>
-                            <b-button
-                                v-if="filteredJournals.length !== 0"
-                                :to="{ name: 'Journal', params: { cID: cID, aID: aID, jID: nextJournal.id } }"
-                                class="flex-grow-1"
-                                tag="b-button"
-                            >
-                                Next
-                                <icon name="arrow-right"/>
-                            </b-button>
-                        </div>
                     </b-card>
+                    <div
+                        v-if="filteredJournals.length > 1"
+                        class="d-flex mb-2"
+                    >
+                        <b-button
+                            v-if="filteredJournals.length !== 0"
+                            :to="{ name: 'Journal', params: { cID: cID, aID: aID, jID: prevJournal.id } }"
+                            class="mr-2 flex-grow-1"
+                            tag="b-button"
+                        >
+                            <icon name="arrow-left"/>
+                            Previous
+                        </b-button>
+                        <b-button
+                            v-if="filteredJournals.length !== 0"
+                            :to="{ name: 'Journal', params: { cID: cID, aID: aID, jID: nextJournal.id } }"
+                            class="flex-grow-1"
+                            tag="b-button"
+                        >
+                            Next
+                            <icon name="arrow-right"/>
+                        </b-button>
+                    </div>
                 </b-col>
                 <b-col
                     v-if="journal && ($hasPermission('can_grade') || $hasPermission('can_publish_grades'))"
@@ -146,44 +145,38 @@
                         Grading
                     </h3>
                     <b-card
+                        v-if="$hasPermission('can_grade')"
                         :class="$root.getBorderClass($route.params.cID)"
-                        class="no-hover"
+                        class="bonus-section shadow no-hover"
                     >
-                        <div
-                            v-if="$hasPermission('can_grade')"
-                            class="grade-section bonus-section full-width shadow"
-                        >
-                            <div>
-                                <b-form-input
-                                    v-model="journal.bonus_points"
-                                    type="number"
-                                    class="theme-input mr-2"
-                                    size="2"
-                                    placeholder="0"
-                                    min="0.0"
-                                />
-                                Bonus points
-                            </div>
-                            <b-button
-                                class="add-button"
-                                @click="commitBonus"
-                            >
-                                <icon
-                                    name="save"
-                                    scale="1"
-                                />
-                                Save bonus
-                            </b-button>
-                        </div>
-                        <b-button
-                            v-if="$hasPermission('can_publish_grades')"
-                            class="add-button full-width mt-1"
-                            @click="publishGradesJournal"
-                        >
-                            <icon name="upload"/>
-                            Publish all grades
-                        </b-button>
+                        Bonus points:
+                        <b-form-input
+                            v-model="bonusPointsTemp"
+                            type="number"
+                            class="theme-input ml-2"
+                            size="2"
+                            placeholder="0"
+                            min="0.0"
+                        />
                     </b-card>
+                    <b-button
+                        class="add-button full-width mb-2"
+                        @click="commitBonus"
+                    >
+                        <icon
+                            name="save"
+                            scale="1"
+                        />
+                        Save bonus
+                    </b-button>
+                    <b-button
+                        v-if="$hasPermission('can_publish_grades')"
+                        class="add-button full-width"
+                        @click="publishGradesJournal"
+                    >
+                        <icon name="upload"/>
+                        Publish all grades
+                    </b-button>
                 </b-col>
             </b-row>
         </b-col>
@@ -229,6 +222,7 @@ export default {
             journal: null,
             loadingNodes: true,
             editingName: false,
+            bonusPointsTemp: 0,
         }
     },
     computed: {
@@ -285,6 +279,7 @@ export default {
             initialCalls.push(journalAPI.getNodes(this.jID))
             Promise.all(initialCalls).then((results) => {
                 this.journal = results[0]
+                this.bonusPointsTemp = this.journal.bonus_points
                 this.nodes = results[1]
                 this.loadingNodes = false
                 if (this.$route.query.nID !== undefined) {
@@ -394,10 +389,10 @@ export default {
             return true
         },
         commitBonus () {
-            if (this.journal.bonus_points !== null && this.journal.bonus_points !== '') {
+            if (this.bonusPointsTemp !== null && this.bonusPointsTemp !== '') {
                 journalAPI.update(
                     this.journal.id,
-                    { bonus_points: this.journal.bonus_points },
+                    { bonus_points: this.bonusPointsTemp },
                     { customSuccessToast: 'Bonus succesfully added.' },
                 )
                     .then((journal) => { this.journal = journal })
@@ -408,17 +403,13 @@ export default {
 </script>
 
 <style lang="sass">
+@import '~sass/modules/colors.sass'
+
 .bonus-section
-    float: left !important
-    display: block
-    margin-bottom: 0px
-    div
-        text-align: center
-    .btn
-        display: block
-        width: 100%
-        border-width: 1px 0px 0px 0px !important
-        border-radius: 0px 0px 5px 5px !important
+    .theme-input, .theme-input:hover:not(.no-hover), .theme-input:focus
+        width: 3.5em
+        display: inline-block
+        padding-right: 0px !important
 
 .journal-details-card > .card-body
     padding-top: 45px
