@@ -144,31 +144,32 @@
                     <h3 class="theme-h3">
                         Grading
                     </h3>
-                    <b-card
+                    <div
                         v-if="$hasPermission('can_grade')"
-                        :class="$root.getBorderClass($route.params.cID)"
-                        class="bonus-section shadow no-hover"
+                        class="bonus-section grade-section full-width"
                     >
-                        Bonus points:
-                        <b-form-input
-                            v-model="bonusPointsTemp"
-                            type="number"
-                            class="theme-input ml-2"
-                            size="2"
-                            placeholder="0"
-                            min="0.0"
-                        />
-                    </b-card>
-                    <b-button
-                        class="add-button full-width mb-2"
-                        @click="commitBonus"
-                    >
-                        <icon
-                            name="save"
-                            scale="1"
-                        />
-                        Save bonus
-                    </b-button>
+                        <div>
+                            <b-form-input
+                                v-model="bonusPointsTemp"
+                                type="number"
+                                class="theme-input mr-2"
+                                size="2"
+                                placeholder="0"
+                                min="0.0"
+                            />
+                            Bonus points
+                        </div>
+                        <b-button
+                            class="add-button"
+                            @click="commitBonus"
+                        >
+                            <icon
+                                name="save"
+                                scale="1"
+                            />
+                            Save bonus
+                        </b-button>
+                    </div>
                     <b-button
                         v-if="$hasPermission('can_publish_grades')"
                         class="add-button full-width"
@@ -405,8 +406,15 @@ export default {
 <style lang="sass">
 @import '~sass/modules/colors.sass'
 
-.bonus-section
-    .theme-input, .theme-input:hover:not(.no-hover), .theme-input:focus
+.grade-section.bonus-section
+    .btn
+        display: block
+        width: 100%
+        border-width: 1px 0px 0px 0px !important
+        border-radius: 0px 0px 5px 5px !important
+    .theme-input, .theme-input:hover, .theme-input:focus
+        margin-left: 0px
+        font-size: 1.3em
         width: 3.5em
         display: inline-block
         padding-right: 0px !important
