@@ -134,6 +134,27 @@
             </b-modal>
 
             <b-modal
+                ref="teacherInitiatedEntries"
+                title="Export to spreadsheet"
+                size="lg"
+                hideFooter
+                noEnforceFocus
+            >
+                <b-card class="no-hover">
+                    <h2 class="theme-h2 multi-form">
+                        Add teacher initiated entries
+                    </h2>
+
+                    <hr/>
+                    <teacher-initiated-entries
+                        :assignment="assignment"
+                        :assignmentJournals="assignmentJournals"
+                        @entries-created="hideModal('teacherInitiatedEntries')"
+                    />
+                </b-card>
+            </b-modal>
+
+            <b-modal
                 v-if="$hasPermission('can_edit_assignment') && assignment.lti_courses
                     && Object.keys(assignment.lti_courses).length > 1"
                 ref="manageLTIModal"
@@ -357,20 +378,29 @@
                     <icon name="file-export"/>
                     Export results
                 </b-button>
+                <b-button
+                    v-if="true"
+                    class="add-button multi-form full-width"
+                    @click="showModal('teacherInitiatedEntries')"
+                >
+                    <icon name="plus"/>
+                    Create teacher entries
+                </b-button>
             </b-col>
         </b-row>
     </content-columns>
 </template>
 
 <script>
-import assignmentSpreadsheetExport from '@/components/assignment/AssignmentSpreadsheetExport.vue'
-import bonusFileUploadInput from '@/components/assets/file_handling/BonusFileUploadInput.vue'
-import breadCrumb from '@/components/assets/BreadCrumb.vue'
-import contentColumns from '@/components/columns/ContentColumns.vue'
-import loadWrapper from '@/components/loading/LoadWrapper.vue'
-import mainCard from '@/components/assets/MainCard.vue'
-import statisticsCard from '@/components/assignment/StatisticsCard.vue'
-import journalCard from '@/components/assignment/JournalCard.vue'
+import AssignmentSpreadsheetExport from '@/components/assignment/AssignmentSpreadsheetExport.vue'
+import BonusFileUploadInput from '@/components/assets/file_handling/BonusFileUploadInput.vue'
+import BreadCrumb from '@/components/assets/BreadCrumb.vue'
+import ContentColumns from '@/components/columns/ContentColumns.vue'
+import LoadWrapper from '@/components/loading/LoadWrapper.vue'
+import MainCard from '@/components/assets/MainCard.vue'
+import StatisticsCard from '@/components/assignment/StatisticsCard.vue'
+import TeacherInitiatedEntries from '@/components/assignment/TeacherInitiatedEntries.vue'
+import JournalCard from '@/components/assignment/JournalCard.vue'
 
 import store from '@/Store.vue'
 import assignmentAPI from '@/api/assignment.js'
@@ -383,14 +413,15 @@ import { mapGetters, mapMutations } from 'vuex'
 export default {
     name: 'Assignment',
     components: {
-        assignmentSpreadsheetExport,
-        bonusFileUploadInput,
-        breadCrumb,
-        contentColumns,
-        loadWrapper,
-        mainCard,
-        statisticsCard,
-        journalCard,
+        AssignmentSpreadsheetExport,
+        BonusFileUploadInput,
+        BreadCrumb,
+        ContentColumns,
+        JournalCard,
+        LoadWrapper,
+        MainCard,
+        StatisticsCard,
+        TeacherInitiatedEntries,
     },
     props: {
         cID: {
