@@ -316,6 +316,7 @@
                 <statistics-card :stats="stats"/>
             </b-col>
             <b-col
+                v-if="canPerformActions"
                 slot="right-content-column"
                 md="6"
                 lg="12"
@@ -324,7 +325,7 @@
                     Actions
                 </h3>
                 <b-button
-                    v-if="$hasPermission('can_publish_grades') && assignmentJournals && assignmentJournals.length > 0"
+                    v-if="canPublishGradesAssignment"
                     class="add-button multi-form full-width"
                     @click="publishGradesAssignment"
                 >
@@ -333,8 +334,7 @@
                         "Publish all grades" : "Publish grades" }}
                 </b-button>
                 <b-button
-                    v-if="$hasPermission('can_edit_assignment') && assignment.lti_courses
-                        && Object.keys(assignment.lti_courses).length > 1"
+                    v-if="canManageLTI"
                     class="add-button multi-form full-width"
                     @click="showModal('manageLTIModal')"
                 >
@@ -342,7 +342,7 @@
                     Manage LTI
                 </b-button>
                 <b-button
-                    v-if="$hasPermission('can_publish_grades') && assignmentJournals.length > 0"
+                    v-if="canImportBonusPoints"
                     class="change-button multi-form full-width"
                     @click="showModal('bonusPointsModal')"
                 >
@@ -350,7 +350,7 @@
                     Import bonus points
                 </b-button>
                 <b-button
-                    v-if="assignmentJournals.length > 0"
+                    v-if="canExportResults"
                     class="add-button multi-form full-width"
                     @click="showModal('assignmentExportSpreadsheetModal')"
                 >
@@ -456,6 +456,25 @@ export default {
                 this.getJournalSearchValue, this.journalSortBy)
             this.calcStats(store.state.filteredJournals)
             return store.state.filteredJournals
+        },
+        canPerformActions () {
+            return this.canPublishGradesAssignment || this.canManageLTI || this.canImportBonusPoints
+                || this.canExportResults
+        },
+        canPublishGradesAssignment  () {
+            return this.$hasPermission('can_publish_grades') && this.assignmentJournals
+                && this.assignmentJournals.length > 0
+        },
+        canManageLTI  () {
+            return this.$hasPermission('can_edit_assignment') && this.assignment.lti_courses
+                    && Object.keys(this.assignment.lti_courses).length > 1
+        },
+        canImportBonusPoints  () {
+            return this.$hasPermission('can_publish_grades') && this.assignmentJournals
+                && this.assignmentJournals.length > 0
+        },
+        canExportResults  () {
+            return this.assignmentJournals && this.assignmentJournals.length > 0
         },
     },
     created () {

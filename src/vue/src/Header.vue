@@ -3,7 +3,7 @@
     <b-navbar
         v-if="loggedIn"
         id="header"
-        class="theme-shadow"
+        class="theme-shadow no-hover"
         toggleable="md"
         type="dark"
         fixed="top"
@@ -102,7 +102,7 @@
     <b-navbar
         v-else
         id="header"
-        class="theme-shadow"
+        class="theme-shadow no-hover"
         toggleable="md"
         type="dark"
         fixed="top"
