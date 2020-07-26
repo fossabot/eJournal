@@ -13,7 +13,7 @@ def update_to_upcoming_deadline_reminder(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('VLE', '0046_compute_journal2'),
+        ('VLE', '0047_dynamic_filename'),
     ]
 
     operations = [
@@ -58,7 +58,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='preferences',
             name='upcoming_deadline_reminder',
-            field=models.TextField(choices=[('p', 'p'), ('w', 'w'), ('d', 'd'), ('o', 'o')], default='p', max_length=1),
+            field=models.TextField(choices=[('d', 'd'), ('w', 'w'), ('p', 'p'), ('o', 'o')], default='p', max_length=1),
         ),
         migrations.CreateModel(
             name='Notification',

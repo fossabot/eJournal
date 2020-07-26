@@ -247,9 +247,12 @@ def send_digest_notifications():
         email.attach_alternative(html_content, 'text/html')
         email.send()
 
-    VLE.models.Notification.objects.filter(creation_date__lt=timezone.now() - datetime.timedelta(days=30)).delete()
-
     return {
         'description': 'Sent notification nrs {}'.format(sending),
         'successful': True,
     }
+
+
+@shared_task
+def remove_old_notifications():
+    VLE.models.Notification.objects.filter(creation_date__lt=timezone.now() - datetime.timedelta(days=30)).delete()

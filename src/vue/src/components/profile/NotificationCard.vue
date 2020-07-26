@@ -1,8 +1,9 @@
 <template>
     <div>
         <h4 class="theme-h4 mb-2 mt-4">
-            <span>Email reminders</span>
+            <span>Email notifications</span>
         </h4>
+
         <b-card
             :class="$root.getBorderClass($route.params.uID)"
             class="no-hover multi-form"
@@ -90,9 +91,6 @@
                 </h2>
             </div>
         </b-card>
-        <h4 class="theme-h4 mb-2 mt-4">
-            <span>Email notifications</span>
-        </h4>
         <b-card
             :class="$root.getBorderClass($route.params.uID)"
             class="no-hover multi-form"
@@ -229,7 +227,7 @@ export default {
             ],
             reminderPreferences: [
                 {
-                    name: 'Upcoming deadline',
+                    name: 'Deadline reminder',
                     key: 'upcoming_deadline_reminder',
                     tooltip: 'Receive an email in advance of an unfinished deadline',
                 },

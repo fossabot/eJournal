@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('VLE', '0047_notifications'),
+        ('VLE', '0048_notifications'),
     ]
 
     operations = [

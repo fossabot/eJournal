@@ -555,7 +555,7 @@ class Notification(CreateUpdateModel):
             'name': 'None',
             'content': {
                 'title': 'Upcoming deadline',
-                'content': 'You have an unfinished deadline that is due on {deadline}',
+                'content': 'You have an unfinished deadline ({node}) that is due on {deadline}',
                 'button_text': 'View Deadline',
             },
         },
@@ -616,31 +616,39 @@ class Notification(CreateUpdateModel):
         null=True,
     )
 
-    def __fill_text(self, text, n=None):
+    def _fill_text(self, text, n=None):
+        node_name = None
+        if self.node:
+            if self.node.type == Node.PROGRESS:
+                node_name = f"{self.journal.grade}/{self.node.preset.target}"
+            elif self.node.type == Node.ENTRYDEADLINE:
+                node_name = self.node.preset.forced_template.name
+
         return text.format(
             comment=self.comment.author.full_name if self.comment else None,
             entry=self.entry.template.name if self.entry and self.entry.template else None,
+            node=node_name,
             journal=self.journal.name if self.journal else None,
             assignment=self.assignment.name if self.assignment else None,
             course=self.course.name if self.course else None,
-            deadline=self.node.preset.due_date.strftime("%B %d at %H:%M") if self.node and self.node.preset else None,
+            deadline=self.node.preset.due_date.strftime("%B %-d at %H:%M") if self.node and self.node.preset else None,
             n=n,
         )
 
     @property
     def title(self):
-        return self.__fill_text(self.TYPES[self.type]['content']['title'])
+        return self._fill_text(self.TYPES[self.type]['content']['title'])
 
     @property
     def content(self):
-        return self.__fill_text(self.TYPES[self.type]['content']['content'])
+        return self._fill_text(self.TYPES[self.type]['content']['content'])
 
     @property
     def button_text(self):
         return Notification.TYPES[self.type]['content']['button_text']
 
     def batch_content(self, n=None):
-        return self.__fill_text(self.TYPES[self.type]['content']['batch_content'], n=n)
+        return self._fill_text(self.TYPES[self.type]['content']['batch_content'], n=n)
 
     @property
     def url(self):

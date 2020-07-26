@@ -301,9 +301,40 @@ class EmailAPITest(TestCase):
         not_in_journal = factory.AssignmentParticipation(assignment=group_assignment)
 
         mails = [n.user.email for n in notifications.generate_upcoming_deadline_notifications()]
+        assert len(notifications.generate_upcoming_deadline_notifications()) == 0, \
+            'Generating the upcoming deadling notifications twice should give no new notifications'
         assert mails.count(in_journal.user.email) == 2, \
             'All students in journal should get a mail'
         assert mails.count(also_in_journal.user.email) == 2, \
             'All students in journal should get a mail'
         assert mails.count(not_in_journal.user.email) == 0, \
             'If not in journal, one should also not get a mail'
+
+    def test_deadline_email_text(self):
+        assignment = factory.Assignment()
+        # ENTRYDEADLINE inside deadline
+        entry = PresetNode.objects.create(
+            description='Entrydeadline node description',
+            due_date=timezone.now().date() + datetime.timedelta(days=7, hours=5),
+            lock_date=timezone.now().date() + datetime.timedelta(days=8),
+            type=Node.ENTRYDEADLINE,
+            forced_template=Template.objects.filter(format__assignment=assignment).first(),
+            format=assignment.format,
+        )
+        # PROGRESS inside deadline
+        preset = PresetNode.objects.create(
+            description='Progress node description',
+            due_date=timezone.now().date() + datetime.timedelta(days=1, hours=5),
+            lock_date=timezone.now().date() + datetime.timedelta(days=2),
+            type=Node.PROGRESS,
+            target=5,
+            format=assignment.format,
+        )
+        journal = factory.Journal(assignment=assignment)
+        notifications.generate_upcoming_deadline_notifications()
+
+        assert f'{journal.grade}/' in Notification.objects.get(node__preset=preset).content
+        assert entry.forced_template.name not in Notification.objects.get(node__preset=preset).content
+
+        assert entry.forced_template.name in Notification.objects.get(node__preset=entry).content
+        assert f'{journal.grade}/' not in Notification.objects.get(node__preset=entry).content
