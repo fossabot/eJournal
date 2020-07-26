@@ -101,8 +101,6 @@
 
                     <bonus-file-upload-input
                         ref="bounsPointsUpload"
-                        :acceptedFiletype="'*/*.csv'"
-                        :maxSizeBytes="$root.maxFileSizeBytes"
                         :endpoint="'assignments/' + $route.params.aID + '/add_bonus_points'"
                         :aID="$route.params.aID"
                         class="mt-2"
@@ -147,7 +145,7 @@
 
                     <hr/>
                     <teacher-initiated-entries
-                        :assignment="assignment"
+                        :aID="aID"
                         :assignmentJournals="assignmentJournals"
                         @entries-created="hideModal('teacherInitiatedEntries')"
                     />
