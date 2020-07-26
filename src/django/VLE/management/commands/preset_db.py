@@ -483,9 +483,9 @@ class Command(BaseCommand):
                                     content = factory.make_content(node.entry, str(fc.pk), field)
                                     file_handling.establish_file(journal.authors.first().user, fc.pk, content=content)
                             elif field.type == Field.FILE:
-                                with open('../vue/public/eJournal-privacy-notice.pdf', 'rb') as file:
+                                with open('./VLE/management/commands/dummy.pdf', 'rb') as file:
                                     pdf = SimpleUploadedFile(
-                                        'eJournal-privacy-notice.pdf', file.read(), content_type='application/pdf')
+                                        'dummy.pdf', file.read(), content_type='application/pdf')
                                     fc = FileContext.objects.create(
                                         file=pdf, author=journal.authors.first().user, file_name=pdf.name)
                                     content = factory.make_content(node.entry, str(fc.pk), field)

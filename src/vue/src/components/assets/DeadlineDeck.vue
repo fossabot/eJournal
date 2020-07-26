@@ -13,7 +13,7 @@
             <span
                 v-if="filterOwnGroups"
                 v-b-tooltip.hover
-                title="Only showing to do items for groups which you are a member of"
+                title="Only showing to do items for groups of which you are a member"
                 @click="filterOwnGroups = false"
             >
                 Showing:
@@ -26,7 +26,7 @@
                 @click="filterOwnGroups = true"
             >
                 Showing:
-                <b>all</b>
+                <b>all groups</b>
             </span>
         </div>
         <load-wrapper :loading="loadingDeadlines">
@@ -75,7 +75,7 @@
                     </b>
                 </div>
                 You do not have any {{ $root.canGradeForSomeCourse()
-                    ? `entries to grade${filterOwnGroups ? ' (in you own groups)' : ''}`
+                    ? `entries to grade${filterOwnGroups ? ' (in your own groups)' : ''}`
                     : 'upcoming deadlines' }}
                 at this moment.
             </b-card>
