@@ -1,25 +1,56 @@
 <template>
     <div>
-        <b-form-file
-            ref="bonusInput"
-            :accept="acceptedFiletype"
-            :state="Boolean(file)"
-            :placeholder="placeholderText"
-            class="fileinput mb-2"
-            @change="fileHandler"
+        <div class="mb-1">
+            <theme-select
+                v-model="selectedJournals"
+                label="name"
+                trackBy="id"
+                :options="assignmentJournals"
+                :multiple="true"
+                :searchable="true"
+                placeholder="Select Journals"
+            />
+            <small v-if="!showUsernameInput">
+                Or
+                <span
+                    class="text-blue cursor-pointer"
+                    @click="showUsernameInput = true"
+                >
+                    select by username</span>.
+            </small>
+            <b-input
+                v-else
+                v-model="usernameInput"
+                class="theme-input  mt-2 mb-2"
+                placeholder="Enter a username and press enter to select"
+                @keydown.enter.native="selectUsername"
+            />
+        </div>
+        <theme-select
+            v-if="templates && templates.length > 0"
+            v-model="selectedTemplate"
+            label="name"
+            trackBy="id"
+            :options="templates"
+            :multiple="false"
+            :searchable="true"
+            placeholder="Select A Template"
         />
-        <hr class="mt-2"/>
-        <b-button
-            v-if="!autoUpload"
-            class="add-button float-right"
-            :class="{ 'input-disabled': !file }"
-            @click="uploadFile"
-        >
-            <icon name="upload"/>
-            Upload
-        </b-button>
+        <span v-else>
+            No templates for this assignment. Create some in the assignment editor first.
+        </span>
+        <template v-if="selectedTemplate">
+            <hr/>
+            <entry-preview
+                ref="entry-prev"
+                :template="selectedTemplate"
+                :nID="-1"
+                :jID="selectedJournalIDs"
+                @posted="entryPosted"
+            />
+        </template>
 
-        <div v-if="errorLogs">
+        <div v-if="false">
             <b class="text-red">Errors in file:</b>
             <div
                 v-if="errorLogs.non_participants || errorLogs.unknown_users"
@@ -84,49 +115,43 @@
 </template>
 
 <script>
+import EntryPreview from '@/components/entry/EntryPreview.vue'
+
 import auth from '@/api/auth.js'
+import assignmentAPI from '@/api/assignment.js'
 
 export default {
+    components: {
+        EntryPreview,
+    },
     props: {
-        acceptedFiletype: {
-            required: true,
-            String,
-        },
-        maxSizeBytes: {
-            required: true,
-            Number,
-        },
         aID: {
             required: true,
-            String,
         },
-        autoUpload: {
-            default: false,
-            Boolean,
-        },
-        endpoint: {
-            default: 'users/upload',
-        },
-        placeholder: {
-            default: 'No file chosen',
-        },
-        contentID: {
-            default: null,
+        assignmentJournals: {
+            required: true,
         },
     },
     data () {
         return {
             placeholderText: 'No file chosen',
-            file: null,
-            errorLogs: null,
+            selectedJournals: [],
+            selectedTemplate: null,
+            templates: null,
+            showUsernameInput: false,
+            usernameInput: null,
         }
     },
+    computed: {
+        selectedJournalIDs () {
+            return this.selectedJournals.map(journal => journal.id)
+        },
+    },
     created () {
-        // Assume the given file is present in the backend
-        if (this.placeholder !== null && this.placeholder !== 'No file chosen') {
-            this.file = true
-            this.placeholderText = this.placeholder
-        }
+        assignmentAPI.getTemplates(this.aID)
+            .then((templates) => {
+                this.templates = templates
+            })
     },
     methods: {
         fileHandler (e) {
@@ -169,6 +194,24 @@ export default {
         },
         resetErrorLogs () {
             this.errorLogs = null
+        },
+        selectUsername () {
+            // Split input on comma and space
+            this.usernameInput.split(/[ ,]+/).forEach((username) => {
+                const journalFromUsername = this.assignmentJournals.find(journal => journal.usernames.split(', ')
+                    .some(journalUsername => journalUsername === username))
+
+                if (!journalFromUsername) {
+                    this.$toasted.error(`${username} does not exist!`)
+                } else if (!this.selectedJournals.includes(journalFromUsername)) {
+                    this.selectedJournals.push(journalFromUsername)
+                }
+            })
+
+            this.usernameInput = null
+        },
+        entryPosted () {
+
         },
     },
 }
