@@ -1,21 +1,17 @@
-<!--
-    Shows the functionality of an Add-Node. It will give the user options
-    to select an Entry-Template, this was set by the teacher, and then fill in
-    this corresponding Entry-Template so it can be saved and added to the
-    Timeline-Tree.
--->
 <template>
     <b-card
         :class="$root.getBorderClass($route.params.cID)"
         class="no-hover"
     >
-        <h2 class="theme-h2 mb-2">
-            New entry
-        </h2>
-        <div v-if="addNode.templates.length > 1">
+        <template
+            v-if="addNode.templates.length > 1"
+        >
+            <h2 class="theme-h2 mb-2">
+                New entry
+            </h2>
             <b-form-select
                 v-model="selectedTemplate"
-                class="theme-select"
+                class="theme-select mb-2"
             >
                 <option
                     :value="null"
@@ -31,16 +27,20 @@
                     {{ template.name }}
                 </option>
             </b-form-select>
-            <br/><br/>
-        </div>
-        <entry-preview
-            v-if="selectedTemplate !== null"
-            ref="entry-prev"
-            :template="selectedTemplate"
-            :nID="addNode.nID"
-            :jID="jID"
-            @posted="entryPosted"
-        />
+        </template>
+        <template v-if="selectedTemplate !== null">
+            <hr
+                v-if="addNode.templates.length > 1"
+                class="mt-2 mb-2"
+            />
+            <entry-preview
+                ref="entry-prev"
+                :template="selectedTemplate"
+                :nID="addNode.nID"
+                :jID="jID"
+                @posted="entryPosted"
+            />
+        </template>
     </b-card>
 </template>
 
