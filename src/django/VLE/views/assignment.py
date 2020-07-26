@@ -568,3 +568,15 @@ class AssignmentView(viewsets.ViewSet):
                 })
 
         return response.success({'participants': participants_without_journal})
+
+    @action(methods=['get'], detail=True)
+    def templates(self, request, pk):
+        """Get all templates (unlimited and preset-only) for an assignment.
+
+        Returns a list of templates."""
+        assignment = Assignment.objects.get(pk=pk)
+
+        request.user.check_permission('can_post_teacher_entries', assignment)
+
+        return response.success({'templates': TemplateSerializer(assignment.format.template_set.filter(
+            archived=False).order_by('name'), many=True).data})

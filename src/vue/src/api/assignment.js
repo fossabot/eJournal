@@ -54,4 +54,9 @@ export default {
         return auth.get(`assignments/${id}/participants_without_journal`, null, connArgs)
             .then(response => response.data.participants)
     },
+
+    getTemplates (id, connArgs = auth.DEFAULT_CONN_ARGS) {
+        return auth.get(`assignments/${id}/templates`, null, connArgs)
+            .then(response => response.data.templates)
+    },
 }
