@@ -551,6 +551,8 @@ class Role(CreateUpdateModel):
 
         'can_comment',
         'can_edit_staff_comment',
+
+        'can_post_teacher_entries',
     ]
     PERMISSIONS = COURSE_PERMISSIONS + ASSIGNMENT_PERMISSIONS
 
@@ -581,6 +583,7 @@ class Role(CreateUpdateModel):
     can_view_grade_history = models.BooleanField(default=False)
     can_have_journal = models.BooleanField(default=False)
     can_comment = models.BooleanField(default=False)
+    can_post_teacher_entries = models.BooleanField(default=False)
     can_edit_staff_comment = models.BooleanField(default=False)
     can_view_unpublished_assignment = models.BooleanField(default=False)
 
@@ -596,6 +599,9 @@ class Role(CreateUpdateModel):
 
         if self.can_view_all_journals and self.can_have_journal:
             raise ValidationError('Teaching staff is not allowed to have a journal in their own course.')
+
+        if self.can_post_teacher_entries and not self.can_view_all_journals:
+            raise ValidationError('A user must be able to view journals in order to post teacher entries.')
 
         if self.can_grade and not self.can_view_all_journals:
             raise ValidationError('A user needs to be able to view journals in order to grade them.')
