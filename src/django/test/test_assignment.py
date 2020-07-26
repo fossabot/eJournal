@@ -885,15 +885,10 @@ class AssignmentAPITest(TestCase):
             assert t1['id'] == t2['pk'], 'all assignment templates should be returned'
         assert len(templates) == 2
 
-        student = factory.Journal(assignment=assignment).authors.first().user
-        templates = api.get(self, 'assignments/templates', user=student, status=200)['templates']
-        assert len(templates) == 0, 'A student should not be able to retrieve all templates for an assignment'
-
         r = Participation.objects.get(course=course, user=teacher).role
         r.can_post_teacher_entries = False
         r.save()
-        templates = api.get(self, 'assignments/templates', user=teacher)['templates']
-        assert len(templates) == 0, 'A teacher requires can_post_teacher_entries to get templates for an assignment.'
+        templates = api.get(self, 'assignments/{}/templates'.format(assignment.pk), user=teacher, status=403)
 
     # LMS should be called, however, as there is nothing in ejournal.app to catch it, it will crash
     # TODO: create a valid testing env to improve this testing, set CELERY_TASK_EAGER_PROPAGATES=True

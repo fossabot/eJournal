@@ -19,11 +19,6 @@ class Migration(migrations.Migration):
             name='can_post_teacher_entries',
             field=models.BooleanField(default=False),
         ),
-        migrations.AlterField(
-            model_name='field',
-            name='type',
-            field=models.TextField(choices=[('t', 'text'), ('rt', 'rich text'), ('f', 'file'), ('v', 'vid'), ('u', 'url'), ('d', 'date'), ('dt', 'datetime'), ('s', 'selection'), ('n', 'no submission')], default='t', max_length=4),
-        ),
         migrations.RunPython(
             set_permission_for_teachers,
         ),
