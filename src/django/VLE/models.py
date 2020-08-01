@@ -1561,3 +1561,28 @@ class Comment(CreateUpdateModel):
 
     def to_string(self, user=None):
         return "Comment"
+
+
+class JournalImportRequest(CreateUpdateModel):
+    """
+    Stores a single request to import all entries of a journal (source) into another journal (target)
+
+    Attributes:
+        source (:model:`VLE.journal`): The journal from which entries will be copied
+        target (:model:`VLE.journal`): The journal into which entries will be copied
+        author (:model:`VLE.user`): The user who created the journal import request.
+    """
+    source = models.ForeignKey(
+        'journal',
+        related_name='import_request_source',
+        on_delete=models.CASCADE
+    )
+    target = models.ForeignKey(
+        'journal',
+        related_name='import_request_target',
+        on_delete=models.CASCADE
+    )
+    author = models.ForeignKey(
+        'user',
+        on_delete=models.CASCADE
+    )
