@@ -13,7 +13,8 @@ from django.core.management.base import BaseCommand
 from faker import Faker
 
 import VLE.factory as factory
-from VLE.models import Assignment, AssignmentParticipation, Course, Field, FileContext, Journal, Node, Template, User, JournalImportRequest
+from VLE.models import (Assignment, AssignmentParticipation, Course, Field, FileContext, Journal, JournalImportRequest,
+                        Node, Template, User)
 from VLE.utils import file_handling
 
 faker = Faker()
@@ -494,16 +495,25 @@ class Command(BaseCommand):
 
     def gen_journal_import_requests(self):
         """
-        Generates a JournalImportRequest for user "Student" from his Colloquium journal into his Logboek journal.
+        Generates a JournalImportRequest for user "Student" from his Colloquium journal into his Logboek journal and
+        the reverse for "Student2".
         """
-        source_assignment = Assignment.objects.get(name='Colloquium')
-        target_assignment = Assignment.objects.get(name='Logboek')
+        a1 = Assignment.objects.get(name='Colloquium')
+        a2 = Assignment.objects.get(name='Logboek')
 
         JournalImportRequest.objects.create(
             source=AssignmentParticipation.objects.get(
-                assignment=source_assignment, user=self.users['Student']).journal,
+                assignment=a1, user=self.users['Student']).journal,
             target=AssignmentParticipation.objects.get(
-                assignment=target_assignment, user=self.users['Student']).journal,
+                assignment=a2, user=self.users['Student']).journal,
+            author=self.users['Student']
+        )
+
+        JournalImportRequest.objects.create(
+            source=AssignmentParticipation.objects.get(
+                assignment=a2, user=self.users['Student']).journal,
+            target=AssignmentParticipation.objects.get(
+                assignment=a1, user=self.users['Student']).journal,
             author=self.users['Student']
         )
 
