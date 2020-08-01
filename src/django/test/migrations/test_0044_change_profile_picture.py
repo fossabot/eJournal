@@ -1,4 +1,5 @@
 from django.conf import settings
+
 from django_test_migrations.contrib.unittest_case import MigratorTestCase
 
 
