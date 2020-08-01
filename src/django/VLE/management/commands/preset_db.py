@@ -13,7 +13,7 @@ from django.core.management.base import BaseCommand
 from faker import Faker
 
 import VLE.factory as factory
-from VLE.models import Assignment, AssignmentParticipation, Course, Field, FileContext, Journal, Node, Template, User
+from VLE.models import Assignment, AssignmentParticipation, Course, Field, FileContext, Journal, Node, Template, User, JournalImportRequest
 from VLE.utils import file_handling
 
 faker = Faker()
@@ -492,6 +492,21 @@ class Command(BaseCommand):
                         except FileNotFoundError:
                             continue
 
+    def gen_journal_import_requests(self):
+        """
+        Generates a JournalImportRequest for user "Student" from his Colloquium journal into his Logboek journal.
+        """
+        source_assignment = Assignment.objects.get(name='Colloquium')
+        target_assignment = Assignment.objects.get(name='Logboek')
+
+        JournalImportRequest.objects.create(
+            source=AssignmentParticipation.objects.get(
+                assignment=source_assignment, user=self.users['Student']).journal,
+            target=AssignmentParticipation.objects.get(
+                assignment=target_assignment, user=self.users['Student']).journal,
+            author=self.users['Student']
+        )
+
     def handle(self, *args, **options):
         """Generate data to test and fill the database with.
 
@@ -505,3 +520,4 @@ class Command(BaseCommand):
         self.gen_entries(Assignment.objects.get(name='Logboek'))
         self.gen_entries(Assignment.objects.get(name='Colloquium'))
         self.gen_content()
+        self.gen_journal_import_requests()
