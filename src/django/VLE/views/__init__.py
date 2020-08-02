@@ -35,6 +35,6 @@ router.register(r'entries', EntryView, basename='entry')
 router.register(r'grades', GradeView, basename='grades')
 router.register(r'formats', FormatView, basename='format')
 router.register(r'files', FileView, basename='file')
-router.register(r'files', JournalImportRequestView, basename='journal_import_request')
+router.register(r'journal_import_request', JournalImportRequestView, basename='journal_import_request')
 
 urlpatterns = router.urls

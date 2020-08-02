@@ -12,8 +12,8 @@ from rest_framework import serializers
 
 import VLE.permissions as permissions
 from VLE.models import (Assignment, AssignmentParticipation, Comment, Content, Course, Entry, Field, FileContext,
-                        Format, Grade, Group, Instance, Journal, Node, Participation, Preferences, PresetNode, Role,
-                        Template, User)
+                        Format, Grade, Group, Instance, Journal, JournalImportRequest, Node, Participation, Preferences,
+                        PresetNode, Role, Template, User)
 from VLE.utils import generic_utils as utils
 from VLE.utils.error_handling import VLEParticipationError, VLEProgrammingError
 
@@ -693,3 +693,23 @@ class FieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = Field
         fields = '__all__'
+
+
+class JournalImportRequestSerializer(AssignmentSerializer):
+    author = serializers.SerializerMethodField()
+    source = serializers.SerializerMethodField()
+    target = serializers.SerializerMethodField()
+
+    class Meta:
+        model = JournalImportRequest
+        fields = ('id', 'source', 'target', 'author')
+        read_only_fields = ('id', 'source', 'target', 'author')
+
+    def get_author(self, jir):
+        return UserSerializer(jir.author, context=self.context).data
+
+    def get_source(self, jir):
+        return JournalSerializer(jir.source, context=self.context).data
+
+    def get_target(self, jir):
+        return JournalSerializer(jir.target, context=self.context).data
