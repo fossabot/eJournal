@@ -77,10 +77,9 @@
                 />
                 <span
                     v-if="journal.import_request_target.length > 0"
-                    class="text-color-red"
                 >
-                    {{ `${journal.import_request_target.length} import request${(
-                        journal.import_request_target.length > 1) ?'s' : ''}` }}
+                    <b> {{ journal.import_request_target.length }} </b>
+                    {{ `Import request${(journal.import_request_target.length > 1) ?'s' : ''}` }}
                 </span>
             </b-col>
         </b-row>
