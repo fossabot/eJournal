@@ -3,15 +3,15 @@
         <!-- Teacher show things todo -->
         <number-badge
             v-if="unpublishedOrNeedsMarking"
+            v-b-tooltip.hover="squareInfo"
             :leftNum="filterOwnGroups ? deadline.stats.needs_marking_own_groups : deadline.stats.needs_marking"
             :rightNum="filterOwnGroups ? deadline.stats.unpublished_own_groups : deadline.stats.unpublished"
             class="float-right multi-form"
-            v-b-tooltip.hover="squareInfo"
         />
         <b-badge
             v-if="deadline.journal_import_requests"
+            v-b-tooltip.hover="`${deadline.journal_import_requests} outstanding journal import requests`"
             class="float-right number-badge"
-            v-b-tooltip.hover="'Number of journal import'"
         >
             {{ deadline.journal_import_requests }}
         </b-badge>

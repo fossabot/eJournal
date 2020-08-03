@@ -16,9 +16,9 @@
                     <number-badge
                         v-if="$hasPermission('can_view_all_journals') &&
                             journal.needs_marking + journal.unpublished > 0"
+                        v-b-tooltip.hover="squareInfo"
                         :leftNum="journal.needs_marking"
                         :rightNum="journal.unpublished"
-                        v-b-tooltip.hover="squareInfo"
                     />
                 </div>
                 <div class="student-details">
