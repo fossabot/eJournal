@@ -503,7 +503,7 @@ class JournalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Journal
         fields = ('id', 'bonus_points', 'grade', 'name', 'image', 'author_limit',
-                  'locked', 'author_count', 'full_names', 'groups',
+                  'locked', 'author_count', 'full_names', 'groups', 'import_request_target',
                   'grade', 'name', 'image', 'needs_lti_link', 'unpublished', 'needs_marking', 'usernames')
         read_only_fields = ('id', 'assignment', 'authors', 'grade')
 
@@ -695,7 +695,7 @@ class FieldSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class JournalImportRequestSerializer(AssignmentSerializer):
+class JournalImportRequestSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
     source = serializers.SerializerMethodField()
     target = serializers.SerializerMethodField()
