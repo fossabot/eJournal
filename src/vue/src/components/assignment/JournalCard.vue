@@ -18,7 +18,7 @@
                             journal.needs_marking + journal.unpublished > 0"
                         :leftNum="journal.needs_marking"
                         :rightNum="journal.unpublished"
-                        :title="squareInfo"
+                        v-b-tooltip.hover="squareInfo"
                     />
                 </div>
                 <div class="student-details">

@@ -6,11 +6,12 @@
             :leftNum="filterOwnGroups ? deadline.stats.needs_marking_own_groups : deadline.stats.needs_marking"
             :rightNum="filterOwnGroups ? deadline.stats.unpublished_own_groups : deadline.stats.unpublished"
             class="float-right multi-form"
-            :title="squareInfo"
+            v-b-tooltip.hover="squareInfo"
         />
         <b-badge
             v-if="deadline.journal_import_requests"
-            class="float-right number-badge highlight"
+            class="float-right number-badge"
+            v-b-tooltip.hover="'Number of journal import'"
         >
             {{ deadline.journal_import_requests }}
         </b-badge>
@@ -143,6 +144,7 @@ export default {
 
 <style lang="sass">
 @import '~sass/modules/colors.sass'
+// TODO JIR: refactor for generic badge style once thread is settled.
 .number-badge
     background-color: white
     color: $theme-dark-blue
