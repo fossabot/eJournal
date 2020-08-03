@@ -27,7 +27,7 @@ export default {
                 }
                 return 0
             },
-            markingNeeded: (a, b) => compare(a.marking_needed, b.marking_needed),
+            markingNeeded: (a, b) => compare(a.needs_marking, b.needs_marking),
             points: (a, b) => compare(a.grade, b.grade),
             importRequests: (a, b) => compare(a.import_request_target.length, b.import_request_target.length),
         }
