@@ -438,12 +438,17 @@ class AssignmentFormatSerializer(AssignmentSerializer):
 
 
 class SmallAssignmentSerializer(AssignmentSerializer):
+    journal_import_requests = serializers.SerializerMethodField()
+
     class Meta:
         model = Assignment
         fields = (
             'id', 'name', 'is_group_assignment', 'is_published', 'points_possible', 'unlock_date', 'due_date',
-            'lock_date', 'deadline', 'journal', 'stats', 'course')
+            'lock_date', 'deadline', 'journal', 'stats', 'course', 'journal_import_requests')
         read_only_fields = ('id', )
+
+    def get_journal_import_requests(self, assignment):
+        return JournalImportRequest.objects.filter(target__assignment=assignment).count()
 
 
 class NodeSerializer(serializers.ModelSerializer):

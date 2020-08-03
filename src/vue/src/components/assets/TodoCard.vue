@@ -8,6 +8,12 @@
             class="float-right multi-form"
             :title="squareInfo"
         />
+        <b-badge
+            v-if="deadline.journal_import_requests"
+            class="float-right number-badge highlight"
+        >
+            {{ deadline.journal_import_requests }}
+        </b-badge>
 
         <b class="field-heading">
             {{ deadline.name }}
@@ -134,3 +140,14 @@ export default {
     },
 }
 </script>
+
+<style lang="sass">
+@import '~sass/modules/colors.sass'
+.number-badge
+    background-color: white
+    color: $theme-dark-blue
+    font-family: 'Roboto Condensed', sans-serif
+    font-size: 1em
+    border-radius: 5px !important
+    border: 1px solid #CCCCCC
+</style>
