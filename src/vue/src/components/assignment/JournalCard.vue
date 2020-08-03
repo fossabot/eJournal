@@ -75,6 +75,13 @@
                     :currentPoints="journal.grade"
                     :totalPoints="assignment.points_possible"
                 />
+                <span
+                    v-if="journal.import_request_target.length > 0"
+                    class="text-color-red"
+                >
+                    {{ `${journal.import_request_target.length} import request${(
+                        journal.import_request_target.length > 1) ?'s' : ''}` }}
+                </span>
             </b-col>
         </b-row>
         <slot/>

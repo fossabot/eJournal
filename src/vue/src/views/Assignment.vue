@@ -50,6 +50,9 @@
                     <option value="markingNeeded">
                         Sort by marking needed
                     </option>
+                    <option value="importRequests">
+                        Sort by import requests
+                    </option>
                     <option value="points">
                         Sort by points
                     </option>
