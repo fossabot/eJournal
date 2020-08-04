@@ -76,10 +76,10 @@
                     :totalPoints="assignment.points_possible"
                 />
                 <span
-                    v-if="journal.import_request_target.length > 0"
+                    v-if="journal.import_requests.length > 0"
                 >
-                    <b> {{ journal.import_request_target.length }} </b>
-                    {{ `Import request${(journal.import_request_target.length > 1) ?'s' : ''}` }}
+                    <b> {{ journal.import_requests.length }} </b>
+                    {{ `Import request${(journal.import_requests.length > 1) ?'s' : ''}` }}
                 </span>
             </b-col>
         </b-row>

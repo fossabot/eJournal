@@ -25,9 +25,7 @@
                     v-for="a in assignments"
                     :key="`assignment-${a.id}-preview`"
                     :assignment="a"
-                    :uniqueName="!assignments.some(a2 =>
-                        a.name === a2.name && a.id !== a2.id
-                    )"
+                    :uniqueName="!assignments.some(a2 => a.name === a2.name && a.id !== a2.id)"
                     @click="importJournal(a)"
                 />
             </load-wrapper>

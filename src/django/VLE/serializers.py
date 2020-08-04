@@ -504,11 +504,12 @@ class JournalSerializer(serializers.ModelSerializer):
     author_count = serializers.SerializerMethodField()
     groups = serializers.SerializerMethodField()
     usernames = serializers.SerializerMethodField()
+    import_requests = serializers.SerializerMethodField()
 
     class Meta:
         model = Journal
         fields = ('id', 'bonus_points', 'grade', 'name', 'image', 'author_limit',
-                  'locked', 'author_count', 'full_names', 'groups', 'import_request_target',
+                  'locked', 'author_count', 'full_names', 'groups', 'import_requests',
                   'grade', 'name', 'image', 'needs_lti_link', 'unpublished', 'needs_marking', 'usernames')
         read_only_fields = ('id', 'assignment', 'authors', 'grade')
 
@@ -530,6 +531,9 @@ class JournalSerializer(serializers.ModelSerializer):
         return list(Participation.objects.filter(
             user__in=journal.authors.values('user'),
             course=self.context['course']).values_list('groups__pk', flat=True).distinct())
+
+    def get_import_requests(self, journal):
+        return journal.import_request_target.count()
 
 
 class FormatSerializer(serializers.ModelSerializer):
@@ -717,4 +721,4 @@ class JournalImportRequestSerializer(serializers.ModelSerializer):
         return JournalSerializer(jir.source, context=self.context).data
 
     def get_target(self, jir):
-        return JournalSerializer(jir.target, context=self.context).data
+        return JournalSerializer(jir.source, context=self.context).data
