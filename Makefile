@@ -159,6 +159,14 @@ postgres-reset:
 	@sudo su -c "psql \
 	-c \"DROP DATABASE IF EXISTS $(postgres_db)\" \
 	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw0\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw1\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw2\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw3\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw4\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw5\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw6\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw7\" \
 	-c \"DROP USER IF EXISTS $(postgres_dev_user)\" \
 	" postgres
 
@@ -203,7 +211,14 @@ db-restore:
 	@read -r a
 	@sudo su -c "psql \
 	-c \"DROP DATABASE IF EXISTS $(postgres_db)\" \
-	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw0\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw1\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw2\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw3\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw4\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw5\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw6\" \
+	-c \"DROP DATABASE IF EXISTS test_$(postgres_db)_gw7\" \
 	-c \"CREATE DATABASE $(postgres_db)\" \
 	" postgres
 	@psql --dbname=postgresql://$(postgres_dev_user):$(postgres_dev_user_pass)@127.0.0.1:5432/$(dbname) < db.dump
