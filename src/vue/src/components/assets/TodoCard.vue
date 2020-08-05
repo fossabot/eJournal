@@ -9,7 +9,7 @@
             class="float-right multi-form"
         />
         <b-badge
-            v-if="deadline.journal_import_requests"
+            v-if="deadline.journal_import_requests && $hasPermission('can_grade', 'assignment', deadline.id)"
             v-b-tooltip.hover="`${deadline.journal_import_requests} outstanding journal import requests`"
             class="float-right number-badge"
         >
