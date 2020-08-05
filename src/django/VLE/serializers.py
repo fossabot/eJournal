@@ -721,4 +721,4 @@ class JournalImportRequestSerializer(serializers.ModelSerializer):
         return JournalSerializer(jir.source, context=self.context).data
 
     def get_target(self, jir):
-        return JournalSerializer(jir.source, context=self.context).data
+        return JournalSerializer(jir.target, context=self.context).data

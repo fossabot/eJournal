@@ -3,7 +3,7 @@ from test.utils import api
 
 from django.test import TestCase
 
-from VLE.models import Field
+from VLE.models import AssignmentParticipation, Field, JournalImportRequest
 
 
 class JournalImportRequestTest(TestCase):
@@ -18,6 +18,41 @@ class JournalImportRequestTest(TestCase):
 
         ap = factory.AssignmentParticipation(assignment=self.assignment2, user=self.student1)
         self.journal2_student1 = ap.journal
+
+    def test_journal_import_request_factory(self):
+        jir = factory.JournalImportRequest(author=factory.Student())
+
+        assert JournalImportRequest.objects.count() == 1, 'A single journal import request is created'
+        assert jir.target.pk != jir.source.pk, 'A unique journal is generated for both the source and target'
+
+        # A jir generates only a single ap for both its source and target
+        ap_source = AssignmentParticipation.objects.get(journal=jir.source)
+        ap_target = AssignmentParticipation.objects.get(journal=jir.target)
+
+        assert jir.author.pk is ap_source.user.pk and jir.author.pk is ap_target.user.pk, \
+            'A generated journal import request shares its author among the source and target journals'
+
+    def test_JIR_list(self):
+        jir = factory.JournalImportRequest()
+        supervisor = jir.target.assignment.author
+        unrelated_teacher = factory.Teacher()
+        data = {'journal_target_id': jir.target.pk}
+
+        # Only relevant users can access JIRs
+        api.get(self, 'journal_import_request', params=data, user=jir.author)
+        api.get(self, 'journal_import_request', params=data, user=supervisor)
+        api.get(self, 'journal_import_request', params=data, user=unrelated_teacher, status=403)
+
+        jir2 = factory.JournalImportRequest(author=jir.author, target=jir.target)
+        # Also generate an unrelated JIR
+        factory.JournalImportRequest()
+
+        resp = api.get(self, 'journal_import_request', params=data, user=jir.author)['journal_import_requests']
+
+        assert len(resp) == 2, 'Both JIRs are serialized'
+        assert resp[0]['id'] == jir.pk and resp[1]['id'] == jir2.pk, 'The correct JIRs are serialized'
+        assert resp[0]['source']['id'] == jir.source.pk and resp[0]['target']['id'] == jir.target.pk, \
+            'The correct source and target journal are serialized'
 
     def test_create(self):
         # You cannot import a journal into itself

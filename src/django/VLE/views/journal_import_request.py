@@ -7,6 +7,24 @@ from VLE.serializers import JournalImportRequestSerializer
 
 
 class JournalImportRequestView(viewsets.ViewSet):
+    def list(self, request):
+        """
+        Lists all journal import requests (JIR) for a given (import) target journal.
+
+        JIRs are not (fully) serialized alongside their respective journals in order to speedup the
+        assignment page, as JIRs occur infrequently.
+        """
+        journal_target_id, = utils.required_typed_params(request.query_params, (int, 'journal_target_id'))
+
+        journal_target = Journal.objects.get(pk=journal_target_id)
+        request.user.check_can_view(journal_target)
+
+        # QUESTION: How to work with JIRs of which the requestee cannot see the source? The source journal IS serialized
+
+        serializer = JournalImportRequestSerializer(
+            journal_target.import_request_target.all(), context={'user': request.user}, many=True)
+        return response.success({'journal_import_requests': serializer.data})
+
     def create(self, request):
         journal_source_id, journal_target_id = utils.required_typed_params(
             request.data, (int, 'journal_source_id'), (int, 'journal_target_id'))
@@ -20,7 +38,7 @@ class JournalImportRequestView(viewsets.ViewSet):
         ap_target = AssignmentParticipation.objects.filter(user=request.user, journal=journal_target)
 
         if not ap_source.exists() or not ap_target.exists():
-            return response.forbidden('You can only import from/into your own journals.')
+            return response.forbidden('You can only import from or into your own journals.')
 
         # QUESTION: Do we care about the lock state of the assignment source or destination?
 
