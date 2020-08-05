@@ -497,14 +497,23 @@ class Command(BaseCommand):
         """
         Generates a JournalImportRequest for user "Student" from his Colloquium journal into his Logboek journal.
         """
-        a1 = Assignment.objects.get(name='Colloquium')
-        a2 = Assignment.objects.get(name='Logboek')
+        colloquium = Assignment.objects.get(name='Colloquium')
+        logboek = Assignment.objects.get(name='Logboek')
+        group_assignment = Assignment.objects.get(name='Group Assignment')
 
         JournalImportRequest.objects.create(
             source=AssignmentParticipation.objects.get(
-                assignment=a1, user=self.users['Student']).journal,
+                assignment=colloquium, user=self.users['Student']).journal,
             target=AssignmentParticipation.objects.get(
-                assignment=a2, user=self.users['Student']).journal,
+                assignment=logboek, user=self.users['Student']).journal,
+            author=self.users['Student']
+        )
+
+        JournalImportRequest.objects.create(
+            source=AssignmentParticipation.objects.get(
+                assignment=group_assignment, user=self.users['Student']).journal,
+            target=AssignmentParticipation.objects.get(
+                assignment=logboek, user=self.users['Student']).journal,
             author=self.users['Student']
         )
 
