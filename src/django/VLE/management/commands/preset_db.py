@@ -495,8 +495,7 @@ class Command(BaseCommand):
 
     def gen_journal_import_requests(self):
         """
-        Generates a JournalImportRequest for user "Student" from his Colloquium journal into his Logboek journal and
-        the reverse for "Student2".
+        Generates a JournalImportRequest for user "Student" from his Colloquium journal into his Logboek journal.
         """
         a1 = Assignment.objects.get(name='Colloquium')
         a2 = Assignment.objects.get(name='Logboek')
@@ -506,14 +505,6 @@ class Command(BaseCommand):
                 assignment=a1, user=self.users['Student']).journal,
             target=AssignmentParticipation.objects.get(
                 assignment=a2, user=self.users['Student']).journal,
-            author=self.users['Student']
-        )
-
-        JournalImportRequest.objects.create(
-            source=AssignmentParticipation.objects.get(
-                assignment=a2, user=self.users['Student']).journal,
-            target=AssignmentParticipation.objects.get(
-                assignment=a1, user=self.users['Student']).journal,
             author=self.users['Student']
         )
 
