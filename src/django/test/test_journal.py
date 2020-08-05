@@ -26,6 +26,18 @@ class JournalAPITest(TestCase):
         group_course = self.group_assignment.courses.first()
         self.g_teacher = group_course.author
 
+    def test_journal_factory(self):
+        journal = factory.Journal()
+
+        # Generating a journal also generates a single corresponding AP
+        ap = AssignmentParticipation.objects.get(journal=journal)
+
+        user = factory.Student()
+        journal = factory.Journal(add_user=user)
+        ap = AssignmentParticipation.objects.get(journal=journal)
+
+        assert ap.user.pk is user.pk, 'It is possible to generate a journal whilst adding a specific user'
+
     def test_computed_name(self):
         journal = factory.Journal()
         assert journal.name == journal.authors.first().user.full_name

@@ -33,3 +33,8 @@ class AssignmentParticipationFactory(factory.django.DjangoModelFactory):
             if not VLE.models.Participation.objects.filter(course=course, user=self.user).exists():
                 role = VLE.models.Role.objects.get(course=course, name='Student')
                 VLE.models.Participation.objects.create(course=course, user=self.user, role=role)
+
+
+class LtiAssignmentParticipationFactory(AssignmentParticipationFactory):
+    grade_url = 'https://www.ejournal.app/'
+    sourcedid = 'Not None'

@@ -6,7 +6,7 @@ from test.factory.format import FormatFactory
 from test.factory.grade import GradeFactory
 from test.factory.group import GroupFactory, LtiGroupFactory
 from test.factory.instance import InstanceFactory
-from test.factory.journal import GroupJournalFactory, JournalFactory, LtiJournalFactory
+from test.factory.journal import GroupJournalFactory, JournalFactory, JournalImportRequestFactory, LtiJournalFactory
 from test.factory.params import JWTParamsFactory, JWTTestUserParamsFactory, UserParamsFactory
 from test.factory.participation import AssignmentParticipationFactory, GroupParticipationFactory, ParticipationFactory
 from test.factory.presetnode import EntrydeadlineNodeFactory, ProgressNodeFactory
@@ -56,3 +56,5 @@ Grade = GradeFactory
 UserParams = UserParamsFactory
 JWTParams = JWTParamsFactory
 JWTTestUserParams = JWTTestUserParamsFactory
+
+JournalImportRequest = JournalImportRequestFactory
