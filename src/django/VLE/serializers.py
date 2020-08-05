@@ -718,7 +718,13 @@ class JournalImportRequestSerializer(serializers.ModelSerializer):
         return UserSerializer(jir.author, context=self.context).data
 
     def get_source(self, jir):
-        return JournalSerializer(jir.source, context=self.context).data
+        return {
+            'journal': JournalSerializer(jir.source, context=self.context).data,
+            'assignment': AssignmentSerializer(jir.source.assignment, context=self.context).data,
+        }
 
     def get_target(self, jir):
-        return JournalSerializer(jir.target, context=self.context).data
+        return {
+            'journal': JournalSerializer(jir.target, context=self.context).data,
+            'assignment': AssignmentSerializer(jir.target.assignment, context=self.context).data,
+        }
