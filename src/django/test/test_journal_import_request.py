@@ -53,6 +53,9 @@ class JournalImportRequestTest(TestCase):
         assert resp[0]['id'] == jir.pk and resp[1]['id'] == jir2.pk, 'The correct JIRs are serialized'
         assert resp[0]['source']['id'] == jir.source.pk and resp[0]['target']['id'] == jir.target.pk, \
             'The correct source and target journal are serialized'
+        assert resp[0]['source']['import_requests'] == 0, \
+            'JIR import_requests (count) are only serialized for the target journal'
+        assert resp[0]['target']['import_requests'] == 2
 
     def test_create(self):
         # You cannot import a journal into itself
