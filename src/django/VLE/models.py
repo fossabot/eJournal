@@ -1351,6 +1351,14 @@ class Entry(CreateUpdateModel):
         return "Entry"
 
 
+class TeacherEntry(CreateUpdateModel):
+    """TeacherEntry.
+
+    An Entry has the following features:
+    - last_edited: the date and time when the etry was last edited by an author. This also changes the last_edited_by
+    """
+
+
 class Grade(CreateUpdateModel):
     """Grade.
 
