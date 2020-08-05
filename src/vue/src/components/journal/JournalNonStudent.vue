@@ -177,12 +177,28 @@
                         </div>
                         <b-button
                             v-if="$hasPermission('can_publish_grades')"
-                            class="add-button full-width mt-1"
+                            class="add-button full-width mt-1 multi-form"
                             @click="publishGradesJournal"
                         >
                             <icon name="upload"/>
                             Publish all grades
                         </b-button>
+
+                        <div v-if="$hasPermission('can_grade') && !loadingNodes">
+                            <b-button
+                                v-if="journal.import_requests"
+                                v-b-modal="'journal-import-request-approval-modal'"
+                                class="multi-form change-button full-width"
+                            >
+                                <icon name="file-import"/>
+                                Manage Import Requests
+                            </b-button>
+
+                            <journal-import-request-approval-modal
+                                v-if="journal.import_requests"
+                                modalID="journal-import-request-approval-modal"
+                            />
+                        </div>
                     </b-card>
                 </b-col>
             </b-row>
@@ -198,6 +214,7 @@ import breadCrumb from '@/components/assets/BreadCrumb.vue'
 import loadWrapper from '@/components/loading/LoadWrapper.vue'
 import journalStartCard from '@/components/journal/JournalStartCard.vue'
 import journalEndCard from '@/components/journal/JournalEndCard.vue'
+import journalImportRequestApprovalModal from '@/components/journal/JournalImportRequestApprovalModal.vue'
 import progressNode from '@/components/entry/ProgressNode.vue'
 
 import store from '@/Store.vue'
@@ -215,6 +232,7 @@ export default {
         journalStartCard,
         journalEndCard,
         progressNode,
+        journalImportRequestApprovalModal,
     },
     props: ['cID', 'aID', 'jID'],
     data () {
