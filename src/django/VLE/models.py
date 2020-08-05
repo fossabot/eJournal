@@ -1565,24 +1565,65 @@ class Comment(CreateUpdateModel):
 
 class JournalImportRequest(CreateUpdateModel):
     """
-    Stores a single request to import all entries of a journal (source) into another journal (target)
+    Journal Import Request (JIR).
+    Stores a single request to import all entries of a journal (source) into another journal (target).
 
     Attributes:
         source (:model:`VLE.journal`): The journal from which entries will be copied
         target (:model:`VLE.journal`): The journal into which entries will be copied
-        author (:model:`VLE.user`): The user who created the journal import request.
+        author (:model:`VLE.user`): The user who created the journal import request
+        state: State of the JIR
+        processor (:model:`VLE.user`): The user who updated the JIR state
     """
+
+    PENDING = 'PEN'
+    DECLINED = 'DEC'
+    APPROVED_INC_GRADES = 'AIG'
+    APPROVED_EXC_GRADES = 'AEG'
+    STATES = (
+        (PENDING, 'Pending'),
+        (DECLINED, 'Declined'),
+        (APPROVED_INC_GRADES, 'Approved including grades'),
+        (APPROVED_EXC_GRADES, 'Approved excluding grades')
+    )
+
+    state = models.CharField(
+        max_length=3,
+        choices=STATES,
+        default=PENDING,
+    )
     source = models.ForeignKey(
         'journal',
         related_name='import_request_source',
-        on_delete=models.CASCADE
+        null=True,
+        on_delete=models.SET_NULL
     )
     target = models.ForeignKey(
         'journal',
         related_name='import_request_target',
-        on_delete=models.CASCADE
+        null=True,
+        on_delete=models.SET_NULL
     )
     author = models.ForeignKey(
         'user',
-        on_delete=models.CASCADE
+        related_name='jir_author',
+        null=True,
+        on_delete=models.SET_NULL
     )
+    processor = models.ForeignKey(
+        'user',
+        related_name='jir_processor',
+        null=True,
+        on_delete=models.SET_NULL
+    )
+
+    def get_update_response(self):
+        responses = {
+            self.DECLINED: 'The journal import request has been succesfully declined.',
+            self.APPROVED_INC_GRADES:
+                'The journal import request has been succesfully approved including all previous grades.',
+            self.APPROVED_EXC_GRADES:
+                'The journal import request has been succesfully approved excluding all previous grades.'
+        }
+
+        return responses[self.state]
