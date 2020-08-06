@@ -1311,6 +1311,11 @@ class Entry(CreateUpdateModel):
         related_name='+',
         null=True,
     )
+    teacher_entry = models.ForeignKey(
+        'TeacherEntry',
+        on_delete=models.CASCADE,
+        null=True,
+    )
 
     author = models.ForeignKey(
         'User',
@@ -1351,12 +1356,31 @@ class Entry(CreateUpdateModel):
         return "Entry"
 
 
-class TeacherEntry(CreateUpdateModel):
+class TeacherEntry(Entry):
     """TeacherEntry.
 
-    An Entry has the following features:
-    - last_edited: the date and time when the etry was last edited by an author. This also changes the last_edited_by
+    An entry posted by a teacher to multiple student journals.
     """
+    assignment = models.ForeignKey(
+        'Assignment',
+        on_delete=models.CASCADE,
+    )
+
+    # Teacher entries objects cannot directly contribute to journal grades. They should be added to each journal and
+    # are individually graded / grades passed back to the LMS from there.
+    # This allows editing and grade passback mechanics for students like usual.
+    grade = None
+    @property
+    def grade(self):
+        raise AttributeError("'TeacherEntry' object has no attribute 'grade'")
+    teacher_entry = None
+    @property
+    def teacher_entry(self):
+        raise AttributeError("'TeacherEntry' object has no attribute 'teacher_entry'")
+    vle_coupling = None
+    @property
+    def vle_coupling(self):
+        raise AttributeError("'TeacherEntry' object has no attribute 'vle_coupling'")
 
 
 class Grade(CreateUpdateModel):

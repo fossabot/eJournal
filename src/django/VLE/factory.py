@@ -12,7 +12,7 @@ from django.utils import timezone
 
 import VLE.validators as validators
 from VLE.models import (Assignment, AssignmentParticipation, Comment, Content, Course, Entry, Field, Format, Grade,
-                        Group, Journal, Node, Participation, PresetNode, Role, Template, User)
+                        Group, Journal, Node, Participation, PresetNode, Role, TeacherEntry, Template, User)
 from VLE.utils.error_handling import VLEBadRequest
 
 
@@ -259,6 +259,12 @@ def make_entry(template, author):
     entry = Entry(template=template, author=author)
     entry.save()
     return entry
+
+
+def make_teacher_entry(template):
+    teacher_entry = TeacherEntry(template=template)
+    teacher_entry.save()
+    return teacher_entry
 
 
 def make_entry_template(name, format, preset_only=False):
