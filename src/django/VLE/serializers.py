@@ -13,7 +13,7 @@ from rest_framework import serializers
 import VLE.permissions as permissions
 from VLE.models import (Assignment, AssignmentParticipation, Comment, Content, Course, Entry, Field, FileContext,
                         Format, Grade, Group, Instance, Journal, Node, Participation, Preferences, PresetNode, Role,
-                        Template, User)
+                        Template, TeacherEntry, User)
 from VLE.utils import generic_utils as utils
 from VLE.utils.error_handling import VLEParticipationError, VLEProgrammingError
 
@@ -645,6 +645,43 @@ class GradeHistorySerializer(serializers.ModelSerializer):
             return grade.author.full_name
 
         return 'Unknown or deleted account'
+
+
+class TeacherEntrySerializer(serializers.ModelSerializer):
+    template = serializers.SerializerMethodField()
+    content = serializers.SerializerMethodField()
+    journal_entries = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TeacherEntry
+        fields = ('id', 'creation_date', 'template', 'content')
+        read_only_fields = ('id', 'template', 'creation_date', 'content')
+
+    def get_template(self, teacher_entry):
+        return TemplateSerializer(teacher_entry.template).data
+
+    def get_content(self, teacher_entry):
+        return ContentSerializer(teacher_entry.content_set.all(), many=True).data
+
+    def get_journal_entries(self, teacher_entry):
+        journal_entries = {}
+        all_assignment_journals = Journal.objects.filter(assignment=teacher_entry.assignment)
+        all_journal_entries_for_teacher_entry = Entry.objects.filter(teacher_entry=teacher_entry)
+
+        for entry in all_journal_entries_for_teacher_entry:
+            journal_entries[entry.node.journal.id] = {
+                'grade': GradeSerializer(entry.grade),
+                'in_journal': True,
+            }
+
+        for journal in all_assignment_journals:
+            if journal.id not in journal_entries:
+                journal_entries[journal.id] = {
+                    'grade': None,
+                    'in_journal': True,
+                }
+
+        return journal_entries
 
 
 class TemplateSerializer(serializers.ModelSerializer):
