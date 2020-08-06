@@ -252,8 +252,9 @@ export default {
                     this.linkableAssignments = assignments.slice()
                     for (let i = 0; i < this.linkableAssignments.length; i++) {
                         this.linkableAssignments[i].assignments = this.linkableAssignments[i].assignments.filter(
-                            assignment => assignment.active_lti_course === null
-                            || assignment.active_lti_course.cID !== this.page.cID)
+                            assignment => typeof assignment.active_lti_course === 'object'
+                            && assignment.active_lti_course !== null
+                            && assignment.active_lti_course.cID !== this.page.cID)
                     }
                     if (this.assignments.length) {
                         this.currentPage = 'Assignment setup'
