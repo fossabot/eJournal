@@ -32,7 +32,7 @@ class JournalImportRequestTest(TestCase):
         assert jir.author.pk is ap_source.user.pk and jir.author.pk is ap_target.user.pk, \
             'A generated journal import request shares its author among the source and target journals'
 
-    def test_JIR_list(self):
+    def test_list_jir(self):
         jir = factory.JournalImportRequest()
         supervisor = jir.target.assignment.author
         unrelated_teacher = factory.Teacher()
@@ -58,7 +58,7 @@ class JournalImportRequestTest(TestCase):
             'JIR import_requests (count) are only serialized for the target journal'
         assert resp[0]['target']['journal']['import_requests'] == 2
 
-    def test_create(self):
+    def test_create_jir(self):
         # You cannot import a journal into itself
         data = {'journal_source_id': self.journal1_student1.pk, 'journal_target_id': self.journal1_student1.pk}
         api.create(self, 'journal_import_request', params=data, user=self.student1, status=400)
@@ -86,3 +86,21 @@ class JournalImportRequestTest(TestCase):
         # Succesfully create a JournalImportRequest
         data = {'journal_source_id': self.journal1_student1.pk, 'journal_target_id': self.journal2_student1.pk}
         api.create(self, 'journal_import_request', params=data, user=self.student1, status=201)
+
+    def test_patch_jir(self):
+        jir = factory.JournalImportRequest()
+        supervisor = jir.target.assignment.author
+        unrelated_teacher = factory.Teacher()
+
+        valid_action = JournalImportRequest.DECLINED
+        invalid_action = 'BLA'
+
+        # A JIR can be updated by a supervisor
+        data = {'pk': jir.pk, 'jir_action': valid_action}
+        api.update(self, 'journal_import_request', params=data, user=supervisor, status=200)
+        api.update(self, 'journal_import_request', params=data, user=jir.author, status=403)
+        api.update(self, 'journal_import_request', params=data, user=unrelated_teacher, status=403)
+
+        # Only valid actions are processed
+        data = {'pk': jir.pk, 'jir_action': invalid_action}
+        api.update(self, 'journal_import_request', params=data, user=supervisor, status=400)
