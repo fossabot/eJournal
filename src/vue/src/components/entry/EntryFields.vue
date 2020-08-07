@@ -1,7 +1,7 @@
 <template>
-    <div v-if="!displayMode">
+    <div v-if="edit">
         <div
-            v-for="(field, i) in fieldsToEdit"
+            v-for="field in orderedFields"
             :key="`node ${nodeID}-field-${field.id}`"
             class="multi-form"
         >
@@ -19,64 +19,64 @@
 
             <b-input
                 v-if="field.type == 't'"
-                v-model="completeContent[i].data"
+                v-model="content[field.id].data"
                 class="theme-input"
                 rows="1"
             />
             <reset-wrapper
                 v-if="field.type == 'd'"
-                v-model="completeContent[i].data"
+                v-model="content[field.id].data"
             >
                 <flat-pickr
-                    v-model="completeContent[i].data"
+                    v-model="content[field.id].data"
                     class="full-width"
                     :config="$root.flatPickrConfig"
                 />
             </reset-wrapper>
             <reset-wrapper
                 v-if="field.type == 'dt'"
-                v-model="completeContent[i].data"
+                v-model="content[field.id].data"
             >
                 <flat-pickr
-                    v-model="completeContent[i].data"
+                    v-model="content[field.id].data"
                     class="full-width"
                     :config="$root.flatPickrTimeConfig"
                 />
             </reset-wrapper>
             <file-upload-input
                 v-else-if="field.type == 'f'"
-                :placeholder="completeContent[i].data ? completeContent[i].data.file_name : null"
+                :placeholder="content[field.id].data ? content[field.id].data.file_name : null"
                 :acceptedFiletype="field.options ? '.' + field.options.split(', ').join(', .') : '*/*'"
                 :maxSizeBytes="$root.maxFileSizeBytes"
                 :autoUpload="true"
                 :aID="$route.params.aID"
-                :contentID="completeContent[i].contentID"
+                :contentID="content[field.id].contentID"
                 @uploadingFile="$emit('uploadingFile')"
                 @fileUploadFailed="$emit('finishedUploadingFile')"
-                @fileUploadSuccess="completeContent[i].data = $event; $emit('finishedUploadingFile')"
+                @fileUploadSuccess="content[field.id].data = $event; $emit('finishedUploadingFile')"
             />
             <b-input
                 v-else-if="field.type == 'v'"
-                v-model="completeContent[i].data"
+                v-model="content[field.id].data"
                 placeholder="Enter a YouTube URL"
                 class="theme-input"
             />
             <text-editor
                 v-else-if="field.type == 'rt'"
-                :id="'rich-text-editor-field-' + i"
-                :key="'rich-text-editor-field-' + i"
-                v-model="completeContent[i].data"
+                :id="'rich-text-editor-field-' + field.id"
+                :key="'rich-text-editor-field-' + field.id"
+                v-model="content[field.id].data"
                 @startedUploading="$emit('uploadingFile')"
                 @finishedUploading="$emit('finishedUploadingFile')"
             />
             <url-input
                 v-else-if="field.type == 'u'"
                 placeholder="Enter a URL"
-                @correctUrlInput="completeContent[i].data = $event"
+                @correctUrlInput="content[field.id].data = $event"
             />
             <b-form-select
                 v-else-if="field.type == 's'"
-                v-model="completeContent[i].data"
+                v-model="content[field.id].data"
                 :options="parseSelectionOptions(field.options)"
                 class="theme-select"
             />
@@ -85,7 +85,7 @@
     <!-- Display section -->
     <div v-else>
         <div
-            v-for="field in fieldsToDisplay"
+            v-for="field in displayFields"
             :key="`node-${nodeID}-field-${field.id}`"
             class="multi-form"
         >
@@ -99,37 +99,37 @@
             <span
                 v-if="field.type == 't'"
                 class="show-enters"
-            >{{ completeContent[field.location].data }}</span>
+            >{{ content[field.id].data }}</span>
             <span
                 v-else-if="field.type == 'd'"
                 class="show-enters"
-            >{{ $root.beautifyDate(completeContent[field.location].data, true, false) }}</span>
+            >{{ $root.beautifyDate(content[field.id].data, true, false) }}</span>
             <span
                 v-else-if="field.type == 'dt'"
                 class="show-enters"
-            >{{ $root.beautifyDate(completeContent[field.location].data) }}</span>
+            >{{ $root.beautifyDate(content[field.id].data) }}</span>
             <file-display
                 v-else-if="field.type == 'f'"
-                :file="completeContent[field.location].data"
+                :file="content[field.id].data"
             />
             <b-embed
                 v-else-if="field.type == 'v'"
-                :src="youtubeEmbedFromURL(completeContent[field.location].data)"
+                :src="youtubeEmbedFromURL(content[field.id].data)"
                 type="iframe"
                 aspect="16by9"
                 allowfullscreen
             />
             <sandboxed-iframe
                 v-else-if="field.type == 'rt'"
-                :content="completeContent[field.location].data"
+                :content="content[field.id].data"
             />
             <a
                 v-else-if="field.type == 'u'"
-                :href="completeContent[field.location].data"
+                :href="content[field.id].data"
             >
-                {{ completeContent[field.location].data }}
+                {{ content[field.id].data }}
             </a>
-            <span v-else-if="field.type == 's'">{{ completeContent[field.location].data }}</span>
+            <span v-else-if="field.type == 's'">{{ content[field.id].data }}</span>
         </div>
     </div>
 </template>
@@ -153,34 +153,27 @@ export default {
         template: {
             required: true,
         },
-        completeContent: {
+        content: {
             default: false,
         },
-        displayMode: {
+        edit: {
             type: Boolean,
             required: true,
         },
         nodeID: {
             required: true,
         },
-        journalID: {
-            default: null,
-            required: false,
-        },
         entryID: {
             default: '-1',
         },
     },
     computed: {
-        fieldsToDisplay () {
-            return this.template.field_set.filter((field, i) => (field.required || this.completeContent[i].data))
+        orderedFields () {
+            return this.template.field_set.slice().sort((a, b) => a.location - b.location)
         },
-        fieldsToEdit () {
-            return this.template.field_set
+        displayFields () {
+            return this.orderedFields.filter(field => this.content[field.id].data)
         },
-    },
-    created () {
-        this.template.field_set.sort((a, b) => a.location - b.location)
     },
     methods: {
         // from https://stackoverflow.com/a/9102270
@@ -203,11 +196,11 @@ export default {
             return options
         },
         checkChanges () {
-            for (let i = 0; i < this.completeContent.length; i++) {
-                if (this.completeContent[i].data !== null && this.completeContent[i].data !== '') {
-                    return true
-                }
-            }
+            // for (let i = 0; i < this.content.length; i++) {
+            //     if (this.content[field.id].data !== null && this.content[field.id].data !== '') {
+            //         return true
+            //     }
+            // }
             return false
         },
     },

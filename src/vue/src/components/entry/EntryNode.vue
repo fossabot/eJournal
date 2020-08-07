@@ -29,8 +29,8 @@
             />
             <entry-fields
                 :template="entryNode.entry.template"
-                :completeContent="completeContent"
-                :displayMode="false"
+                :content="entryNode.entry.content"
+                :edit="true"
                 :nodeID="entryNode.nID"
                 :entryID="entryNode.entry.id"
                 @uploadingFile="uploadingFiles ++"
@@ -104,8 +104,8 @@
             <entry-fields
                 :nodeID="entryNode.nID"
                 :template="entryNode.entry.template"
-                :completeContent="completeContent"
-                :displayMode="true"
+                :content="entryNode.entry.content"
+                :edit="false"
                 :journalID="journal.id"
                 :entryID="entryNode.entry.id"
             />
@@ -159,7 +159,6 @@ export default {
             saveEditMode: 'Edit',
             tempNode: this.entryNode,
             matchEntry: 0,
-            completeContent: [],
 
             dismissSecs: 3,
             dismissCountDown: 0,
@@ -174,29 +173,22 @@ export default {
     },
     watch: {
         entryNode () {
-            this.completeContent = []
             this.tempNode = this.entryNode
             this.saveEditMode = 'Edit'
-            this.setContent()
         },
-    },
-    created () {
-        this.setContent()
     },
     methods: {
         saveEdit () {
             if (this.saveEditMode === 'Save') {
                 if (this.checkFilled()) {
                     this.saveEditMode = 'Edit'
-                    this.tempNode.entry.content = this.completeContent
+                    // this.tempNode.entry.content = this.completeContent
                     this.$emit('edit-node', this.tempNode)
                 } else {
                     this.dismissCountDown = this.dismissSecs
                 }
             } else {
                 this.saveEditMode = 'Save'
-                this.completeContent = []
-                this.setContent()
             }
         },
         deleteEntry () {
@@ -206,45 +198,16 @@ export default {
         },
         cancel () {
             this.saveEditMode = 'Edit'
-            this.completeContent = []
-            this.setContent()
-        },
-        setContent () {
-            let matchFound
-            /* Loads in the data of an entry in the right order by matching
-             * the different data-fields with the corresponding template-IDs. */
-            this.entryNode.entry.template.field_set.sort((a, b) => a.location - b.location).forEach((templateField) => {
-                matchFound = false
-
-                matchFound = this.entryNode.entry.content.some((content) => {
-                    if (content.field === templateField.id) {
-                        this.completeContent.push({
-                            data: content.data,
-                            id: content.field,
-                            contentID: content.id,
-                        })
-
-                        return true
-                    }
-                    return false
-                })
-
-                if (!matchFound) {
-                    this.completeContent.push({
-                        data: null,
-                        id: templateField.id,
-                    })
-                }
-            })
         },
         checkFilled () {
-            for (let i = 0; i < this.completeContent.length; i++) {
-                const content = this.completeContent[i]
-                const field = this.entryNode.entry.template.field_set.sort((a, b) => a.location - b.location)[i]
-                if (field.required && !content.data) {
-                    return false
-                }
-            }
+            // TODO: CHECK FILLED
+            // for (let i = 0; i < this.completeContent.length; i++) {
+            //     const content = this.completeContent[i]
+            //     const field = this.entryNode.entry.template.field_set.sort((a, b) => a.location - b.location)[i]
+            //     if (field.required && !content.data) {
+            //         return false
+            //     }
+            // }
 
             return true
         },

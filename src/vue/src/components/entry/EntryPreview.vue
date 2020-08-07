@@ -18,8 +18,8 @@
 
             <entry-fields
                 :template="template"
-                :completeContent="completeContent"
-                :displayMode="false"
+                :content="newEntryContent"
+                :edit="true"
                 :nodeID="nID"
                 @uploadingFile="uploadingFiles ++"
                 @finishedUploadingFile="uploadingFiles --"
@@ -73,49 +73,34 @@ export default {
     },
     data () {
         return {
-            completeContent: [],
             dismissSecs: 3,
             dismissCountDown: 0,
             showDismissibleAlert: false,
             saveRequestInFlight: false,
             uploadingFiles: 0,
+            newEntryContent: {},
         }
     },
-    watch: {
-        template () {
-            this.completeContent = []
-            this.setContent()
-        },
-    },
-    created () {
-        this.setContent()
-    },
     methods: {
-        setContent () {
-            this.template.field_set.forEach((field) => {
-                this.completeContent.push({
-                    data: null,
-                    id: field.id,
-                })
-            })
-        },
         checkFilled () {
-            for (let i = 0; i < this.completeContent.length; i++) {
-                const content = this.completeContent[i]
-                const field = this.template.field_set[i]
-                if (field.required && !content.data) {
-                    return false
-                }
-            }
+            // TODO: CHECK FILLED
+            // for (let i = 0; i < this.completeContent.length; i++) {
+            //     const content = this.completeContent[i]
+            //     const field = this.template.field_set[i]
+            //     if (field.required && !content.data) {
+            //         return false
+            //     }
+            // }
 
             return true
         },
         checkChanges () {
-            for (let i = 0; i < this.completeContent.length; i++) {
-                if (this.completeContent[i].data !== null && this.completeContent[i].data !== '') {
-                    return true
-                }
-            }
+            // TODO: CHECK CHANGES
+            // for (let i = 0; i < this.completeContent.length; i++) {
+            //     if (this.completeContent[i].data !== null && this.completeContent[i].data !== '') {
+            //         return true
+            //     }
+            // }
             return false
         },
         save () {
@@ -123,7 +108,7 @@ export default {
                 const params = {
                     journal_id: this.jID,
                     template_id: this.template.id,
-                    content: this.completeContent,
+                    content: this.newEntryContent,
                 }
                 if (this.nID > 0) {
                     params.node_id = this.nID

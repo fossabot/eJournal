@@ -67,9 +67,8 @@
                 <entry-fields
                     :nodeID="entryNode.nID"
                     :template="entryNode.entry.template"
-                    :completeContent="completeContent"
-                    :displayMode="true"
-                    :journalID="journal.id"
+                    :content="entryNode.entry.content"
+                    :edit="false"
                     :entryID="entryNode.entry.id"
                 />
             </div>
@@ -181,7 +180,6 @@ export default {
     props: ['entryNode', 'journal', 'assignment'],
     data () {
         return {
-            completeContent: [],
             gradeHistory: [],
             grade: {
                 grade: '',
@@ -196,9 +194,6 @@ export default {
     },
     watch: {
         entryNode () {
-            this.completeContent = []
-            this.setContent()
-
             if (this.entryNode.entry && this.entryNode.entry.grade) {
                 this.grade = this.entryNode.entry.grade
             } else {
@@ -210,8 +205,6 @@ export default {
         },
     },
     created () {
-        this.setContent()
-
         if (this.entryNode.entry && this.entryNode.entry.grade) {
             this.grade = this.entryNode.entry.grade
         } else {
@@ -222,39 +215,6 @@ export default {
         }
     },
     methods: {
-        setContent () {
-            /* Loads in the data of an entry in the right order by matching
-             * the different data-fields with the corresponding template-IDs. */
-            let matchFound
-
-            if (this.entryNode.entry) {
-                this.entryNode.entry.template.field_set.sort((a, b) => a.location - b.location)
-                    .forEach((templateField) => {
-                        matchFound = false
-
-                        matchFound = this.entryNode.entry.content.some((content) => {
-                            if (content.field === templateField.id) {
-                                this.completeContent.push({
-                                    data: content.data,
-                                    id: content.field,
-                                    contentID: content.id,
-                                })
-
-                                return true
-                            }
-
-                            return false
-                        })
-
-                        if (!matchFound) {
-                            this.completeContent.push({
-                                data: null,
-                                id: templateField.id,
-                            })
-                        }
-                    })
-            }
-        },
         changeButtonOption (option) {
             preferencesAPI.update(this.$store.getters['user/uID'], { grade_button_setting: option })
                 .then((preferences) => {

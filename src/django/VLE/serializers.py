@@ -604,7 +604,12 @@ class EntrySerializer(serializers.ModelSerializer):
         return TemplateSerializer(entry.template).data
 
     def get_content(self, entry):
-        return ContentSerializer(entry.content_set.all(), many=True).data
+        content_dict = {}
+
+        for content in entry.content_set.all():
+            content_dict[content.field.id] = ContentSerializer(content).data
+
+        return content_dict
 
     def get_editable(self, entry):
         return entry.is_editable()
