@@ -11,7 +11,7 @@
         <b-card
             v-if="saveEditMode == 'Save'"
             class="no-hover"
-            :class="$root.getBorderClass(cID)"
+            :class="$root.getBorderClass($route.params.cID)"
         >
             <div
                 v-if="gradePublished"
@@ -153,12 +153,11 @@ export default {
         entryFields,
         sandboxedIframe,
     },
-    props: ['entryNode', 'cID', 'journal', 'assignment'],
+    props: ['entryNode', 'journal', 'assignment'],
     data () {
         return {
             saveEditMode: 'Edit',
             tempNode: this.entryNode,
-            matchEntry: 0,
             completeContent: [],
 
             dismissSecs: 3,

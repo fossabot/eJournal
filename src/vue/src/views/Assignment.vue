@@ -132,7 +132,7 @@
             </b-modal>
 
             <b-modal
-                ref="teacherInitiatedEntries"
+                ref="teacherEntries"
                 title="Post teacher entries"
                 size="lg"
                 hideFooter
@@ -144,10 +144,10 @@
                     </h2>
 
                     <hr/>
-                    <teacher-initiated-entries
+                    <teacher-entries
                         :aID="aID"
                         :assignmentJournals="assignmentJournals"
-                        @entries-created="hideModal('teacherInitiatedEntries')"
+                        @entries-created="hideModal('teacherEntries')"
                     />
                 </b-card>
             </b-modal>
@@ -379,7 +379,7 @@
                 <b-button
                     v-if="true"
                     class="add-button multi-form full-width"
-                    @click="showModal('teacherInitiatedEntries')"
+                    @click="showModal('teacherEntries')"
                 >
                     <icon name="plus"/>
                     Post teacher entries
@@ -397,7 +397,7 @@ import ContentColumns from '@/components/columns/ContentColumns.vue'
 import LoadWrapper from '@/components/loading/LoadWrapper.vue'
 import MainCard from '@/components/assets/MainCard.vue'
 import StatisticsCard from '@/components/assignment/StatisticsCard.vue'
-import TeacherInitiatedEntries from '@/components/assignment/TeacherInitiatedEntries.vue'
+import TeacherEntries from '@/components/assignment/TeacherEntries.vue'
 import JournalCard from '@/components/assignment/JournalCard.vue'
 
 import store from '@/Store.vue'
@@ -419,7 +419,7 @@ export default {
         LoadWrapper,
         MainCard,
         StatisticsCard,
-        TeacherInitiatedEntries,
+        TeacherEntries,
     },
     props: {
         cID: {

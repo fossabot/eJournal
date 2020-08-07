@@ -11,7 +11,7 @@ import VLE.utils.entry_utils as entry_utils
 import VLE.utils.file_handling as file_handling
 import VLE.utils.generic_utils as utils
 import VLE.utils.responses as response
-from VLE.models import Assignment, Entry, Field, FileContext, Node, Template
+from VLE.models import Assignment, Entry, Field, FileContext, TeacherEntry, Template
 from VLE.utils import grading
 
 
@@ -29,13 +29,14 @@ class TeacherEntryView(viewsets.ViewSet):
         Deletes remaining temporary user files if successful.
 
         Arguments:
-        request -- the request that was send with
-            journal_id -- the journal id
+        request -- the request that was sent with
+            assignment_id -- the assignment id to which the entry belongs
             template_id -- the template id to create the entry with
             content -- the list of {tag, data} tuples to bind data to a template field.
+            journal_ids -- the journal ids of all journals to which the entry should be added
         """
-        assignment_id, template_id, journal_ids, content_list = utils.required_params(
-            request.data, "assignment_id", "template_id", "journal_ids", "content")
+        assignment_id, template_id, content_list, journal_ids = utils.required_params(
+            request.data, "assignment_id", "template_id", "content", "journal_ids")
 
         assignment = Assignment.objects.get(pk=assignment_id)
         template = Template.objects.get(pk=template_id)
@@ -48,7 +49,7 @@ class TeacherEntryView(viewsets.ViewSet):
 
         entry_utils.check_fields(template, content_list)
 
-        entry = factory.make_teacher_entry(template)
+        teacher_entry = factory.make_teacher_entry(template)
 
         try:
             files_to_establish = []
@@ -59,7 +60,7 @@ class TeacherEntryView(viewsets.ViewSet):
                 if data is not None and field.type == field.FILE:
                     data, = utils.required_typed_params(data, (str, 'id'))
 
-                created_content = factory.make_content(entry, data, field)
+                created_content = factory.make_content(teacher_entry, data, field)
 
                 if field.type == field.FILE:
                     if field.required and not data:
@@ -72,9 +73,9 @@ class TeacherEntryView(viewsets.ViewSet):
                 if field.type == Field.RICH_TEXT:
                     files_to_establish += [(f, created_content) for f in file_handling.get_files_from_rich_text(data)]
 
-        # If anything fails during creation of the entry, delete the entry
+        # If anything fails during creation of the teacher_entry, delete the teacher_entry
         except Exception as e:
-            entry.delete()
+            teacher_entry.delete()
 
             # If it is a file issue, raise with propper response, else respond with the exception that was raised
             if type(e) == FileContext.DoesNotExist:
@@ -89,25 +90,20 @@ class TeacherEntryView(viewsets.ViewSet):
         # Delete old user files
         file_handling.remove_unused_user_files(request.user)
 
-        return response.created({})
+        # TODO TEACHERENTRY: Add entry to all student journals along with specified grade.
+
+        return response.created({
+            'teacher_entry': serialize.TeacherEntrySerializer(teacher_entry).data
+        })
 
     def partial_update(self, request, *args, **kwargs):
         """Update an existing teacher entry.
 
         Arguments:
-        request -- request data
-            data -- the new data for the course
-        pk -- assignment ID
+
 
         Returns:
-        On failure:
-            unauthorized -- when the user is not logged in
-            not found -- when the entry does not exist
-            forbidden -- User not allowed to edit this entry
-            unauthorized -- when the user is unauthorized to edit the entry
-            bad_request -- when there is invalid data in the request
-        On success:
-            success -- with the new entry data
+
 
         """
         content_list, = utils.required_params(request.data, 'content')
@@ -184,7 +180,7 @@ class TeacherEntryView(viewsets.ViewSet):
         return response.success({'entry': serialize.EntrySerializer(entry, context={'user': request.user}).data})
 
     def destroy(self, request, *args, **kwargs):
-        """Delete an entry and the node it belongs to.
+        """Delete a teacher entry and all instances of it.
 
         Arguments:
         request -- request data
@@ -200,24 +196,10 @@ class TeacherEntryView(viewsets.ViewSet):
         """
         pk, = utils.required_typed_params(kwargs, (int, 'pk'))
 
-        entry = Entry.objects.get(pk=pk)
-        journal = entry.node.journal
-        assignment = journal.assignment
+        teacher_entry = TeacherEntry.objects.get(pk=pk)
+        assignment = teacher_entry.assignment
 
-        if journal.authors.filter(user=request.user).exists():
-            request.user.check_permission('can_have_journal', assignment, 'You are not allowed to delete entries.')
-            if entry.is_graded():
-                return response.forbidden('You are not allowed to delete graded entries.')
-            if entry.is_locked():
-                return response.forbidden('You are not allowed to delete locked entries.')
-            if assignment.is_locked():
-                return response.forbidden('You are not allowed to delete entries in a locked assignment.')
-        elif not request.user.is_superuser:
-            return response.forbidden('You are not allowed to delete someone else\'s entry.')
-        if len(journal.needs_lti_link) > 0:
-            return response.forbidden(journal.outdated_link_warning_msg)
+        request.user.check_permission('can_have_journal', assignment, 'You are not allowed to post or delete teacher '
+                                      'entries.')
 
-        if entry.node.type != Node.ENTRYDEADLINE:
-            entry.node.delete()
-        entry.delete()
-        return response.success(description='Successfully deleted entry.')
+        return response.success(description='Successfully deleted teacher entry.')

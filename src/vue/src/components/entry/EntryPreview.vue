@@ -97,10 +97,6 @@ export default {
             showDismissibleAlert: false,
             saveRequestInFlight: false,
             uploadingFiles: 0,
-
-            // For teacher-initated entries a grade can be added right away.
-            teacherEntryGrade: null,
-            teacherEntryPublishGrade: false,
         }
     },
     watch: {

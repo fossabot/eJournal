@@ -13,7 +13,7 @@ from rest_framework import serializers
 import VLE.permissions as permissions
 from VLE.models import (Assignment, AssignmentParticipation, Comment, Content, Course, Entry, Field, FileContext,
                         Format, Grade, Group, Instance, Journal, Node, Participation, Preferences, PresetNode, Role,
-                        Template, TeacherEntry, User)
+                        TeacherEntry, Template, User)
 from VLE.utils import generic_utils as utils
 from VLE.utils.error_handling import VLEParticipationError, VLEProgrammingError
 
