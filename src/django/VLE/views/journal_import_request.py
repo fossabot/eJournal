@@ -22,7 +22,10 @@ class JournalImportRequestView(viewsets.ViewSet):
         # QUESTION: How to work with JIRs of which the requestee cannot see the source? The source journal IS serialized
 
         serializer = JournalImportRequestSerializer(
-            journal_target.import_request_target.all(), context={'user': request.user}, many=True)
+            journal_target.import_request_target.filter(state=JournalImportRequest.PENDING),
+            context={'user': request.user},
+            many=True
+        )
         return response.success({'journal_import_requests': serializer.data})
 
     def create(self, request):
@@ -49,3 +52,35 @@ class JournalImportRequestView(viewsets.ViewSet):
 
         serializer = JournalImportRequestSerializer(jir, many=False, context={'user': request.user})
         return response.created({'journal_import_request': serializer.data})
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Handles the processing of a pending JIR. There are three possible outcomes:
+
+        - Decline the request
+        - Approve import including any previous grades
+        - Approve import without any of the previous grades
+
+        The processed JIR instance is stored as history.
+        """
+        pk, = utils.required_typed_params(kwargs, (int, 'pk'))
+        jir_action, = utils.required_typed_params(request.data, (str, 'jir_action'))
+
+        jir = JournalImportRequest.objects.get(pk=pk, state=JournalImportRequest.PENDING)
+
+        if not any([jir_action == abbr and abbr != jir.PENDING for (abbr, _) in jir.STATES]):
+            return response.bad_request('Unknown journal import request action.')
+
+        # QUESTION: Does the approving user also need grade permissions (or atleast view permissions) of the source?
+        # Since after the import, the source is viewable by the approving user.
+
+        if not request.user.has_permission('can_grade', jir.target.assignment):
+            return response.forbidden('You require the ability to grade the journal in order to approve the import.')
+
+        # TODO JIR: Update process logic
+
+        jir.processor = request.user
+        jir.state = jir_action
+        jir.save()
+
+        return response.success(description='Successfully deleted entry.')

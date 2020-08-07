@@ -62,20 +62,20 @@
 
                         <hr/>
 
-                        <h5>How should the import request be processed?</h5>
+                        How should the import request be processed?
 
                         <b-form-select
                             v-model="jirAction"
                             :selectSize="1"
                             class="theme-select multi-form"
                         >
-                            <option value="grades">
+                            <option value="AIG">
                                 Import including grades
                             </option>
-                            <option value="no-grades">
+                            <option value="AEG">
                                 Import excluding grades
                             </option>
-                            <option value="decline">
+                            <option value="DEC">
                                 Decline
                             </option>
                         </b-form-select>
@@ -138,7 +138,10 @@ export default {
         },
         handleJIR (jir, i) {
             // TODO are you sure, send to backend
-            this.$delete(this.jirs, i)
+            journalImportRequestAPI.update(jir.id, this.jirAction).then(() => { this.$delete(this.jirs, i) })
+            if (!this.jirs) {
+                this.$root.$emit('bv::hide::modal', this.modalID)
+            }
         },
     },
 }

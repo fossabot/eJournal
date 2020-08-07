@@ -10,4 +10,9 @@ export default {
         return auth.create('journal_import_request', data, connArgs)
             .then(response => response.data.journal_import_request)
     },
+
+    update (id, jirAction, connArgs = auth.DEFAULT_CONN_ARGS) {
+        return auth.update(`journal_import_request/${id}`, { jir_action: jirAction }, connArgs)
+            .then(response => response.data)
+    },
 }
