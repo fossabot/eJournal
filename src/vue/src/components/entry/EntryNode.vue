@@ -1,6 +1,7 @@
 <template>
     <div>
         <!-- Edit mode. -->
+        {{ entryNode }}
         <b-card
             v-if="saveEditMode == 'Save'"
             class="no-hover"
@@ -22,7 +23,7 @@
             />
             <entry-fields
                 :template="entryNode.entry.template"
-                :content="entryNode.entry.content"
+                :content="editContent"
                 :edit="true"
                 :nodeID="entryNode.nID"
                 :entryID="entryNode.entry.id"
@@ -150,7 +151,7 @@ export default {
     data () {
         return {
             saveEditMode: 'Edit',
-            tempNode: this.entryNode,
+            editContent: () => Object(),
             matchEntry: 0,
 
             dismissSecs: 3,
@@ -165,9 +166,12 @@ export default {
         },
     },
     watch: {
-        entryNode () {
-            this.tempNode = this.entryNode
-            this.saveEditMode = 'Edit'
+        entryNode: {
+            immediate: true,
+            handler () {
+                this.editContent = Object.assign({}, this.entryNode.entry.content)
+                this.saveEditMode = 'Edit'
+            },
         },
     },
     methods: {
@@ -175,8 +179,7 @@ export default {
             if (this.saveEditMode === 'Save') {
                 if (this.checkFilled()) {
                     this.saveEditMode = 'Edit'
-                    // this.tempNode.entry.content = this.completeContent
-                    this.$emit('edit-node', this.tempNode)
+                    this.$emit('edit-content', this.editContent)
                 } else {
                     this.dismissCountDown = this.dismissSecs
                 }

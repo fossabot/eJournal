@@ -607,7 +607,8 @@ class EntrySerializer(serializers.ModelSerializer):
         content_dict = {}
 
         for content in entry.content_set.all():
-            content_dict[content.field.id] = ContentSerializer(content).data
+            # Only include the actual content (so e.g. text).
+            content_dict[content.field.id] = ContentSerializer(content).data['data']
 
         return content_dict
 

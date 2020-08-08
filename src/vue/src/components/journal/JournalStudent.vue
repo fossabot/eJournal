@@ -62,7 +62,7 @@
                                 :assignment="assignment"
                                 :cID="cID"
                                 :entryNode="nodes[currentNode]"
-                                @edit-node="adaptData"
+                                @edit-content="editContent"
                                 @delete-node="deleteNode"
                             />
                         </div>
@@ -74,7 +74,7 @@
                                     :assignment="assignment"
                                     :cID="cID"
                                     :entryNode="nodes[currentNode]"
-                                    @edit-node="adaptData"
+                                    @edit-content="editContent"
                                     @delete-node="deleteNode"
                                 />
                             </div>
@@ -250,9 +250,8 @@ export default {
             .then((journal) => { this.journal = journal })
     },
     methods: {
-        adaptData (editedData) {
-            // this.nodes[this.currentNode] = editedData
-            entryAPI.update(this.nodes[this.currentNode].entry.id, { content: editedData.entry.content })
+        editContent (content) {
+            entryAPI.update(this.nodes[this.currentNode].entry.id, { content })
                 .then((entry) => { this.nodes[this.currentNode].entry = entry })
         },
         deleteNode () {
