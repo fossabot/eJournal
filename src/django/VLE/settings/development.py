@@ -24,7 +24,7 @@ CORS_ORIGIN_ALLOW_ALL = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = True
 
-INSTALLED_APPS += ['silk']
+INSTALLED_APPS += ['silk', 'django_extensions']
 
 MIDDLEWARE = [
     'silk.middleware.SilkyMiddleware',
