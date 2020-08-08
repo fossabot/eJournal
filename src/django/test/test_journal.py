@@ -3,10 +3,11 @@ from test.utils import api
 
 from computedfields.models import update_dependent
 from django.conf import settings
-from django.test import TestCase
 from django.db.models import Q
+from django.test import TestCase
+
 import VLE.factory
-from VLE.models import AssignmentParticipation, Journal, User, Course, Assignment, Node, Entry, Template, Content
+from VLE.models import Assignment, AssignmentParticipation, Content, Course, Entry, Journal, Node, Template, User
 from VLE.utils.error_handling import VLEBadRequest
 
 

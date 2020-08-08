@@ -1580,11 +1580,13 @@ class JournalImportRequest(CreateUpdateModel):
     DECLINED = 'DEC'
     APPROVED_INC_GRADES = 'AIG'
     APPROVED_EXC_GRADES = 'AEG'
+    EMPTY_WHEN_PROCESSED = 'EWP'
     STATES = (
         (PENDING, 'Pending'),
         (DECLINED, 'Declined'),
         (APPROVED_INC_GRADES, 'Approved including grades'),
-        (APPROVED_EXC_GRADES, 'Approved excluding grades')
+        (APPROVED_EXC_GRADES, 'Approved excluding grades'),
+        (EMPTY_WHEN_PROCESSED, 'Empty when processed')
     )
 
     state = models.CharField(
@@ -1628,7 +1630,9 @@ class JournalImportRequest(CreateUpdateModel):
             self.APPROVED_INC_GRADES:
                 'The journal import request has been succesfully approved including all previous grades.',
             self.APPROVED_EXC_GRADES:
-                'The journal import request has been succesfully approved excluding all previous grades.'
+                'The journal import request has been succesfully approved excluding all previous grades.',
+            self.EMPTY_WHEN_PROCESSED:
+                'The source journal no longer has entries to import, the request has been archived.'
         }
 
         return responses[self.state]

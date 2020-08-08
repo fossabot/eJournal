@@ -2,8 +2,9 @@ from rest_framework import viewsets
 
 import VLE.utils.generic_utils as utils
 import VLE.utils.responses as response
-from VLE.models import AssignmentParticipation, Entry, Journal, JournalImportRequest
+from VLE.models import AssignmentParticipation, Entry, Journal, JournalImportRequest, Comment, FileContext, Content
 from VLE.serializers import JournalImportRequestSerializer
+from django.core.files.base import ContentFile
 
 
 class JournalImportRequestView(viewsets.ViewSet):
@@ -68,7 +69,8 @@ class JournalImportRequestView(viewsets.ViewSet):
 
         jir = JournalImportRequest.objects.get(pk=pk, state=JournalImportRequest.PENDING)
 
-        if not any([jir_action == abbr and abbr != jir.PENDING for (abbr, _) in jir.STATES]):
+        allowed_actions = [abbr for (abbr, _) in jir.STATES if (abbr not in [jir.PENDING, jir.EMPTY_WHEN_PROCESSED])]
+        if jir_action not in allowed_actions:
             return response.bad_request('Unknown journal import request action.')
 
         # QUESTION: Does the approving user also need grade permissions (or atleast view permissions) of the source?
@@ -77,10 +79,81 @@ class JournalImportRequestView(viewsets.ViewSet):
         if not request.user.has_permission('can_grade', jir.target.assignment):
             return response.forbidden('You require the ability to grade the journal in order to approve the import.')
 
-        # TODO JIR: Update process logic
+        source_entries = Entry.objects.filter(node__journal=jir.source)
+
+        if not source_entries.exists():
+            jir.state = jir.EMPTY_WHEN_PROCESSED
+
+        # TODO JIR: Create differentiating labels indiciting the entry was imported
+        for entry in source_entries:
+            contents = Content.objects.filter(entry=entry)
+            comments = Comment.objects.filter(node=entry.node)
+
+            entry.pk = None
+            # TODO JIR: Can we keep the old template or does it need to be duplicated to the new assignment
+            if jir_action == jir.APPROVED_EXC_GRADES:
+                entry.grade = None
+            entry.save()
+
+            node = entry.node
+            # TODO JIR: If a link to presetnode exists can this be maintained? node.preset.format.assignment will diff
+            node.pk = None
+            node.entry = entry
+            node.journal = jir.target
+            node.save()
+
+            # TODO JIR: Double check if the one to one relation Entry -- Node is correct on the entry side
+
+            # TODO JIR, move to function (for testing)
+            for comment in comments:
+                comment.pk = None
+                comment.node = node
+                comment.save()
+
+                # TODO JIR, check whether this approach accurately captures both attached files as embedded in text
+                # TODO JIR, doublecheck if FCs indeed cannot be temp if comment context is set
+                for old_fc in FileContext.objects.filter(comment=comment, is_temp=False):
+                    new_fc = FileContext.objects.create(
+                        file=ContentFile(old_fc.file.file.read(), name=old_fc.file_name),
+                        file_name=old_fc.file_name,
+                        author=old_fc.author,
+                        is_temp=old_fc.is_temp,
+                        creation_date=old_fc.creation_date,
+                        last_edited=old_fc.last_edited,
+                        comment=comment,
+                        journal=jir.target,
+                        in_rich_text=old_fc.in_rich_text
+                    )
+
+                    comment.text = comment.text.replace(
+                        '?access_id={}'.format(old_fc.access_id), '?access_id={}'.format(new_fc.access_id))
+                    comment.save()
+
+            # TODO JIR, move to function (for testing), also copy any files associated with the content
+            for content in contents:
+                content.pk = None
+                # Can the old Field link remain intact? field.template.format.assignment will be different
+                content.entry = entry
+                content.save()
+
+                # TODO JIR, doublecheck if FCs indeed cannot be temp if comment context is set
+                for old_fc in FileContext.objects.filter(content=content, is_temp=False):
+                    new_fc = FileContext.objects.create(
+                        file=ContentFile(old_fc.file.file.read(), name=old_fc.file_name),
+                        file_name=old_fc.file_name,
+                        author=old_fc.author,
+                        is_temp=old_fc.is_temp,
+                        creation_date=old_fc.creation_date,
+                        last_edited=old_fc.last_edited,
+                        content=content,
+                        journal=jir.target,
+                        in_rich_text=old_fc.in_rich_text
+                    )
+
+            # TODO JIR: Notify teacher of new entry / grades
+            # grading.task_journal_status_to_LMS.delay(journal.pk)
 
         jir.processor = request.user
-        jir.state = jir_action
         jir.save()
 
         return response.success(description='Successfully update journal import request.')
