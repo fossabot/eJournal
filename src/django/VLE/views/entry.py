@@ -138,7 +138,6 @@ class EntryView(viewsets.ViewSet):
 
         """
         content_dict, = utils.required_params(request.data, 'content')
-        print(content_dict)
         entry_id, = utils.required_typed_params(kwargs, (int, 'pk'))
         entry = Entry.objects.get(pk=entry_id)
         journal = entry.node.journal
