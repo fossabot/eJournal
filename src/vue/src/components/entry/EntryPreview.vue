@@ -1,7 +1,3 @@
-<!--
-    Loads a preview of an Entry-Template and returns the filled in data to
-    the parent once it's saved.
--->
 <template>
     <div>
         <b-card

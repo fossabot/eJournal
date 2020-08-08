@@ -1,10 +1,3 @@
-<!--
-    Loads in an entry for a student, which was previously filled in
-    by the student using an Add-Node or an empty Deadline-Entry-Node.
-    It will also show the grade once it's published by responsible user
-    and give a possibility to edit an entry if it still has the
-    needed privileges.
- -->
 <template>
     <div>
         <!-- Edit mode. -->

@@ -17,69 +17,72 @@
                 :content="field.description"
             />
 
-            <b-input
-                v-if="field.type == 't'"
-                v-model="content[field.id].data"
-                class="theme-input"
-                rows="1"
-            />
-            <reset-wrapper
-                v-if="field.type == 'd'"
-                v-model="content[field.id].data"
-            >
-                <flat-pickr
-                    v-model="content[field.id].data"
-                    class="full-width"
-                    :config="$root.flatPickrConfig"
+            <div :class="{ 'input-disabled': readOnly }">
+                <b-input
+                    v-if="field.type == 't'"
+                    v-model="content[field.id]"
+                    class="theme-input"
+                    rows="1"
                 />
-            </reset-wrapper>
-            <reset-wrapper
-                v-if="field.type == 'dt'"
-                v-model="content[field.id].data"
-            >
-                <flat-pickr
-                    v-model="content[field.id].data"
-                    class="full-width"
-                    :config="$root.flatPickrTimeConfig"
+                <reset-wrapper
+                    v-if="field.type == 'd'"
+                    v-model="content[field.id]"
+                >
+                    <flat-pickr
+                        v-model="content[field.id]"
+                        class="full-width"
+                        :config="$root.flatPickrConfig"
+                    />
+                </reset-wrapper>
+                <reset-wrapper
+                    v-if="field.type == 'dt'"
+                    v-model="content[field.id]"
+                >
+                    <flat-pickr
+                        v-model="content[field.id]"
+                        class="full-width"
+                        :config="$root.flatPickrTimeConfig"
+                    />
+                </reset-wrapper>
+                <file-upload-input
+                    v-else-if="field.type == 'f'"
+                    :placeholder="content[field.id] ? content[field.id].file_name : null"
+                    :acceptedFiletype="field.options ? '.' + field.options.split(', ').join(', .') : '*/*'"
+                    :maxSizeBytes="$root.maxFileSizeBytes"
+                    :autoUpload="true"
+                    :aID="$route.params.aID"
+                    :contentID="content[field.id] ? content[field.id].contentID : null"
+                    @uploadingFile="$emit('uploadingFile')"
+                    @fileUploadFailed="$emit('finishedUploadingFile')"
+                    @fileUploadSuccess="content[field.id] = $event; $emit('finishedUploadingFile')"
                 />
-            </reset-wrapper>
-            <file-upload-input
-                v-else-if="field.type == 'f'"
-                :placeholder="content[field.id].data ? content[field.id].data.file_name : null"
-                :acceptedFiletype="field.options ? '.' + field.options.split(', ').join(', .') : '*/*'"
-                :maxSizeBytes="$root.maxFileSizeBytes"
-                :autoUpload="true"
-                :aID="$route.params.aID"
-                :contentID="content[field.id].contentID"
-                @uploadingFile="$emit('uploadingFile')"
-                @fileUploadFailed="$emit('finishedUploadingFile')"
-                @fileUploadSuccess="content[field.id].data = $event; $emit('finishedUploadingFile')"
-            />
-            <b-input
-                v-else-if="field.type == 'v'"
-                v-model="content[field.id].data"
-                placeholder="Enter a YouTube URL"
-                class="theme-input"
-            />
-            <text-editor
-                v-else-if="field.type == 'rt'"
-                :id="'rich-text-editor-field-' + field.id"
-                :key="'rich-text-editor-field-' + field.id"
-                v-model="content[field.id].data"
-                @startedUploading="$emit('uploadingFile')"
-                @finishedUploading="$emit('finishedUploadingFile')"
-            />
-            <url-input
-                v-else-if="field.type == 'u'"
-                placeholder="Enter a URL"
-                @correctUrlInput="content[field.id].data = $event"
-            />
-            <b-form-select
-                v-else-if="field.type == 's'"
-                v-model="content[field.id].data"
-                :options="parseSelectionOptions(field.options)"
-                class="theme-select"
-            />
+                <b-input
+                    v-else-if="field.type == 'v'"
+                    v-model="content[field.id]"
+                    placeholder="Enter a YouTube URL"
+                    class="theme-input"
+                />
+                <!-- Newly added fields in template editor have id <0. -->
+                <text-editor
+                    v-else-if="field.type == 'rt'"
+                    :id="`rich-text-editor-field-${field.id > 0 ? 'id-' + field.id : 'loc-' + field.location}`"
+                    :key="`rich-text-editor-field-${field.id > 0 ? field.id : field.location}`"
+                    v-model="content[field.id]"
+                    @startedUploading="$emit('uploadingFile')"
+                    @finishedUploading="$emit('finishedUploadingFile')"
+                />
+                <url-input
+                    v-else-if="field.type == 'u'"
+                    placeholder="Enter a URL"
+                    @correctUrlInput="content[field.id] = $event"
+                />
+                <b-form-select
+                    v-else-if="field.type == 's'"
+                    v-model="content[field.id]"
+                    :options="parseSelectionOptions(field.options)"
+                    class="theme-select"
+                />
+            </div>
         </div>
     </div>
     <!-- Display section -->
@@ -99,37 +102,37 @@
             <span
                 v-if="field.type == 't'"
                 class="show-enters"
-            >{{ content[field.id].data }}</span>
+            >{{ content[field.id] }}</span>
             <span
                 v-else-if="field.type == 'd'"
                 class="show-enters"
-            >{{ $root.beautifyDate(content[field.id].data, true, false) }}</span>
+            >{{ $root.beautifyDate(content[field.id], true, false) }}</span>
             <span
                 v-else-if="field.type == 'dt'"
                 class="show-enters"
-            >{{ $root.beautifyDate(content[field.id].data) }}</span>
+            >{{ $root.beautifyDate(content[field.id]) }}</span>
             <file-display
                 v-else-if="field.type == 'f'"
-                :file="content[field.id].data"
+                :file="content[field.id]"
             />
             <b-embed
                 v-else-if="field.type == 'v'"
-                :src="youtubeEmbedFromURL(content[field.id].data)"
+                :src="youtubeEmbedFromURL(content[field.id])"
                 type="iframe"
                 aspect="16by9"
                 allowfullscreen
             />
             <sandboxed-iframe
                 v-else-if="field.type == 'rt'"
-                :content="content[field.id].data"
+                :content="content[field.id]"
             />
             <a
                 v-else-if="field.type == 'u'"
-                :href="content[field.id].data"
+                :href="content[field.id]"
             >
-                {{ content[field.id].data }}
+                {{ content[field.id] }}
             </a>
-            <span v-else-if="field.type == 's'">{{ content[field.id].data }}</span>
+            <span v-else-if="field.type == 's'">{{ content[field.id] }}</span>
         </div>
     </div>
 </template>
@@ -154,17 +157,21 @@ export default {
             required: true,
         },
         content: {
-            default: false,
+            required: true,
         },
         edit: {
             type: Boolean,
-            required: true,
+            default: false,
+        },
+        readOnly: {
+            type: Boolean,
+            default: false,
         },
         nodeID: {
-            required: true,
+            default: -1,
         },
         entryID: {
-            default: '-1',
+            default: -1,
         },
     },
     computed: {
@@ -172,7 +179,7 @@ export default {
             return this.template.field_set.slice().sort((a, b) => a.location - b.location)
         },
         displayFields () {
-            return this.orderedFields.filter(field => this.content[field.id].data)
+            return this.orderedFields.filter(field => this.content[field.id] && this.content[field.id])
         },
     },
     methods: {
@@ -197,7 +204,7 @@ export default {
         },
         checkChanges () {
             // for (let i = 0; i < this.content.length; i++) {
-            //     if (this.content[field.id].data !== null && this.content[field.id].data !== '') {
+            //     if (this.content[field.id] !== null && this.content[field.id] !== '') {
             //         return true
             //     }
             // }

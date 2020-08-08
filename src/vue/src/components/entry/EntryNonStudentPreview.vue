@@ -1,8 +1,3 @@
-<!--
-    Loads a filled in template of an entry and the corresponding
-    comments. The teacher tools will also be loaded if the user has the
-    right permissions.
--->
 <template>
     <div v-if="entryNode.entry !== null">
         <b-card
