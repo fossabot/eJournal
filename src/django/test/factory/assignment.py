@@ -57,6 +57,7 @@ class AssignmentFactory(factory.django.DjangoModelFactory):
         self.format.template_set.add(template1)
         Field.objects.create(type=Field.TEXT, title="Title", location=1, template=template1, required=True)
         Field.objects.create(type=Field.RICH_TEXT, title="Summary", location=2, template=template1, required=True)
+
         template2 = Template.objects.create(format=self.format, name="template 2 - optional summary")
         self.format.template_set.add(template2)
         Field.objects.create(type=Field.TEXT, title="Title", location=1, template=template2, required=False)

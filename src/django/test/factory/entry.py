@@ -23,7 +23,10 @@ class EntryFactory(factory.django.DjangoModelFactory):
         self.node.type = VLE.models.Node.ENTRY
         self.node.save()
         self.node.journal.node_set.add(self.node)
-        self.template = self.node.journal.assignment.format.template_set.filter(preset_only=False).first()
+
+        if not self.template:
+            if self.node.journal.assignment.format.template_set.exists():
+                self.template = self.node.journal.assignment.format.template_set.filter(preset_only=False).first()
         self.author = self.node.journal.authors.first().user
         self.save()
 

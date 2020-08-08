@@ -50,6 +50,13 @@ class GroupJournalFactory(JournalFactory):
     author_limit = 3
 
 
+class PopulatedJournalFactory(JournalFactory):
+    node = factory.RelatedFactory(
+        'test.factory.node.NodeFactory',
+        factory_related_name='journal',
+    )
+
+
 class JournalImportRequestFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = 'VLE.JournalImportRequest'
