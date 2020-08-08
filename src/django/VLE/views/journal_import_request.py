@@ -83,4 +83,4 @@ class JournalImportRequestView(viewsets.ViewSet):
         jir.state = jir_action
         jir.save()
 
-        return response.success(description='Successfully deleted entry.')
+        return response.success(description='Successfully update journal import request.')

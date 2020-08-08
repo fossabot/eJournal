@@ -3,22 +3,11 @@ from test.utils import api
 
 from django.test import TestCase
 
-from VLE.models import AssignmentParticipation, Field, JournalImportRequest
+from VLE.models import (Assignment, AssignmentParticipation, Content, Course, Entry, Field, Journal,
+                        JournalImportRequest, Node, PresetNode, Template)
 
 
 class JournalImportRequestTest(TestCase):
-    def setUp(self):
-        self.journal1_student1 = factory.Journal()
-        self.student1 = self.journal1_student1.authors.first().user
-        self.assignment = self.journal1_student1.assignment
-
-        self.assignment2 = factory.Assignment()
-        self.journal1_student2 = factory.Journal(assignment=self.assignment2)
-        self.student2 = self.journal1_student2.authors.first().user
-
-        ap = factory.AssignmentParticipation(assignment=self.assignment2, user=self.student1)
-        self.journal2_student1 = ap.journal
-
     def test_journal_import_request_factory(self):
         jir = factory.JournalImportRequest(author=factory.Student())
 
@@ -59,33 +48,43 @@ class JournalImportRequestTest(TestCase):
         assert resp[0]['target']['journal']['import_requests'] == 2
 
     def test_create_jir(self):
+        journal1_student1 = factory.Journal()
+        student1 = journal1_student1.authors.first().user
+        assignment = journal1_student1.assignment
+
+        assignment2 = factory.Assignment()
+        journal1_student2 = factory.Journal(assignment=assignment2)
+
+        ap = factory.AssignmentParticipation(assignment=assignment2, user=student1)
+        journal2_student1 = ap.journal
+
         # You cannot import a journal into itself
-        data = {'journal_source_id': self.journal1_student1.pk, 'journal_target_id': self.journal1_student1.pk}
-        api.create(self, 'journal_import_request', params=data, user=self.student1, status=400)
+        data = {'journal_source_id': journal1_student1.pk, 'journal_target_id': journal1_student1.pk}
+        api.create(self, 'journal_import_request', params=data, user=student1, status=400)
 
         # You can only import from and to ones own journal
-        data = {'journal_source_id': self.journal1_student1.pk, 'journal_target_id': self.journal1_student2.pk}
-        api.create(self, 'journal_import_request', params=data, user=self.student1, status=403)
+        data = {'journal_source_id': journal1_student1.pk, 'journal_target_id': journal1_student2.pk}
+        api.create(self, 'journal_import_request', params=data, user=student1, status=403)
 
         # You cannot request to import an empty journal
-        data = {'journal_source_id': self.journal1_student1.pk, 'journal_target_id': self.journal2_student1.pk}
-        api.create(self, 'journal_import_request', params=data, user=self.student1, status=400)
+        data = {'journal_source_id': journal1_student1.pk, 'journal_target_id': journal2_student1.pk}
+        api.create(self, 'journal_import_request', params=data, user=student1, status=400)
 
         # So we create an entry in journal1_student1
-        format = self.assignment.format
+        format = assignment.format
         template = factory.Template(format=format)
         valid_create_params = {
-            'journal_id': self.journal1_student1.pk,
+            'journal_id': journal1_student1.pk,
             'template_id': template.pk,
             'content': []
         }
         fields = Field.objects.filter(template=template)
         valid_create_params['content'] = [{'data': 'test data', 'id': field.id} for field in fields]
-        api.create(self, 'entries', params=valid_create_params, user=self.student1)
+        api.create(self, 'entries', params=valid_create_params, user=student1)
 
         # Succesfully create a JournalImportRequest
-        data = {'journal_source_id': self.journal1_student1.pk, 'journal_target_id': self.journal2_student1.pk}
-        api.create(self, 'journal_import_request', params=data, user=self.student1, status=201)
+        data = {'journal_source_id': journal1_student1.pk, 'journal_target_id': journal2_student1.pk}
+        api.create(self, 'journal_import_request', params=data, user=student1, status=201)
 
     def test_patch_jir(self):
         jir = factory.JournalImportRequest()
@@ -95,12 +94,12 @@ class JournalImportRequestTest(TestCase):
         valid_action = JournalImportRequest.DECLINED
         invalid_action = 'BLA'
 
-        # A JIR can be updated by a supervisor
-        data = {'pk': jir.pk, 'jir_action': valid_action}
-        api.update(self, 'journal_import_request', params=data, user=supervisor, status=200)
-        api.update(self, 'journal_import_request', params=data, user=jir.author, status=403)
-        api.update(self, 'journal_import_request', params=data, user=unrelated_teacher, status=403)
-
         # Only valid actions are processed
         data = {'pk': jir.pk, 'jir_action': invalid_action}
-        api.update(self, 'journal_import_request', params=data, user=supervisor, status=400)
+        api.update(self, 'journal_import_request', params=data, user=jir.target.assignment.author, status=400)
+
+        # A JIR can be updated by a supervisor
+        data = {'pk': jir.pk, 'jir_action': valid_action}
+        api.update(self, 'journal_import_request', params=data, user=jir.author, status=403)
+        api.update(self, 'journal_import_request', params=data, user=unrelated_teacher, status=403)
+        api.update(self, 'journal_import_request', params=data, user=supervisor, status=200)

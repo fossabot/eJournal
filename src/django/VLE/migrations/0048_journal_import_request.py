@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
                 ('update_date', models.DateTimeField(auto_now=True)),
                 ('state', models.CharField(choices=[('PEN', 'Pending'), ('DEC', 'Declined'), ('AIG', 'Approved including grades'), ('AEG', 'Approved excluding grades')], default='PEN', max_length=3)),
                 ('author', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='jir_author', to=settings.AUTH_USER_MODEL)),
-                ('processor', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='jir_processor', to='VLE.Journal')),
+                ('processor', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='jir_processor', to=settings.AUTH_USER_MODEL)),
                 ('source', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='import_request_source', to='VLE.Journal')),
                 ('target', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='import_request_target', to='VLE.Journal')),
             ],
