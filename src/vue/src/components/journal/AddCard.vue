@@ -9,36 +9,35 @@
         :class="$root.getBorderClass($route.params.cID)"
         class="no-hover"
     >
-        <h2 class="theme-h2 mb-2">
+        <h2 class="theme-h2">
             New entry
         </h2>
-        <div v-if="addNode.templates.length > 1">
-            <b-form-select
-                v-model="selectedTemplate"
-                class="theme-select"
+        <b-form-select
+            v-if="addNode.templates.length > 1"
+            v-model="selectedTemplate"
+            class="theme-select mt-2"
+        >
+            <option
+                :value="null"
+                disabled
             >
-                <option
-                    :value="null"
-                    disabled
-                >
-                    Please select a template
-                </option>
-                <option
-                    v-for="template in addNode.templates"
-                    :key="template.id"
-                    :value="template"
-                >
-                    {{ template.name }}
-                </option>
-            </b-form-select>
-            <br/><br/>
-        </div>
+                Please select a template
+            </option>
+            <option
+                v-for="template in addNode.templates"
+                :key="template.id"
+                :value="template"
+            >
+                {{ template.name }}
+            </option>
+        </b-form-select>
         <entry-preview
             v-if="selectedTemplate !== null"
             ref="entry-prev"
             :template="selectedTemplate"
             :nID="addNode.nID"
             :jID="jID"
+            class="mt-2"
             @posted="entryPosted"
         />
     </b-card>
