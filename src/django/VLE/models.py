@@ -1595,24 +1595,29 @@ class JournalImportRequest(CreateUpdateModel):
     source = models.ForeignKey(
         'journal',
         related_name='import_request_source',
+        blank=True,
         null=True,
         on_delete=models.SET_NULL
     )
     target = models.ForeignKey(
         'journal',
         related_name='import_request_target',
+        blank=True,
         null=True,
         on_delete=models.SET_NULL
     )
+    # TODO JIR: CASCADE_OR_SET_NUL: Decide if some fields should in fact CASCADE on deletion
     author = models.ForeignKey(
         'user',
         related_name='jir_author',
+        blank=True,
         null=True,
         on_delete=models.SET_NULL
     )
     processor = models.ForeignKey(
         'user',
         related_name='jir_processor',
+        blank=True,
         null=True,
         on_delete=models.SET_NULL
     )
