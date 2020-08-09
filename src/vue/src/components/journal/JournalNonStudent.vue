@@ -59,7 +59,7 @@
                 <load-wrapper :loading="loadingNodes">
                     <div v-if="nodes.length > currentNode && currentNode !== -1">
                         <div v-if="nodes[currentNode].type == 'e' || nodes[currentNode].type == 'd'">
-                            <entry-non-student-preview
+                            <entry-non-student
                                 ref="entry-template-card"
                                 :journal="journal"
                                 :entryNode="nodes[currentNode]"
@@ -191,14 +191,14 @@
 </template>
 
 <script>
-import entryNonStudentPreview from '@/components/entry/EntryNonStudentPreview.vue'
-import timeline from '@/components/timeline/Timeline.vue'
-import journalDetails from '@/components/journal/JournalDetails.vue'
-import breadCrumb from '@/components/assets/BreadCrumb.vue'
-import loadWrapper from '@/components/loading/LoadWrapper.vue'
-import journalStartCard from '@/components/journal/JournalStartCard.vue'
-import journalEndCard from '@/components/journal/JournalEndCard.vue'
-import progressNode from '@/components/entry/ProgressNode.vue'
+import EntryNonStudent from '@/components/entry/EntryNonStudent.vue'
+import Timeline from '@/components/timeline/Timeline.vue'
+import JournalDetails from '@/components/journal/JournalDetails.vue'
+import BreadCrumb from '@/components/assets/BreadCrumb.vue'
+import LoadWrapper from '@/components/loading/LoadWrapper.vue'
+import JournalStartCard from '@/components/journal/JournalStartCard.vue'
+import JournalEndCard from '@/components/journal/JournalEndCard.vue'
+import ProgressNode from '@/components/entry/ProgressNode.vue'
 
 import store from '@/Store.vue'
 import journalAPI from '@/api/journal.js'
@@ -207,14 +207,14 @@ import { mapGetters, mapMutations } from 'vuex'
 
 export default {
     components: {
-        entryNonStudentPreview,
-        breadCrumb,
-        loadWrapper,
-        timeline,
-        journalDetails,
-        journalStartCard,
-        journalEndCard,
-        progressNode,
+        EntryNonStudent,
+        BreadCrumb,
+        LoadWrapper,
+        Timeline,
+        JournalDetails,
+        JournalStartCard,
+        JournalEndCard,
+        ProgressNode,
     },
     props: ['cID', 'aID', 'jID'],
     data () {
