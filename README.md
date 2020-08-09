@@ -3,6 +3,7 @@
 </p>  
 
 [![Build Status](https://travis-ci.com/eJourn-al/eJournal.svg?branch=develop)](https://travis-ci.com/eJourn-al/eJournal) [![Coverage Status](https://codecov.io/gh/eJourn-al/eJournal/branch/develop/graph/badge.svg)](https://codecov.io/gh/eJourn-al/eJournal)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FeJourn-al%2FeJournal.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FeJourn-al%2FeJournal?ref=badge_shield)
 
 eJournal is a platform for online journalling and long term assignments, especially developed for education. It can be easily connected to virtual learning environments through LTI.
 
@@ -102,3 +103,7 @@ Teun Mathijssen,
 Rick Watertor,
 Dennis Wind,
 Zi Long Zhu.
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FeJourn-al%2FeJournal.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FeJourn-al%2FeJournal?ref=badge_large)
