@@ -79,18 +79,6 @@
                         v-else-if="currentNode >= nodes.length"
                         :assignment="assignment"
                     />
-                    <entry
-                        v-else-if="(nodes[currentNode].entry || !currentNodeIsLocked) && currentTemplate"
-                        ref="entry-"
-                        :class="{'input-disabled': !loadingNodes && journal.needs_lti_link.length > 0
-                            && assignment.active_lti_course}"
-                        :template="currentTemplate"
-                        :assignment="assignment"
-                        :node="nodes[currentNode]"
-                        :create="nodes[currentNode].type == 'a'"
-                        @entry-deleted="removeCurrentEntry"
-                        @entry-posted="entryPosted"
-                    />
                     <progress-node
                         v-else-if="nodes[currentNode].type == 'p'"
                         :currentNode="nodes[currentNode]"
@@ -98,7 +86,7 @@
                         :bonusPoints="journal.bonus_points"
                     />
                     <b-card
-                        v-else-if="currentNodeIsLocked"
+                        v-else-if="nodes[currentNode].type == 'd' && currentNodeIsLocked"
                         :class="$root.getBorderClass($route.params.cID)"
                         class="no-hover"
                     >
@@ -109,6 +97,19 @@
                         <b>This preset is locked. You cannot submit an entry at the moment.</b><br/>
                         {{ deadlineRange }}
                     </b-card>
+                    <entry
+                        v-else-if="(nodes[currentNode].type == 'd' || nodes[currentNode].type == 'e'
+                            || nodes[currentNode].type == 'a') && currentTemplate"
+                        ref="entry"
+                        :class="{'input-disabled': !loadingNodes && journal.needs_lti_link.length > 0
+                            && assignment.active_lti_course}"
+                        :template="currentTemplate"
+                        :assignment="assignment"
+                        :node="nodes[currentNode]"
+                        :create="nodes[currentNode].type == 'a'"
+                        @entry-deleted="removeCurrentEntry"
+                        @entry-posted="entryPosted"
+                    />
                 </load-wrapper>
             </b-col>
         </b-col>
@@ -268,55 +269,11 @@ export default {
                 this.nodes.splice(this.currentNode, 1)
             }
         },
-        discardChanges () {
-            // if (this.currentNode !== -1 && this.currentNode < this.nodes.length) {
-            //     if (this.nodes[this.currentNode].type === 'd'
-            //         && this.nodes[this.currentNode].entry === null
-            //         && !this.isLocked()) {
-            //         if (this.$refs['entry-prev'].checkChanges()
-            //             && !window.confirm('Progress will not be saved if you leave. Do you wish to continue?')) {
-            //             return false
-            //         }
-            //     }
-
-            //     if (this.nodes[this.currentNode].type === 'd'
-            //         && this.nodes[this.currentNode].entry !== null) {
-            //         if (this.$refs['entry-template-card'].saveEditMode === 'Save'
-            //             && !window.confirm('Progress will not be saved if you leave. Do you wish to continue?')) {
-            //             return false
-            //         }
-            //     }
-
-            //     if (this.nodes[this.currentNode].type === 'a') {
-            //         if (this.$refs['add-card-ref'].checkChanges()
-            //             && !window.confirm('Progress will not be saved if you leave. Do you wish to continue?')) {
-            //             return false
-            //         }
-            //     }
-
-            //     if (this.nodes[this.currentNode].type === 'e') {
-            //         if (this.$refs['entry-template-card'].saveEditMode === 'Save'
-            //             && !window.confirm('Progress will not be saved if you leave. Do you wish to continue?')) {
-            //             return false
-            //         }
-            //     }
-            // }
-
-            return true
-        },
-        selectNode ($event) {
-            /* Function that prevents you from instant leaving an EntryNode
-             * or a DeadlineNode when clicking on a different node in the
-             * timeline. */
-            if ($event === this.currentNode) {
-                return this.currentNode
+        selectNode (selectedNode) {
+            if (selectedNode !== this.currentNode && (!this.$refs.entry || this.$refs.entry.safeToLeave()
+                || window.confirm('Progress will not be saved if you leave. Do you wish to continue?'))) {
+                this.currentNode = selectedNode
             }
-
-            if (this.discardChanges()) {
-                this.currentNode = $event
-            }
-
-            return undefined
         },
         entryPosted (data) {
             this.nodes = data.nodes

@@ -213,6 +213,11 @@ export default {
 
             return true
         },
+        safeToLeave () {
+            // It is safe to leave the entry if it is not currently being edited AND if no content for an entry to be
+            // created is provided.
+            return !this.edit && !(this.create && this.template.field_set.some(field => this.newEntryContent[field.id]))
+        },
     },
 }
 </script>
