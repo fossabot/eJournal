@@ -28,7 +28,7 @@ if not os.path.exists(LOG_DIR):
 CORS_ORIGIN_ALLOW_ALL = True
 CSP_DEFAULT_SRC = ("'self'", "'unsafe-inline'")
 
-INSTALLED_APPS += ['silk', 'django_extensions']
+INSTALLED_APPS += ['silk']
 
 MIDDLEWARE = [
     'silk.middleware.SilkyMiddleware',
