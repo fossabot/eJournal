@@ -1450,7 +1450,7 @@ class Field(CreateUpdateModel):
     type = models.TextField(
         max_length=4,
         choices=TYPES,
-        default=TEXT,
+        default=RICH_TEXT,
     )
     title = models.TextField()
     description = models.TextField(
