@@ -318,22 +318,22 @@ export default {
         adaptData (editedData) {
             this.nodes[this.currentNode] = editedData
         },
-        selectNode ($event) {
+        selectNode (newNode) {
             /* Function that prevents you from instant leaving an EntryNode
              * or a DeadlineNode when clicking on a different node in the
              * timeline. */
-            if ($event === this.currentNode) {
+            if (newNode === this.currentNode) {
                 /* TODO fix mess */
             } else if (!this.discardChanges()) {
                 /* pass */
             } else if (this.currentNode === -1 || this.currentNode >= this.nodes.length
                 || this.nodes[this.currentNode].type !== 'e'
                 || this.nodes[this.currentNode].type !== 'd') {
-                this.currentNode = $event
+                this.currentNode = newNode
             } else if (this.$refs['entry-template-card'].saveEditMode === 'Save') {
                 window.confirm('Progress will not be saved if you leave. Do you wish to continue?')
             } else {
-                this.currentNode = $event
+                this.currentNode = newNode
             }
         },
         publishGradesJournal () {

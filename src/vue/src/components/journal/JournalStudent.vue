@@ -270,8 +270,7 @@ export default {
             }
         },
         selectNode (selectedNode) {
-            if (selectedNode !== this.currentNode && (!this.$refs.entry || this.$refs.entry.safeToLeave()
-                || window.confirm('Progress will not be saved if you leave. Do you wish to continue?'))) {
+            if (selectedNode !== this.currentNode || this.safeToLeave()) {
                 this.currentNode = selectedNode
             }
         },
@@ -288,6 +287,10 @@ export default {
                 }
             }
             return 0
+        },
+        safeToLeave () {
+            return !this.$refs.entry || this.$refs.entry.safeToLeave()
+                || window.confirm('Progress will not be saved if you leave. Do you wish to continue?')
         },
     },
 }
