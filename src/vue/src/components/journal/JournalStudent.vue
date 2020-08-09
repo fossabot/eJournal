@@ -322,6 +322,7 @@ export default {
             this.nodes = data.nodes
             this.loadingNodes = false
             this.currentNode = data.added
+            this.selectedTemplate = null
         },
         findEntryNode (nodeID) {
             for (let i = 0; i < this.nodes.length; i++) {

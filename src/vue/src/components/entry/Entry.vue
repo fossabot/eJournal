@@ -54,7 +54,7 @@
             <template v-if="edit">
                 <b-button
                     class="add-button float-right mt-2"
-                    :class="{'input-disabled': uploadingFiles > 0}"
+                    :class="{ 'input-disabled': requestInFlight || uploadingFiles > 0 }"
                     @click="saveChanges"
                 >
                     <icon name="save"/>
@@ -71,11 +71,11 @@
             <b-button
                 v-else-if="create"
                 class="add-button float-right"
-                :class="{ 'input-disabled': saveRequestInFlight || uploadingFiles > 0 }"
+                :class="{ 'input-disabled': requestInFlight || uploadingFiles > 0 }"
                 @click="createEntry"
             >
                 <icon name="paper-plane"/>
-                Post Entry
+                Post
             </b-button>
             <template v-else>
                 <hr class="full-width"/>
@@ -142,7 +142,7 @@ export default {
     data () {
         return {
             edit: false,
-            saveRequestInFlight: false,
+            requestInFlight: false,
             newEntryContent: () => Object(),
             uploadingFiles: 0,
         }
@@ -168,35 +168,42 @@ export default {
     methods: {
         saveChanges () {
             if (this.checkRequiredFields()) {
-                entryAPI.update(this.nodes[this.currentNode].entry.id, { content: this.newEntryContent })
+                entryAPI.update(this.node.entry.id, { content: this.newEntryContent },
+                    { customSuccessToast: 'Entry successfully updated.' })
                     .then((entry) => {
-                        this.nodes[this.currentNode].entry = entry
+                        this.node.entry = entry
                         this.edit = false
+                        this.requestInFlight = false
+                    })
+                    .catch(() => {
+                        this.requestInFlight = false
                     })
             }
         },
         deleteEntry () {
             if (window.confirm('Are you sure that you want to delete this entry?')) {
-                entryAPI.delete(this.node.entry.id, { responseSuccessToast: true })
-                    .then(() => {
-                        this.$emit('entry-deleted')
+                entryAPI.delete(this.node.entry.id, { customSuccessToast: 'Entry successfully deleted.' })
+                    .then((data) => {
+                        this.requestInFlight = false
+                        this.$emit('entry-deleted', data)
                     })
+                    .catch(() => { this.requestInFlight = false })
             }
         },
         createEntry () {
             if (this.checkRequiredFields()) {
-                this.saveRequestInFlight = true
+                this.requestInFlight = true
                 entryAPI.create({
                     journal_id: this.$route.params.jID,
                     template_id: this.template.id,
                     content: this.newEntryContent,
                     node_id: this.node && this.node.id > 0 ? this.node.id : null,
-                })
+                }, { customSuccessToast: 'Entry successfully posted.' })
                     .then((data) => {
-                        this.saveRequestInFlight = false
+                        this.requestInFlight = false
                         this.$emit('entry-posted', data)
                     })
-                    .catch(() => { this.saveRequestInFlight = false })
+                    .catch(() => { this.requestInFlight = false })
             }
         },
         checkRequiredFields () {
