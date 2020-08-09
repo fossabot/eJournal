@@ -228,7 +228,7 @@ export default {
             } else if (this.nodes[this.currentNode].template) {
                 // Preset node.
                 return this.nodes[this.currentNode].template
-            } else if (this.nodes[this.currentNode].templates.length === 1) {
+            } else if (this.nodes[this.currentNode].templates && this.nodes[this.currentNode].templates.length === 1) {
                 // Add node with only one unlimited template available.
                 return this.nodes[this.currentNode].templates[0]
             }
