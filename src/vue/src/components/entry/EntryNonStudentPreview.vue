@@ -4,69 +4,66 @@
             class="no-hover entry-card-teacher"
             :class="$root.getBorderClass($route.params.cID)"
         >
-            <div>
-                <div
-                    v-if="$hasPermission('can_grade')"
-                    class="grade-section shadow sticky"
+            <div
+                v-if="$hasPermission('can_grade')"
+                class="grade-section shadow sticky"
+            >
+                <b-form-input
+                    v-model="grade.grade"
+                    type="number"
+                    class="theme-input"
+                    size="2"
+                    autofocus
+                    placeholder="0"
+                    min="0.0"
+                />
+                <b-button
+                    v-if="$hasPermission('can_view_grade_history')"
+                    class="grade-history-button float-right"
+                    @click="showGradeHistory"
                 >
-                    <b-form-input
-                        v-model="grade.grade"
-                        type="number"
-                        class="theme-input"
-                        size="2"
-                        autofocus
-                        placeholder="0"
-                        min="0.0"
-                    />
-                    <b-button
-                        v-if="$hasPermission('can_view_grade_history')"
-                        class="grade-history-button float-right"
-                        @click="showGradeHistory"
-                    >
-                        <icon name="history"/>
-                    </b-button>
-                    <dropdown-button
-                        :selectedOption="this.$store.getters['preferences/gradeButtonSetting']"
-                        :options="{
-                            s: {
-                                text: 'Save grade',
-                                icon: 'save',
-                                class: 'add-button',
-                            },
-                            p: {
-                                text: 'Save & publish grade',
-                                icon: 'save',
-                                class: 'add-button',
-                            },
-                        }"
-                        @click="commitGrade"
-                        @change-option="changeButtonOption"
-                    />
-                </div>
-                <div
-                    v-else-if="gradePublished"
-                    class="grade-section grade shadow"
-                >
-                    {{ entryNode.entry.grade.grade }}
-                </div>
-                <div
-                    v-else
-                    class="grade-section grade shadow"
-                >
-                    <icon name="hourglass-half"/>
-                </div>
-
-                <h2 class="theme-h2 mb-2">
-                    {{ entryNode.entry.template.name }}
-                </h2>
-                <entry-fields
-                    :nodeID="entryNode.nID"
-                    :template="entryNode.entry.template"
-                    :content="entryNode.entry.content"
-                    :edit="false"
-                    :entryID="entryNode.entry.id"
+                    <icon name="history"/>
+                </b-button>
+                <dropdown-button
+                    :selectedOption="this.$store.getters['preferences/gradeButtonSetting']"
+                    :options="{
+                        s: {
+                            text: 'Save grade',
+                            icon: 'save',
+                            class: 'add-button',
+                        },
+                        p: {
+                            text: 'Save & publish grade',
+                            icon: 'save',
+                            class: 'add-button',
+                        },
+                    }"
+                    @click="commitGrade"
+                    @change-option="changeButtonOption"
                 />
             </div>
+            <div
+                v-else-if="gradePublished"
+                class="grade-section grade shadow"
+            >
+                {{ entryNode.entry.grade.grade }}
+            </div>
+            <div
+                v-else
+                class="grade-section grade shadow"
+            >
+                <icon name="hourglass-half"/>
+            </div>
+
+            <h2 class="theme-h2 mb-2">
+                {{ entryNode.entry.template.name }}
+            </h2>
+            <entry-fields
+                :nodeID="entryNode.nID"
+                :template="entryNode.entry.template"
+                :content="entryNode.entry.content"
+                :edit="false"
+            />
             <hr class="full-width"/>
             <div class="timestamp">
                 <span v-if="entryNode.entry.last_edited_by == null">

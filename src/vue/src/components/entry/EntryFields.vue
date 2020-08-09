@@ -170,16 +170,13 @@ export default {
         nodeID: {
             default: -1,
         },
-        entryID: {
-            default: -1,
-        },
     },
     computed: {
         orderedFields () {
             return this.template.field_set.slice().sort((a, b) => a.location - b.location)
         },
         displayFields () {
-            return this.orderedFields.filter(field => this.content[field.id] && this.content[field.id])
+            return this.orderedFields.filter(field => this.content[field.id])
         },
     },
     methods: {

@@ -598,7 +598,7 @@ class EntrySerializer(serializers.ModelSerializer):
         return entry.author.full_name
 
     def get_last_edited_by(self, entry):
-        return None if entry.last_edited_by is None else entry.last_edited_by.full_name
+        return entry.last_edited_by.full_name if entry.last_edited_by else None
 
     def get_template(self, entry):
         return TemplateSerializer(entry.template).data

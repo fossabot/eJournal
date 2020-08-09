@@ -50,83 +50,65 @@
                     '{{ assignment.active_lti_course.name }}' at least once.
                 </b-alert>
                 <load-wrapper :loading="loadingNodes">
-                    <div
-                        v-if="nodes.length > currentNode && currentNode !== -1"
-                        :class="{'input-disabled': !loadingNodes && journal.needs_lti_link.length > 0
-                            && assignment.active_lti_course}"
+                    <b-form-select
+                        v-if="nodes[currentNode] && nodes[currentNode].type == 'a' &&
+                            nodes[currentNode].templates.length > 1"
+                        v-model="selectedTemplate"
+                        class="theme-select mb-2"
                     >
-                        <div v-if="nodes[currentNode].type == 'e'">
-                            <entry-node
-                                ref="entry-template-card"
-                                :journal="journal"
-                                :assignment="assignment"
-                                :cID="cID"
-                                :entryNode="nodes[currentNode]"
-                                @edit-content="editContent"
-                                @delete-node="deleteNode"
-                            />
-                        </div>
-                        <div v-else-if="nodes[currentNode].type == 'd'">
-                            <div v-if="nodes[currentNode].entry !== null">
-                                <entry-node
-                                    ref="entry-template-card"
-                                    :journal="journal"
-                                    :assignment="assignment"
-                                    :cID="cID"
-                                    :entryNode="nodes[currentNode]"
-                                    @edit-content="editContent"
-                                    @delete-node="deleteNode"
-                                />
-                            </div>
-                            <div v-else>
-                                <entry-preview
-                                    v-if="!isLocked()"
-                                    ref="entry-prev"
-                                    :template="nodes[currentNode].template"
-                                    :nID="nodes[currentNode].nID"
-                                    :jID="jID"
-                                    :description="nodes[currentNode].description"
-                                    @posted="entryPosted"
-                                />
-                                <b-card
-                                    v-else
-                                    :class="$root.getBorderClass($route.params.cID)"
-                                    class="no-hover"
-                                >
-                                    <h2 class="theme-h2 mb-2">
-                                        {{ nodes[currentNode].template.name }}
-                                    </h2>
-                                    <hr class="full-width"/>
-                                    <b>This preset is locked. You cannot submit an entry at the moment.</b><br/>
-                                    {{ deadlineRange }}
-                                </b-card>
-                            </div>
-                        </div>
-                        <div v-else-if="nodes[currentNode].type == 'a'">
-                            <add-card
-                                ref="add-card-ref"
-                                :addNode="nodes[currentNode]"
-                                :jID="jID"
-                                @posted="entryPosted"
-                            />
-                        </div>
-                        <div v-else-if="nodes[currentNode].type == 'p'">
-                            <progress-node
-                                :currentNode="nodes[currentNode]"
-                                :nodes="nodes"
-                                :bonusPoints="journal.bonus_points"
-                            />
-                        </div>
-                    </div>
+                        <option
+                            :value="null"
+                            disabled
+                        >
+                            New entry: select a template
+                        </option>
+                        <option
+                            v-for="template in nodes[currentNode].templates"
+                            :key="template.id"
+                            :value="template"
+                        >
+                            {{ template.name }}
+                        </option>
+                    </b-form-select>
+
                     <journal-start-card
-                        v-else-if="currentNode === -1"
+                        v-if="currentNode === -1"
                         :assignment="assignment"
                     />
                     <journal-end-card
-                        v-else
+                        v-else-if="currentNode >= nodes.length"
                         :assignment="assignment"
-                        :student="true"
                     />
+                    <entry
+                        v-else-if="(nodes[currentNode].entry || !currentNodeIsLocked) && currentTemplate"
+                        ref="entry-"
+                        :class="{'input-disabled': !loadingNodes && journal.needs_lti_link.length > 0
+                            && assignment.active_lti_course}"
+                        :template="currentTemplate"
+                        :assignment="assignment"
+                        :node="nodes[currentNode]"
+                        :create="nodes[currentNode].type == 'a'"
+                        @entry-deleted="removeCurrentEntry"
+                        @entry-posted="entryPosted"
+                    />
+                    <progress-node
+                        v-else-if="nodes[currentNode].type == 'p'"
+                        :currentNode="nodes[currentNode]"
+                        :nodes="nodes"
+                        :bonusPoints="journal.bonus_points"
+                    />
+                    <b-card
+                        v-else-if="currentNodeIsLocked"
+                        :class="$root.getBorderClass($route.params.cID)"
+                        class="no-hover"
+                    >
+                        <h2 class="theme-h2 mb-2">
+                            {{ nodes[currentNode].template.name }}
+                        </h2>
+                        <hr class="full-width"/>
+                        <b>This preset is locked. You cannot submit an entry at the moment.</b><br/>
+                        {{ deadlineRange }}
+                    </b-card>
                 </load-wrapper>
             </b-col>
         </b-col>
@@ -153,7 +135,7 @@
 
             <transition name="fade">
                 <b-button
-                    v-if="$root.lgMax && addIndex > -1 && currentNode !== addIndex"
+                    v-if="addIndex > -1 && currentNode !== addIndex"
                     class="fab"
                     @click="currentNode = addIndex"
                 >
@@ -168,9 +150,7 @@
 </template>
 
 <script>
-import entryNode from '@/components/entry/EntryNode.vue'
-import entryPreview from '@/components/entry/EntryPreview.vue'
-import addCard from '@/components/journal/AddCard.vue'
+import Entry from '@/components/entry/Entry.vue'
 import timeline from '@/components/timeline/Timeline.vue'
 import breadCrumb from '@/components/assets/BreadCrumb.vue'
 import loadWrapper from '@/components/loading/LoadWrapper.vue'
@@ -181,16 +161,13 @@ import progressNode from '@/components/entry/ProgressNode.vue'
 
 import journalAPI from '@/api/journal.js'
 import assignmentAPI from '@/api/assignment.js'
-import entryAPI from '@/api/entry.js'
 
 export default {
     components: {
         breadCrumb,
         loadWrapper,
-        addCard,
         timeline,
-        entryNode,
-        entryPreview,
+        Entry,
         progressNode,
         journalStartCard,
         journalEndCard,
@@ -200,12 +177,11 @@ export default {
     data () {
         return {
             currentNode: -1,
-            editedData: ['', ''],
             nodes: [],
             journal: null,
             assignment: null,
             loadingNodes: true,
-            editingName: false,
+            selectedTemplate: null,
         }
     },
     computed: {
@@ -225,6 +201,40 @@ export default {
             }
 
             return ''
+        },
+        currentNodeIsLocked () {
+            const currentDate = new Date()
+            let unlockDate = currentDate
+            let lockDate = currentDate
+
+            if (!this.nodes[this.currentNode]) {
+                return false
+            }
+
+            if (this.nodes[this.currentNode].unlock_date) {
+                unlockDate = new Date(this.nodes[this.currentNode].unlock_date)
+            }
+
+            if (this.nodes[this.currentNode].lock_date) {
+                lockDate = new Date(this.nodes[this.currentNode].lock_date)
+            }
+
+            return currentDate < unlockDate || lockDate < currentDate
+        },
+        currentTemplate () {
+            if (this.nodes[this.currentNode].entry && this.nodes[this.currentNode].entry.template) {
+                // Existing entry.
+                return this.nodes[this.currentNode].entry.template
+            } else if (this.nodes[this.currentNode].template) {
+                // Preset node.
+                return this.nodes[this.currentNode].template
+            } else if (this.nodes[this.currentNode].templates.length === 1) {
+                // Add node with only one unlimited template available.
+                return this.nodes[this.currentNode].templates[0]
+            }
+
+            // Add node with multiple choices: select from dropdown.
+            return this.selectedTemplate
         },
     },
     created () {
@@ -250,58 +260,47 @@ export default {
             .then((journal) => { this.journal = journal })
     },
     methods: {
-        editContent (content) {
-            entryAPI.update(this.nodes[this.currentNode].entry.id, { content })
-                .then((entry) => { this.nodes[this.currentNode].entry = entry })
-        },
-        deleteNode () {
-            entryAPI.delete(this.nodes[this.currentNode].entry.id, { responseSuccessToast: true })
-                .then(() => {
-                    if (this.nodes[this.currentNode].type === 'd') {
-                        this.nodes[this.currentNode].entry = null
-                        this.currentNode = 0
-                    } else {
-                        this.nodes.splice(this.currentNode, 1)
-                    }
-                })
+        removeCurrentEntry () {
+            if (this.nodes[this.currentNode].type === 'd') {
+                this.nodes[this.currentNode].entry = null
+                this.currentNode = 0
+            } else {
+                this.nodes.splice(this.currentNode, 1)
+            }
         },
         discardChanges () {
-            /*  Checks the node and depending of the type of node
-             *  it will look for possible unsaved changes.
-             *  If there are unsaved changes a confirmation will be asked.
-             */
-            if (this.currentNode !== -1 && this.currentNode < this.nodes.length) {
-                if (this.nodes[this.currentNode].type === 'd'
-                    && this.nodes[this.currentNode].entry === null
-                    && !this.isLocked()) {
-                    if (this.$refs['entry-prev'].checkChanges()
-                        && !window.confirm('Progress will not be saved if you leave. Do you wish to continue?')) {
-                        return false
-                    }
-                }
+            // if (this.currentNode !== -1 && this.currentNode < this.nodes.length) {
+            //     if (this.nodes[this.currentNode].type === 'd'
+            //         && this.nodes[this.currentNode].entry === null
+            //         && !this.isLocked()) {
+            //         if (this.$refs['entry-prev'].checkChanges()
+            //             && !window.confirm('Progress will not be saved if you leave. Do you wish to continue?')) {
+            //             return false
+            //         }
+            //     }
 
-                if (this.nodes[this.currentNode].type === 'd'
-                    && this.nodes[this.currentNode].entry !== null) {
-                    if (this.$refs['entry-template-card'].saveEditMode === 'Save'
-                        && !window.confirm('Progress will not be saved if you leave. Do you wish to continue?')) {
-                        return false
-                    }
-                }
+            //     if (this.nodes[this.currentNode].type === 'd'
+            //         && this.nodes[this.currentNode].entry !== null) {
+            //         if (this.$refs['entry-template-card'].saveEditMode === 'Save'
+            //             && !window.confirm('Progress will not be saved if you leave. Do you wish to continue?')) {
+            //             return false
+            //         }
+            //     }
 
-                if (this.nodes[this.currentNode].type === 'a') {
-                    if (this.$refs['add-card-ref'].checkChanges()
-                        && !window.confirm('Progress will not be saved if you leave. Do you wish to continue?')) {
-                        return false
-                    }
-                }
+            //     if (this.nodes[this.currentNode].type === 'a') {
+            //         if (this.$refs['add-card-ref'].checkChanges()
+            //             && !window.confirm('Progress will not be saved if you leave. Do you wish to continue?')) {
+            //             return false
+            //         }
+            //     }
 
-                if (this.nodes[this.currentNode].type === 'e') {
-                    if (this.$refs['entry-template-card'].saveEditMode === 'Save'
-                        && !window.confirm('Progress will not be saved if you leave. Do you wish to continue?')) {
-                        return false
-                    }
-                }
-            }
+            //     if (this.nodes[this.currentNode].type === 'e') {
+            //         if (this.$refs['entry-template-card'].saveEditMode === 'Save'
+            //             && !window.confirm('Progress will not be saved if you leave. Do you wish to continue?')) {
+            //             return false
+            //         }
+            //     }
+            // }
 
             return true
         },
@@ -331,21 +330,6 @@ export default {
                 }
             }
             return 0
-        },
-        isLocked () {
-            const currentDate = new Date()
-            let unlockDate = currentDate
-            let lockDate = currentDate
-
-            if (this.nodes[this.currentNode].unlock_date) {
-                unlockDate = new Date(this.nodes[this.currentNode].unlock_date)
-            }
-
-            if (this.nodes[this.currentNode].lock_date) {
-                lockDate = new Date(this.nodes[this.currentNode].lock_date)
-            }
-
-            return currentDate < unlockDate || lockDate < currentDate
         },
     },
 }
