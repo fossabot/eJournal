@@ -1,12 +1,12 @@
 <template>
     <div v-if="entryNode.entry !== null">
         <b-card
-            class="no-hover entry-card-teacher"
+            class="no-hover"
             :class="$root.getBorderClass($route.params.cID)"
         >
             <div
                 v-if="$hasPermission('can_grade')"
-                class="grade-section shadow sticky"
+                class="grade-section sticky"
             >
                 <b-form-input
                     v-model="grade.grade"

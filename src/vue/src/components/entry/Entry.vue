@@ -105,7 +105,6 @@
         <comments
             v-if="node && node.entry"
             :eID="node.entry.id"
-            :entryGradePublished="gradePublished"
         />
     </div>
 </template>
